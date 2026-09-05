@@ -10,8 +10,28 @@ Banco ficticio: **Banco Cardamomo**. País: Guatemala. Moneda: Quetzal.
 
 Abre `index.html` con doble clic. No necesita servidor, ni npm, ni conexión.
 
-Para publicarlo en GitHub Pages, sube la carpeta completa y activa Pages sobre la rama
-principal. No hay paso de compilación.
+## Publicarlo en GitHub Pages
+
+El repositorio ya está iniciado y con el primer commit hecho, en la rama `main`. Faltan
+tres pasos que hay que hacer desde el navegador porque en esta máquina no está instalada
+la herramienta de línea de comandos de GitHub.
+
+1. En `github.com/new`, crea un repositorio **vacío** llamado `mi-primer-quetzal`. No
+   marques nada de README, licencia ni `.gitignore`: el repositorio local ya los tiene.
+2. Desde esta carpeta, conecta y sube:
+
+   ```
+   git remote add origin https://github.com/TU-USUARIO/mi-primer-quetzal.git
+   git push -u origin main
+   ```
+
+3. En el repositorio, entra a **Settings** y luego a **Pages**. En *Source* elige
+   **Deploy from a branch**, en *Branch* elige `main` y la carpeta `/ (root)`, y guarda.
+
+En un par de minutos queda en `https://TU-USUARIO.github.io/mi-primer-quetzal/`. No hay
+paso de compilación: GitHub sirve los archivos tal cual.
+
+`node_modules` está en el `.gitignore`, así que no se sube. El juego no lo necesita.
 
 ## Qué incluye
 
@@ -56,7 +76,7 @@ de fuente verificada y están documentadas en `docs/investigacion-economia-guate
 Las pruebas corren sin navegador con Node y son deterministas.
 
 ```
-node pruebas/todas.js          # las cinco suites, 110 comprobaciones
+node pruebas/todas.js          # las seis suites, 157 comprobaciones
 ```
 
 O una por una:
@@ -67,14 +87,22 @@ node pruebas/vidas-completas.js    # cuatro vidas hasta la jubilación
 node pruebas/ciclo-credito.js      # fiador, garantía, puntaje, mora, tarjeta
 node pruebas/largo-plazo.js        # hipoteca, pensión, orígenes y migración
 node pruebas/interfaz-bilingue.js  # las cinco pestañas en ambos idiomas
+node pruebas/dom-real.js           # una partida de verdad en un navegador simulado
 ```
 
 `balanceo.js` es el que hay que mirar al tocar la economía: compara estrategias y deja ver
 si algún incentivo quedó al revés. Ya atrapó tres veces que quemarse rendía más que
 cuidarse.
 
+`dom-real.js` es la única que necesita `npm install`, porque usa jsdom para cargar el
+`index.html` real y tocar botones de verdad: abre ventanas, llena campos, cambia de idioma
+y juega un minijuego esperando sus temporizadores. Si jsdom no está instalado, esa suite se
+salta sola y las otras cinco siguen corriendo.
+
+**El juego no tiene dependencias.** El `package.json` existe solo para esa prueba.
+
 `pruebas/comun.js` carga el juego en un entorno aislado con un DOM mínimo. Si agregas un
-archivo al juego, agrégalo también a la lista `ARCHIVOS` de ese módulo.
+archivo al juego, agrégalo también a la lista `ARCHIVOS` de ese módulo y a `index.html`.
 
 ## Agregar cosas
 

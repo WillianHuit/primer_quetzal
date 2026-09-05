@@ -552,8 +552,8 @@ Con los cinco de la versión 1 son ocho en total.
 
 ## 21. Cómo se verificó todo
 
-Cinco suites de prueba corren sin navegador con `node pruebas/todas.js` y suman **110
-comprobaciones**. Todas pasan, y son deterministas.
+Seis suites de prueba corren con `node pruebas/todas.js` y suman **157 comprobaciones**.
+Todas pasan, y son deterministas.
 
 | Suite | Qué cubre |
 |---|---|
@@ -562,19 +562,43 @@ comprobaciones**. Todas pasan, y son deterministas.
 | Ciclo de crédito | Fiador, garantía, puntaje, mora, tarjeta y prestamista |
 | Largo plazo | Hipoteca, pensión, los tres orígenes y la migración completa |
 | Interfaz bilingüe | Las cinco pestañas en ambos idiomas y en todos los estados |
+| DOM real | Una partida jugada de verdad, tocando botones en un navegador simulado |
 
-Las pruebas encontraron fallas reales, no solo confirmaron lo que ya funcionaba:
+Las cinco primeras usan un DOM mínimo escrito a mano, que sirve para ver que las vistas se
+dibujan pero no ejercita lo que de verdad puede romperse. La sexta carga el `index.html`
+real con jsdom y juega: elige origen, acepta un empleo, abre una cuenta, reparte las
+semanas, cierra el turno, mueve dinero en una ventana con campo numérico, cambia de idioma,
+abre el glosario y juega un minijuego esperando sus temporizadores. Es la única que
+necesita `npm install`, y si falta jsdom se salta sola.
+
+### Las cinco fallas que encontraron las pruebas
+
+Ninguna se habría visto leyendo el código.
 
 1. **Quemarse rendía más que descansar.** Trabajar las cuatro semanas todos los meses
    ganaba más que cuidarse, que es el incentivo contrario al que el juego debe enseñar.
 2. **Se ahorraba Q3,100 al mes con un sueldo de Q3,000**, porque no existía el gasto
    personal.
 3. **La fuga del efectivo se comía Q42,000 en dos años** sin tope.
-4. **La prueba de migración era intermitente.** Forzar el azar desde fuera no afectaba al
-   contexto aislado del juego, así que fallaba el 18% de las veces y parecía un bug del
-   producto. Se corrigió en el arranque compartido de las pruebas.
+4. **El costo de enfermarse nunca se cobraba.** Se registraba en el resumen del mes pero no
+   se descontaba de ninguna cuenta.
+5. **El hermano mandaba dinero extra a quien no tenía hermano fuera.** El evento de remesa
+   extraordinaria se disparaba con cualquier origen, incluido el que no recibe remesas.
 
-## 22. Registro de decisiones
+Una sexta falla estaba en las pruebas y no en el juego: forzar el azar desde fuera no
+afecta al contexto aislado donde corre el motor, así que la prueba de migración fallaba el
+18% de las veces y parecía un defecto del producto. Se corrigió en el arranque compartido.
+
+## 22. Despliegue
+
+El repositorio está iniciado en la rama `main` con el primer commit hecho. Faltan tres
+pasos manuales desde el navegador, porque en la máquina de desarrollo no está instalada la
+herramienta de línea de comandos de GitHub. Están escritos en el `README.md`.
+
+`node_modules` está en el `.gitignore`. Se sube solo el juego, las pruebas y los documentos:
+39 archivos. GitHub Pages los sirve tal cual, sin compilación.
+
+## 23. Registro de decisiones
 
 Cuarenta y nueve decisiones acordadas en cinco rondas de entrevista, el 4 de septiembre de
 2026. Las que se apartaron de la recomendación inicial y por qué:
