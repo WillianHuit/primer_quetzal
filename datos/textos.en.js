@@ -279,8 +279,8 @@ var TEXTOS_EN = {
     'Contrato, Bono 14, aguinaldo y seguro social. Puedes construir historial de crédito.':
       'A contract, the statutory July and December bonuses, and social security. You can build credit history.',
     'Economía informal': 'The informal economy',
-    'Sin contrato ni prestaciones, con ingresos más bajos. Es donde vive el 66% del país.':
-      'No contract, no benefits, lower income. It is where 66% of the country lives.',
+    'Sin contrato ni prestaciones, con ingresos más bajos. Es donde vive el 65% del país.':
+      'No contract, no benefits, lower income. It is where 65% of the country lives.',
     'Jugar así': 'Play this way',
 
     // teaching cards
@@ -328,8 +328,8 @@ var TEXTOS_EN = {
     'Le pediste al prestamista': 'You borrowed from the street lender',
     'Tienes el dinero hoy, sin papeles y sin fiador. Tu cuota es {0} por seis meses.':
       'You have the money today, no paperwork and no co-signer. Your payment is {0} for six months.',
-    'Este préstamo no construye ningún historial. Al contrario: te consume el ingreso que necesitas para calificar en el banco. Es la trampa donde cae el 26.2% del país.':
-      'This loan builds no record at all. Worse, it eats the income you need to qualify at a bank. It is the trap 26.2% of the country falls into.'
+    'Este préstamo no construye ningún historial. Al contrario: te consume el ingreso que necesitas para calificar en el banco. En Guatemala 41 de cada 100 adultos piden prestado, pero solo 9 lo logran en un banco.':
+      'This loan builds no record at all. Worse, it eats the income you need to qualify at a bank. In Guatemala 41 out of every 100 adults borrow money, but only 9 manage it at a bank.'
   },
 
   // ---------- data by id: jobs, careers, minigames, events, promotions ----------

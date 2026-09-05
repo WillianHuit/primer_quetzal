@@ -200,4 +200,53 @@ const rep = Motor.reporte();
 ok(Array.isArray(rep.lecciones) && rep.lecciones.every(l => l.clave),
    'las lecciones del reporte vienen como claves traducibles');
 
+(function comprobarDiccionarioCompleto() {
+  /* ----------------------------------------------------------------------
+   * El diccionario cubre todo lo que el codigo pide traducir.
+   *
+   * El recorrido de arriba solo ve las pantallas que logra abrir, asi que una
+   * cadena de un caso raro puede quedarse sin traducir sin que nadie lo note.
+   * Esto lo mira al reves: saca del codigo TODAS las cadenas que pasan por
+   * T('...') y comprueba que cada una este en el diccionario ingles.
+   * ---------------------------------------------------------------------- */
+
+  const fs = require('fs');
+  const path = require('path');
+  const RAIZ = path.join(__dirname, '..');
+  const leer = p => fs.readFileSync(path.join(RAIZ, p), 'utf8');
+
+  const FUENTES = ['js/ui.js', 'js/motor.js', 'js/minijuegos/marco.js'];
+  const pedidas = new Set();
+  for (const a of FUENTES) {
+    const re = /\bT\(\s*'((?:[^'\\]|\\.)*)'/g;
+    let m;
+    const txt = leer(a);
+    while ((m = re.exec(txt)) !== null) pedidas.add(m[1].replace(/\\'/g, "'"));
+  }
+
+  // sbEn ya viene cargado mas arriba en este mismo archivo
+  const dicc = (sbEn.TEXTOS_EN && sbEn.TEXTOS_EN.ui) ? sbEn.TEXTOS_EN.ui : {};
+  const sinTraducir = [...pedidas].filter(k => !(k in dicc)).sort();
+
+  ok(pedidas.size > 300,
+     `el codigo pide traducir ${pedidas.size} cadenas`);
+  ok(sinTraducir.length === 0,
+     sinTraducir.length === 0
+       ? `las ${pedidas.size} tienen traduccion al ingles`
+       : `quedan ${sinTraducir.length} sin traducir: ${sinTraducir.slice(0, 5).join(' | ')}`);
+
+  // Y al reves: claves que sobran en el diccionario, que suelen ser textos
+  // renombrados en el codigo y olvidados en la traduccion.
+  const datosDir = path.join(RAIZ, 'datos');
+  const todo = FUENTES.map(leer).join('\n') +
+    fs.readdirSync(datosDir).filter(f => f.endsWith('.js'))
+      .map(f => fs.readFileSync(path.join(datosDir, f), 'utf8')).join('\n');
+  const huerfanas = Object.keys(dicc).filter(k => !todo.includes(k));
+  ok(huerfanas.length === 0,
+     huerfanas.length === 0
+       ? 'ninguna clave del diccionario quedo huerfana'
+       : `${huerfanas.length} claves ya no se usan: ${huerfanas.slice(0, 5).join(' | ')}`);
+})();
+
 M.imprimir('interfaz bilingüe');
+

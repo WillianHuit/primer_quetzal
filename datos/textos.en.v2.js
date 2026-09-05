@@ -233,6 +233,7 @@
     'makes it work is not how much you put in, it is how many years you leave it alone.';
 
   // ---------- tasa nominal vs efectiva en la lista de prestamos ----------
+  ui['Intereses pagados'] = 'Interest paid';
   ui['Tasa nominal'] = 'Nominal rate';
   ui['Tasa efectiva'] = 'Effective rate';
 
