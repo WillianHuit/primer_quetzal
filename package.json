@@ -1,0 +1,12 @@
+{
+  "name": "mi-primer-quetzal",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Simulador de vida financiera para aprender a usar productos bancarios en Guatemala",
+  "scripts": {
+    "test": "node pruebas/todas.js"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.0"
+  }
+}

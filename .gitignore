@@ -1,0 +1,13 @@
+# El juego no tiene dependencias. node_modules existe solo para las pruebas.
+node_modules/
+package-lock.json
+
+# Basura del sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editores
+.vscode/
+.idea/
+*.swp
