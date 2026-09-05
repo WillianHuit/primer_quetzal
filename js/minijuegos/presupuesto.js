@@ -11,7 +11,7 @@ Minijuegos.registrar({
   descripcion: 'Reparte el sueldo. Van a caer imprevistos.',
   ensena: 'Sin un colchón, cualquier imprevisto se vuelve deuda.',
   duracion: 75,
-  pagoMaximo: 160,
+  pagoMaximo: 420,
   puntosParaPagoMaximo: 90,
 
   jugar: function (caja, api) {

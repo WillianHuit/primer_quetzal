@@ -13,7 +13,7 @@ Minijuegos.registrar({
   descripcion: 'Cotiza el material justo. Ni corto ni inflado.',
   ensena: 'Un presupuesto sin margen es un presupuesto que pierde plata.',
   duracion: 70,
-  pagoMaximo: 360,
+  pagoMaximo: 1200,
   puntosParaPagoMaximo: 100,
 
   jugar: function (caja, api) {

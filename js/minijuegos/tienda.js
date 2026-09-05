@@ -10,7 +10,7 @@ Minijuegos.registrar({
   descripcion: 'Atiende clientes y da el cambio correcto.',
   ensena: 'Manejar efectivo sin equivocarte.',
   duracion: 50,
-  pagoMaximo: 200,
+  pagoMaximo: 500,
   puntosParaPagoMaximo: 110,
 
   jugar: function (caja, api) {

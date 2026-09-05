@@ -220,3 +220,46 @@ if (fallos.length) {
 } else {
   console.log('  el incentivo apunta en la direccion correcta');
 }
+
+
+/* ----------------------------------------------------------------------
+ * ¿Se puede salir del modo dificil?
+ *
+ * En la economia informal TODOS los empleos que no piden titulo dejan
+ * margen negativo contra el gasto fijo de la casa familiar:
+ *   repartidor -Q289 · tienda -Q152 · construccion -Q425 · vendedor -Q971
+ * Solo dos escapan, y ninguno esta disponible al empezar: la tienda propia
+ * pide Q8,000 de capital, y el tecnico en refrigeracion pide un titulo.
+ *
+ * O sea que el modo dificil es un hoyo del que solo se sale estudiando, y
+ * se tarda una decada en volver a numeros negros. Es duro a proposito y es
+ * fiel a la investigacion, pero tiene que seguir siendo POSIBLE. Esto lo
+ * fija: si algun cambio lo vuelve una trampa sin salida, la suite falla.
+ * ---------------------------------------------------------------------- */
+
+function vidaDificilQueEstudia(M, e) {
+  let mejor = null;
+  for (const t of sandbox.TRABAJOS) {
+    if (!t.permiteInformal) continue;
+    if (!M.puedeAplicar(t).ok) continue;
+    if (!mejor || t.salarioBase > mejor.salarioBase) mejor = t;
+  }
+  if (mejor && (!e.empleo || e.empleo.id !== mejor.id)) M.tomarTrabajo(mejor.id, false);
+  if (!e.estudio && e.educacion === 'bachiller') M.inscribirse('tecnico', false);
+  repartir(M, e, e.estudio ? 2 : 3, e.estudio ? 1 : 0);
+}
+
+const salidas = SEMILLAS.map(s =>
+  conAzarSemilla(sandbox, s, () => vidaSinSemilla('escape dificil', 'dificil', vidaDificilQueEstudia, true)));
+
+const salen = salidas.filter(p => p > 0).length;
+console.log('\n--- ¿se puede salir del modo dificil estudiando? ---');
+console.log(`  patrimonio mediano a los 65   ${Q(mediana(salidas))}`);
+console.log(`  termina en positivo en ${salen} de ${SEMILLAS.length} semillas`);
+
+if (salen < SEMILLAS.length) {
+  console.log(`  TRAMPA SIN SALIDA: el modo dificil deja a ${SEMILLAS.length - salen} vidas en negativo`);
+  process.exitCode = 1;
+} else {
+  console.log('  el modo dificil es duro pero tiene salida');
+}

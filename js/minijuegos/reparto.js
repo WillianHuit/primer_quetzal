@@ -11,7 +11,7 @@ Minijuegos.registrar({
   descripcion: 'Esquiva el tráfico y entrega los pedidos a tiempo.',
   ensena: null,
   duracion: 40,
-  pagoMaximo: 220,
+  pagoMaximo: 550,
   puntosParaPagoMaximo: 120,
 
   jugar: function (caja, api) {

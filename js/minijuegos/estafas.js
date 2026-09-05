@@ -12,7 +12,7 @@ Minijuegos.registrar({
   descripcion: 'Te llegan mensajes. Decide cuáles son fraude.',
   ensena: 'Ningún banco pide claves por mensaje, y la urgencia es la señal de alarma.',
   duracion: 60,
-  pagoMaximo: 150,
+  pagoMaximo: 400,
   puntosParaPagoMaximo: 100,
 
   jugar: function (caja, api) {

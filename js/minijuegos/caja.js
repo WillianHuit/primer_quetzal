@@ -12,7 +12,7 @@ Minijuegos.registrar({
   descripcion: 'Cuadra la caja del día y encuentra el descuadre.',
   ensena: 'Llevar cuentas es lo que separa un negocio de un pasatiempo.',
   duracion: 70,
-  pagoMaximo: 320,
+  pagoMaximo: 850,
   puntosParaPagoMaximo: 100,
 
   jugar: function (caja, api) {

@@ -583,7 +583,7 @@ Con los cinco de la versión 1 son ocho en total.
 
 ## 21. Cómo se verificó todo
 
-Seis suites de prueba corren con `node pruebas/todas.js`. Todas pasan y todas son
+Siete suites de prueba corren con `node pruebas/todas.js`. Todas pasan y todas son
 deterministas, aunque dos de ellas no lo eran hasta que se revisó: **balanceo y vidas
 completas usaban azar libre**, así que sus números bailaban miles de quetzales entre
 corridas. Pasaban igual, porque solo miraban si había errores y nunca comparaban cifras.
@@ -597,9 +597,10 @@ semillas en vez de una.
 | Ciclo de crédito | Fiador, garantía, puntaje, mora, tarjeta y prestamista |
 | Largo plazo | Hipoteca, pensión, los tres orígenes y la migración completa |
 | Interfaz bilingüe | Las cinco pestañas en ambos idiomas y en todos los estados |
+| Minijuegos | Que el trabajo extra compense la semana de trabajo que cuesta |
 | DOM real | Una partida jugada de verdad, tocando botones en un navegador simulado |
 
-Las cinco primeras usan un DOM mínimo escrito a mano, que sirve para ver que las vistas se
+Las seis primeras usan un DOM mínimo escrito a mano, que sirve para ver que las vistas se
 dibujan pero no ejercita lo que de verdad puede romperse. La sexta carga el `index.html`
 real con jsdom y juega: elige origen, acepta un empleo, abre una cuenta, reparte las
 semanas, cierra el turno, mueve dinero en una ventana con campo numérico, cambia de idioma,
@@ -654,3 +655,79 @@ Cuarenta y nueve decisiones acordadas en cinco rondas de entrevista, el 4 de sep
 2. El ingreso mediano nacional deja Q17 de margen sobre la canasta ampliada, lo que haría
    el juego matemáticamente imposible de ganar. Se resolvió situando al jugador en el
    escenario formal urbano y convirtiendo el escenario mediano en el modo difícil.
+
+## 24. Dos cosas que solo se vieron al medirlas
+
+Aparecieron al revisar el efecto de la recalibración, y ninguna era visible leyendo el código.
+
+### 24.1 Los minijuegos nunca compensaban
+
+Un espacio de minijuego cuesta una semana de trabajo, y la tabla de pago castiga cada semana
+que no trabajas: pasar de cuatro semanas a tres quita el **30 % del sueldo del mes**. Con los
+pagos que tenían, jugar era siempre una pérdida:
+
+| Situación | Cuesta la semana | Pagaba el mejor minijuego |
+|---|---|---|
+| Sin título, vendedor informal | Q369 | Q220 |
+| Sin título, dependiente de tienda formal | Q900 | Q220 |
+| Con maestría, gerente | Q3,600 | Q420 |
+
+Un jugador que hiciera cuentas no los tocaba nunca, y la brecha **crecía** conforme avanzaba,
+porque los minijuegos de carrera subían mucho menos que el sueldo. La mecánica era decorativa.
+
+Los pagos se recalibraron para que la curva tenga la forma correcta:
+
+| Minijuego | Antes | Ahora | Requisito |
+|---|---|---|---|
+| Reparto en moto | Q220 | **Q550** | ninguno |
+| Turno en la tienda | Q200 | **Q500** | ninguno |
+| Cuadra el mes | Q160 | **Q420** | ninguno |
+| Caza-estafas | Q150 | **Q400** | ninguno |
+| Cierre de caja | Q320 | **Q850** | técnico |
+| Conciliación bancaria | Q340 | **Q1,000** | administración |
+| Presupuesto de obra | Q360 | **Q1,200** | ingeniería |
+| Decisión de inversión | Q420 | **Q1,600** | maestría |
+
+La forma que se buscó, y que ahora una suite entera vigila: **al que menos gana, el trabajo
+extra le tiene que rendir más que su propia semana**, porque así es como vive quien gana poco;
+y **al que más gana le tiene que seguir conviniendo su empleo**, porque si no el juego premiaría
+abandonar la carrera que costó estudiar. Entre esos dos extremos hay una decisión real.
+
+### 24.2 El modo difícil es un hoyo de diez años, y está bien que lo sea
+
+Al medirlo salió que en la economía informal **todos los empleos que no piden título dejan
+margen negativo** contra el gasto fijo de la casa familiar, que es Q2,200:
+
+| Empleo informal | Ingreso | Margen |
+|---|---|---|
+| Vendedor por comisión | Q1,229 | **−Q971** |
+| Ayudante de construcción | Q1,775 | **−Q425** |
+| Repartidor en moto | Q1,911 | **−Q289** |
+| Dependiente de tienda | Q2,048 | **−Q152** |
+| Tienda propia | Q2,321 | +Q121, pero pide Q8,000 de capital |
+| Técnico en refrigeración | Q3,276 | +Q1,076, pero pide título |
+
+Los dos únicos empleos con margen positivo están cerrados al empezar: uno pide un capital que
+no se puede juntar estando en negativo, y el otro pide estudiar. **La única salida es
+estudiar, y tarda.** Medido sobre quince semillas, jugando bien:
+
+| | Patrimonio mediano | En positivo |
+|---|---|---|
+| A los 3 años | −Q30,288 | 0 de 15 |
+| A los 5 años (ya graduados los 15) | −Q37,613 | 0 de 15 |
+| A los 10 años | +Q6,769 | 11 de 15 |
+| A los 20 años | +Q131,811 | 15 de 15 |
+
+Se gradúan a los cinco años, pero la deuda acumulada no se salda hasta cerca de los diez. El
+jugador pasa sus veintes en rojo y sale a los veintiocho.
+
+**No se cambió nada de esto.** Es duro a propósito y es fiel a lo que dice la investigación:
+el ingreso mediano nacional es Q2,300 y la canasta ampliada Q2,283, o sea diecisiete quetzales
+de margen. Lo que faltaba era que estuviera **dicho** y que estuviera **protegido**: ahora hay
+una comprobación que falla si algún cambio futuro convierte el modo difícil en una trampa sin
+salida.
+
+Lo que sí conviene tener claro: el número que muestra `balanceo.js` para el modo difícil
+(patrimonio negativo a 24 meses) **no es un error del juego**. Es el primer tramo de la
+escalada, visto de cerca.
+

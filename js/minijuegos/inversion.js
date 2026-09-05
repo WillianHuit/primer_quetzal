@@ -14,7 +14,7 @@ Minijuegos.registrar({
   descripcion: 'Dos proyectos, un presupuesto. Elige el que de verdad conviene.',
   ensena: 'Un proyecto solo vale la pena si rinde más que lo que cuesta el dinero.',
   duracion: 75,
-  pagoMaximo: 420,
+  pagoMaximo: 1600,
   puntosParaPagoMaximo: 100,
 
   jugar: function (caja, api) {

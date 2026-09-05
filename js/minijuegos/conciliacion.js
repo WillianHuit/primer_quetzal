@@ -13,7 +13,7 @@ Minijuegos.registrar({
   descripcion: 'Cuadra tu libro contra el estado de cuenta del banco.',
   ensena: 'El saldo que ves en la app no es el dinero que de verdad tienes disponible.',
   duracion: 70,
-  pagoMaximo: 340,
+  pagoMaximo: 1000,
   puntosParaPagoMaximo: 100,
 
   jugar: function (caja, api) {

@@ -1,4 +1,4 @@
-/* Corre las cinco pruebas y resume. Uso: node pruebas/todas.js */
+/* Corre todas las pruebas y resume. Uso: node pruebas/todas.js */
 
 const { execFileSync } = require('child_process');
 const path = require('path');
@@ -8,6 +8,7 @@ const SUITES = [
   ['vidas-completas.js',    'Vidas completas hasta los 65'],
   ['ciclo-credito.js',      'Ciclo de crédito'],
   ['largo-plazo.js',        'Hipoteca, pensión, orígenes y migración'],
+  ['minijuegos-valen.js',   'Los minijuegos valen la semana que cuestan'],
   ['interfaz-bilingue.js',  'Interfaz en español e inglés'],
   ['dom-real.js',           'Interacción real en el navegador']
 ];

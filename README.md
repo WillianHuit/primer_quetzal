@@ -76,7 +76,7 @@ de fuente verificada y están documentadas en `docs/investigacion-economia-guate
 Las pruebas corren sin navegador con Node y son deterministas.
 
 ```
-node pruebas/todas.js          # las seis suites
+node pruebas/todas.js          # las siete suites
 ```
 
 O una por una:
@@ -86,6 +86,7 @@ node pruebas/balanceo.js           # cinco estrategias a 24 meses
 node pruebas/vidas-completas.js    # cuatro vidas hasta la jubilación
 node pruebas/ciclo-credito.js      # fiador, garantía, puntaje, mora, tarjeta
 node pruebas/largo-plazo.js        # hipoteca, pensión, orígenes y migración
+node pruebas/minijuegos-valen.js   # que el trabajo extra compense la semana que cuesta
 node pruebas/interfaz-bilingue.js  # las cinco pestañas en ambos idiomas
 node pruebas/dom-real.js           # una partida de verdad en un navegador simulado
 ```
