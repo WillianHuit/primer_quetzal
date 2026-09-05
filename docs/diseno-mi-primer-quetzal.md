@@ -484,7 +484,25 @@ prueba corren sin navegador y comprueban 65 aserciones en total:
 - **Balanceo**: cinco estrategias jugadas a veinticuatro meses. Detectó que quemarse
   trabajando las cuatro semanas rendía más que descansar, y que se podían ahorrar Q3,100
   al mes con un sueldo de Q3,000. Las dos cosas están corregidas.
-- **Vidas completas**: cuatro partidas de 224 turnos hasta la jubilación, sin errores.
+- **Vidas completas**: cuatro partidas de 224 turnos hasta la jubilación, sin errores, más
+  una comprobación de que **estudiar rinde**. Esa comprobación se agregó después y destapó
+  dos cosas. La primera, que ninguna vida cambiaba de empleo al graduarse, así que el juego
+  nunca había verificado su promesa central: la vida que llegaba a maestría terminaba con
+  Q372,673 y la que nunca estudió con Q496,563, pero solo porque el graduado se quedaba de
+  agente de call center. La segunda, que la suite **no era determinista**: el patrimonio de
+  una misma estrategia oscilaba entre Q465 mil y Q2.5 millones según la corrida, y pasaba
+  igual porque solo miraba errores, nunca números. Ahora el azar va con semilla y cada ruta
+  se corre veintiuna veces para comparar medianas:
+
+  | Ruta | Mediana del patrimonio a los 65 |
+  |---|---|
+  | Sin estudiar | Q482,364 |
+  | Técnico | Q625,606 |
+  | Licenciatura | Q896,570 |
+  | Maestría | Q1,465,390 |
+
+  La escalera es monótona y la maestría más que duplica a no estudiar, que es exactamente lo
+  que dice el diseño. Si algún día deja de serlo, la suite falla y nombra el escalón roto.
 - **Ciclo de crédito**: diecinueve comprobaciones. Confirma que Q1,000 con el prestamista
   se devuelven como Q2,033 en seis meses, y que pagando solo el mínimo de la tarjeta una
   deuda de Q1,000 apenas baja a Q819 en doce meses.

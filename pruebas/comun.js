@@ -111,4 +111,33 @@ function conAzarFijo(sb, valor, fn) {
   }
 }
 
-module.exports = { RAIZ, ARCHIVOS, Elem, cargar, Marcador, trabajar, conAzarFijo };
+/* Azar reproducible.
+ *
+ * conAzarFijo congela Math.random en un solo valor, lo cual sirve para forzar
+ * que un evento ocurra o no ocurra, pero mata toda la variedad del juego.
+ * Para jugar vidas enteras hace falta azar de verdad que ademas se repita
+ * igual en cada corrida: eso es esto.
+ *
+ * Ojo con la misma trampa de siempre: cada contexto de vm tiene su propio
+ * Math, asi que la sustitucion tiene que hacerse DENTRO del sandbox.
+ * Generador mulberry32, corto y de calidad suficiente para una simulacion.
+ */
+function conAzarSemilla(sb, semilla, fn) {
+  vm.runInContext(
+    '(function(){' +
+    '  globalThis.__azar = Math.random;' +
+    '  var s = ' + (semilla >>> 0) + ';' +
+    '  Math.random = function(){' +
+    '    s = s + 0x6D2B79F5 | 0;' +
+    '    var t = Math.imul(s ^ s >>> 15, 1 | s);' +
+    '    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;' +
+    '    return ((t ^ t >>> 14) >>> 0) / 4294967296;' +
+    '  };' +
+    '})()', sb);
+  try { return fn(); }
+  finally {
+    vm.runInContext('(function(){ if (globalThis.__azar) Math.random = globalThis.__azar; })()', sb);
+  }
+}
+
+module.exports = { RAIZ, ARCHIVOS, Elem, cargar, Marcador, trabajar, conAzarFijo, conAzarSemilla };

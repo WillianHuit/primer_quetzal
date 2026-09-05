@@ -1,9 +1,18 @@
 // Prueba completa: varias vidas jugadas hasta la jubilacion a los 65.
-const { cargar } = require('./comun');
+const { cargar, conAzarSemilla } = require('./comun');
 const sandbox = cargar('es');
 const { Motor, CONFIG, NIVELES_EDUCATIVOS } = sandbox;
 
+// Semilla fija: la misma corrida da siempre el mismo resultado. Antes no era
+// asi y el patrimonio de una misma vida oscilaba entre Q465 mil y Q2.5
+// millones segun la corrida, asi que los numeros no servian para comparar nada.
+const SEMILLA = 20260904;
+
 function vida(nombre, dificultad, estrategia) {
+  return conAzarSemilla(sandbox, SEMILLA, () => vidaSinSemilla(nombre, dificultad, estrategia));
+}
+
+function vidaSinSemilla(nombre, dificultad, estrategia, callado) {
   Motor.iniciar(dificultad, 1);
   const e = Motor.get();
   const problemas = [];
@@ -33,6 +42,11 @@ function vida(nombre, dificultad, estrategia) {
   }
 
   const r = Motor.reporte();
+  if (callado) {
+    // callado no significa silenciar fallos: solo omitir el detalle de una vida sana
+    if (problemas.length) console.log(`  PROBLEMAS en ${nombre}:\n   - ` + problemas.slice(0,3).join('\n   - '));
+    return r.patrimonio;
+  }
   console.log(`\n=== ${nombre} (${dificultad}) ===`);
   console.log(`  turnos jugados      ${turnos}   edad ${r.edad}   jubilado: ${e.jubilado}`);
   console.log(`  educacion final     ${r.educacion}  (${graduaciones} graduaciones)`);
@@ -50,6 +64,26 @@ function vida(nombre, dificultad, estrategia) {
   if (problemas.length) console.log('  PROBLEMAS:\n   - ' + problemas.slice(0,6).join('\n   - '));
   else console.log('  sin errores');
   return r.patrimonio;
+}
+
+// Busca el mejor empleo al que el jugador ya califica y se cambia si conviene.
+// Cambiar reinicia la antiguedad, asi que solo vale la pena si el sueldo base
+// nuevo supera al que ya se gana con experiencia incluida.
+function mejorEmpleo(M, e, formal) {
+  const actual = e.empleo ? sandbox.TRABAJOS.find(t => t.id === e.empleo.id) : null;
+  const anios = e.empleo ? Math.floor(e.empleo.mesesEnPuesto / 12) : 0;
+  const ganaHoy = actual
+    ? actual.salarioBase * (1 + anios * sandbox.AUMENTO_POR_ANIO_EXPERIENCIA)
+    : 0;
+
+  let mejor = null;
+  for (const t of sandbox.TRABAJOS) {
+    if (actual && t.id === actual.id) continue;
+    if (!M.puedeAplicar(t).ok) continue;
+    if (t.salarioBase <= ganaHoy) continue;
+    if (!mejor || t.salarioBase > mejor.salarioBase) mejor = t;
+  }
+  if (mejor) M.tomarTrabajo(mejor.id, formal === undefined ? true : formal);
 }
 
 function repartir(M, e, trabajoSemanas, estudioSemanas) {
@@ -72,10 +106,9 @@ vida('Trabaja desde los 18 y ahorra', 'normal', (M, e) => {
 
 // B: estudia ingenieria publica y luego maestria
 vida('Universitario hasta maestria', 'normal', (M, e) => {
-  if (!e.empleo) {
-    const orden = ['gerente','ingeniero','soporte','callcenter','tienda'];
-    for (const id of orden) { if (M.puedeAplicar({id, requisito: (id==='gerente'?'maestria':id==='ingeniero'?'licenciatura':id==='soporte'?'tecnico':'bachiller')}).ok) { M.tomarTrabajo(id, true); break; } }
-  }
+  // Se cambia de empleo cuando el titulo nuevo le abre uno mejor. Sin esto la
+  // prueba jamas comprobaba que estudiar sirva de algo.
+  mejorEmpleo(M, e, true);
   if (e.monetaria === null && e.efectivo >= 200) M.abrirCuenta('monetaria', 200);
   else if (e.ahorro === null && e.efectivo >= 100) M.abrirCuenta('ahorro', 100);
   if (!e.estudio && e.educacion === 'bachiller') M.inscribirse('ingenieria', false);
@@ -86,10 +119,7 @@ vida('Universitario hasta maestria', 'normal', (M, e) => {
 
 // C: tecnico corto, empieza a trabajar pronto, usa credito formal
 vida('Tecnico con credito formal', 'normal', (M, e) => {
-  if (!e.empleo) {
-    if (e.educacion === 'tecnico') M.tomarTrabajo('soporte', true);
-    else M.tomarTrabajo('repartidor', true);
-  }
+  mejorEmpleo(M, e, true);
   if (e.monetaria === null && e.efectivo >= 200) M.abrirCuenta('monetaria', 200);
   else if (e.ahorro === null && e.efectivo >= 100) M.abrirCuenta('ahorro', 100);
   if (!e.estudio && e.educacion === 'bachiller') M.inscribirse('tecnico', false);
@@ -107,3 +137,86 @@ vida('Informal y prestamista del barrio', 'dificil', (M, e) => {
   if (e.efectivo < 300 && e.prestamos.length === 0) M.pedirInformal(1000, 6);
   repartir(M, e, 3, 0);
 });
+
+
+/* ----------------------------------------------------------------------
+ * ¿Estudiar rinde?
+ *
+ * Es la promesa central del juego y no habia nada que la comprobara. Una
+ * sola vida no alcanza: con azar libre el patrimonio de la misma estrategia
+ * oscilaba cinco a uno entre corridas. Aqui se corre cada ruta sobre
+ * veintiuna semillas y se compara la MEDIANA, que aguanta los extremos.
+ * ---------------------------------------------------------------------- */
+
+const SEMILLAS = Array.from({ length: 21 }, (_, i) => 1000 + i * 7919);
+
+function cuentasBasicas(M, e) {
+  if (e.monetaria === null && e.efectivo >= 200) M.abrirCuenta('monetaria', 200);
+  else if (e.ahorro === null && e.efectivo >= 100) M.abrirCuenta('ahorro', 100);
+  if (e.ahorro !== null && e.monetaria !== null && e.monetaria > 2500) {
+    M.mover('monetaria', 'ahorro', e.monetaria - 2000);
+  }
+}
+
+const RUTAS = {
+  'sin estudiar': (M, e) => {
+    mejorEmpleo(M, e, true);
+    cuentasBasicas(M, e);
+    repartir(M, e, 3, 0);
+  },
+  'tecnico': (M, e) => {
+    mejorEmpleo(M, e, true);
+    cuentasBasicas(M, e);
+    if (!e.estudio && e.educacion === 'bachiller') M.inscribirse('tecnico', false);
+    repartir(M, e, e.estudio ? 2 : 3, e.estudio ? 1 : 0);
+  },
+  'licenciatura': (M, e) => {
+    mejorEmpleo(M, e, true);
+    cuentasBasicas(M, e);
+    if (!e.estudio && e.educacion === 'bachiller') M.inscribirse('ingenieria', false);
+    repartir(M, e, e.estudio ? 2 : 3, e.estudio ? 1 : 0);
+  },
+  'maestria': (M, e) => {
+    mejorEmpleo(M, e, true);
+    cuentasBasicas(M, e);
+    if (!e.estudio && e.educacion === 'bachiller') M.inscribirse('ingenieria', false);
+    if (!e.estudio && e.educacion === 'licenciatura' && e.edad < 40) M.inscribirse('maestria', false);
+    repartir(M, e, e.estudio ? 2 : 3, e.estudio ? 1 : 0);
+  }
+};
+
+function mediana(xs) {
+  const s = xs.slice().sort((a, b) => a - b);
+  return s[Math.floor(s.length / 2)];
+}
+
+const Q = n => 'Q' + Math.round(n).toLocaleString('en-US');
+
+console.log('\n--- ¿estudiar rinde? mediana de 21 vidas por ruta ---');
+const medianas = {};
+for (const [nombre, estrategia] of Object.entries(RUTAS)) {
+  const patrimonios = SEMILLAS.map(s =>
+    conAzarSemilla(sandbox, s, () => vidaSinSemilla(nombre, 'normal', estrategia, true)));
+  medianas[nombre] = mediana(patrimonios);
+  const min = Math.min(...patrimonios), max = Math.max(...patrimonios);
+  console.log(`  ${nombre.padEnd(14)} mediana ${Q(medianas[nombre]).padStart(12)}   ` +
+              `rango ${Q(min)} a ${Q(max)}`);
+}
+
+const fallos = [];
+function exigir(cond, texto) { if (!cond) fallos.push(texto); }
+
+exigir(medianas['tecnico'] > medianas['sin estudiar'],
+  `el tecnico (${Q(medianas['tecnico'])}) deberia superar a no estudiar (${Q(medianas['sin estudiar'])})`);
+exigir(medianas['maestria'] > medianas['licenciatura'],
+  `la maestria (${Q(medianas['maestria'])}) deberia superar a la licenciatura sola (${Q(medianas['licenciatura'])})`);
+exigir(medianas['maestria'] > medianas['sin estudiar'] * 2,
+  `la maestria (${Q(medianas['maestria'])}) deberia mas que duplicar a no estudiar (${Q(medianas['sin estudiar'])})`);
+
+if (fallos.length) {
+  console.log('\n  INCENTIVO AL REVES:');
+  fallos.forEach(f => console.log('   - ' + f));
+  process.exitCode = 1;
+} else {
+  console.log('  el incentivo apunta en la direccion correcta');
+}

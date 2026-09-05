@@ -90,9 +90,15 @@ node pruebas/interfaz-bilingue.js  # las cinco pestañas en ambos idiomas
 node pruebas/dom-real.js           # una partida de verdad en un navegador simulado
 ```
 
-`balanceo.js` es el que hay que mirar al tocar la economía: compara estrategias y deja ver
-si algún incentivo quedó al revés. Ya atrapó tres veces que quemarse rendía más que
-cuidarse.
+`balanceo.js` es el que hay que mirar al tocar la economía a corto plazo: compara estrategias
+a 24 meses y deja ver si algún incentivo quedó al revés. Ya atrapó tres veces que quemarse
+rendía más que cuidarse.
+
+`vidas-completas.js` es el que hay que mirar al tocar los costos de estudio o los sueldos.
+Además de jugar cuatro vidas hasta los 65, corre cuatro rutas educativas sobre veintiuna
+semillas y compara la mediana del patrimonio final. Si estudiar dejara de rendir, la suite
+falla y dice cuál escalón se invirtió. Todas las corridas usan azar con semilla, así que dan
+el mismo resultado siempre.
 
 `dom-real.js` es la única que necesita `npm install`, porque usa jsdom para cargar el
 `index.html` real y tocar botones de verdad: abre ventanas, llena campos, cambia de idioma
