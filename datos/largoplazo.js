@@ -47,12 +47,20 @@ var CASAS = [
 var HIPOTECA = {
   tasaAnual: 0.0942,          // dato verificado
   plazos: [20, 25, 30],       // años
-  engancheNormal: 0.20,       // dato verificado
-  engancheFHA: 0.05,          // dato verificado
+  engancheNormal: 0.20,       // [V-sec] la banca convencional financia 70-80% del avaluo
+  // [V] FHA: desde 5% en vivienda nueva o proyectada (financia hasta el 95%).
+  // En vivienda EXISTENTE la FHA pide 10%. El juego usa el caso de vivienda nueva.
+  engancheFHA: 0.05,
   puntajeMinimo: 45,
-  // La cuota no puede pasar de esta parte del ingreso mensual
-  cargaMaximaIngreso: 0.35,   // ESTIMACION: criterio comun de la banca
-  gastosDeCierre: 0.03,       // ESTIMACION: escritura, avaluo, papeleo
+  // La cuota no puede pasar de esta parte del ingreso mensual.
+  // [V-sec] El criterio mas citado de la banca guatemalteca es 30%, y 35% ya se
+  // considera zona de riesgo. La FHA hace analisis por nucleo familiar pero no
+  // publica su tope.
+  cargaMaximaIngreso: 0.30,
+  // [V-sec] Gastos de cierre de vivienda usada: 4% a 6% del valor. Timbres 3%
+  // (Decreto 37-92), notario 1-2%, avaluo, inscripcion. En vivienda nueva el 12%
+  // de IVA sustituye a los timbres y suele venir dentro del precio de lista.
+  gastosDeCierre: 0.05,
   apreciacionAnual: 0.03,     // ESTIMACION
   descripcion: 'Comprar tu casa. Es la decisión financiera más grande de una vida.'
 };
@@ -66,9 +74,15 @@ var HIPOTECA = {
 var PENSION = {
   nombre: 'Plan de pensiones',
   icono: '🌴',
-  rendimientoAnual: 0.07,     // ESTIMACION
+  // Guatemala no publica rendimientos de planes de pension privados: no hay
+  // regimen obligatorio y ni bancos ni aseguradoras dan un porcentaje. Ese vacio
+  // es en si mismo un dato. El 7% se ancla en lo unico publicado y comparable:
+  // [V] bonos del Tesoro en quetzales adjudicados en 2025, 6.75% a 2030, 7.00% a
+  // 2032, 7.375% a 2038 y 7.75% a 2045. La tasa pasiva bancaria promedio va por
+  // 5.1% [V] Banguat IMM05, asi que 7% es el techo defendible, no un invento.
+  rendimientoAnual: 0.07,
   aporteMinimo: 100,
-  edadRetiro: 60,
-  penalizacionRetiroAnticipado: 0.25, // ESTIMACION: pierdes un cuarto de lo ganado
+  edadRetiro: 60,             // [V] IGSS: pension por vejez a los 60, con 240 meses cotizados
+  penalizacionRetiroAnticipado: 0.25, // ESTIMACION: no se encontro ninguna cifra publicada
   descripcion: 'Apartas un poco cada mes durante décadas. El tiempo hace el resto.'
 };

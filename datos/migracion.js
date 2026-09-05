@@ -18,8 +18,15 @@ var MIGRACION = {
   edadMaxima: 45,
 
   // Lo que cuesta irse. Casi nadie lo paga de contado.
-  costoViaje: 65000,          // ESTIMACION: es la cifra que empuja a endeudarse
-  riesgoFracaso: 0.18,        // ESTIMACION: te devuelven y pierdes lo invertido
+  //
+  // [V] OIM, Encuesta sobre Migracion Internacional de Personas Guatemaltecas y
+  // Remesas 2022: el credito promedio contraido para el viaje es de Q125,000, y
+  // el 87.6% de los migrantes viaja con coyote. La prensa reporta casos de
+  // Q100,000 a Q200,000.
+  costoViaje: 125000,
+  // [V] Misma encuesta: solo el 78.7% llego en un viaje. El 14.9% necesito dos,
+  // el 4.6% tres y el 1.8% cuatro o mas. Fracasar no borra la deuda.
+  riesgoFracaso: 0.21,
 
   // Trabajos disponibles allá, en dólares al mes
   empleos: [

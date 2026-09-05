@@ -1821,6 +1821,155 @@ también la de menor probabilidad de graduarse**, y **el área donde más gente 
 donde las empresas dicen que falta gente**.
 
 ---
+## Anexo E. Hipoteca, pensión y migración
+
+Tercera tanda de verificación, sobre las estimaciones de `largoplazo.js` y `migracion.js`.
+
+### E.1 Gastos de cierre de una hipoteca
+
+| Concepto | Cifra | Etiqueta |
+|---|---|---|
+| **Total de gastos de cierre, vivienda usada** | **4 % a 6 % del valor** | [V-sec] MapaInmueble |
+| Timbres fiscales, de la segunda venta en adelante | 3 % | [V-sec] Decreto 37-92, confirmado por RE/MAX y CityMax |
+| IVA en primera venta, **en lugar** de timbres | 12 %, normalmente ya incluido en el precio de lista | [V-sec] mismas fuentes |
+| Honorarios de notario | 1 % a 2 % de práctica de mercado (arancel legal: Q500 + 3 %) | [V-sec] MapaInmueble |
+| Inscripción de la hipoteca en el Registro de la Propiedad | Q250 fijos | [V-sec] Living in Guatemala |
+| Avalúo comercial | US$200 a US$500 | [V-sec] MapaInmueble |
+| **Avalúo FHA** | **2 por millar (0.2 %)** | [V] [FHA, vivienda existente](https://www.fha.gob.gt/servicios/viviendaExistente) |
+| **Análisis de caso FHA** | **3 por millar (0.3 %)** | [V] FHA, misma página |
+| **Prima FHA más seguro de desgravamen** | **1.26 % anual** sobre el monto financiado (1 % de prima + 0.26 % de desgravamen) | [V] [calculadora FHA](https://www.fha.gob.gt/calculadora) |
+
+### E.2 Capacidad de pago y enganche
+
+| Concepto | Cifra | Etiqueta |
+|---|---|---|
+| **Cuota máxima sobre el ingreso neto** | **30 %** es el estándar más citado; 35 % ya se lee como zona de riesgo | [V-sec] varias fuentes de banca y bienes raíces |
+| Criterio conservador de educación financiera | 25 % del ingreso total | [V-sec] |
+| La FHA analiza capacidad de pago por núcleo familiar y su calculadora muestra la relación cuota/ingreso, **pero no publica el tope** | — | [V] el hecho · **no encontrado** el porcentaje |
+| **Enganche FHA, vivienda nueva o proyectada** | **desde 5 %** (financia hasta el 95 %) | [V] [FHA](https://www.fha.gob.gt/quienessomos/sistemaFHA) |
+| **Enganche FHA, vivienda existente** | **desde 10 %** (financia hasta el 90 %) | [V] FHA |
+| Enganche convencional, banca sin FHA | 20 % a 30 %; financian 70-80 % del avalúo | [V-sec] MapaInmueble |
+| Plazo FHA | **hasta 30 años** en el folleto oficial, aunque la página *Sistema FHA* del mismo sitio anuncia 40 años. La contradicción es de la fuente, no mía | [V] |
+| Plazo típico de la banca comercial | 15 a 25 años | [V-sec] |
+| Tasa hipotecaria de mercado | 7.5 % a 10.5 % | [V-sec] |
+
+**No encontrado:** el **tope de valor de vivienda que asegura la FHA**. No está en la portada,
+ni en las páginas de servicio, ni en las preguntas frecuentes, ni en el folleto oficial. Lo
+más cercano son dos umbrales de otros programas: el de *vivienda social* de la Resolución
+JM 286-2024 (170 salarios mínimos más bonificación, unos Q675,400 con el salario de 2025) y
+el techo de Q617,000 del programa *Mi Primera Casa*.
+
+### E.3 Pensiones
+
+**Lo que sí está publicado, del IGSS:**
+
+| Concepto | Cifra | Etiqueta |
+|---|---|---|
+| Cuota total al IGSS | **15.5 % del salario**: 4.83 % el trabajador, 10.67 % el patrono | [V-sec] Prensa Libre |
+| De ese total, al programa de pensiones (IVS) va | **5.5 %** (el resto va a salud, maternidad y accidentes) | [V-sec] |
+| **Edad de retiro por vejez** | **60 años** | [V] [IGSS](https://www.igssgt.org/ivs/pension-por-riesgo-de-vejez/) |
+| **Cotizaciones mínimas** | **240 meses, o sea 20 años** | [V] IGSS |
+| Fórmula de la pensión | **50 % del promedio de los últimos 60 meses de salario**, con tope de 80 % | [V-sec] declaración de la jefa del Departamento IVS |
+| Pensión máxima | **Q7,200 al mes** | [V-sec] |
+| Pensión mínima | **Q340 al mes** | [V-sec] |
+| Pensionados por vejez (2024) | **121,066**, de 216,322 pensionados en total | [V] [IGSS, informe anual 2024](https://www.igssgt.org/wp-content/uploads/2025/07/Resumen-informe-anual-de-labores-2024-IGSS.pdf) |
+| Pagado en pensiones de vejez (2024) | **Q4,505,811,061.47** | [V] mismo informe |
+| **Pensión de vejez promedio real** | **unos Q3,100 al mes** (Q4,505.8 millones entre 121,066 pensionados, doce pagos) | [E] sobre dos cifras [V] |
+
+Ese último número es el dato duro para la narrativa del juego: **la pensión promedio real
+ronda Q3,100, no el tope de Q7,200.**
+
+**El vacío, que también es un hallazgo:** Guatemala **no tiene régimen de pensiones privadas
+obligatorio ni fondos con rendimientos publicados**. Los bancos anuncian "el mejor
+rendimiento del mercado" sin dar un número. Ni una aseguradora publica un porcentaje. Lo
+único comparable y publicado son:
+
+| Ancla | Tasa | Etiqueta |
+|---|---|---|
+| **Bonos del Tesoro en quetzales**, adjudicados el 25 de marzo de 2025 | **6.75 %** a 2030 · **7.00 %** a 2032 · **7.375 %** a 2038 · **7.75 %** a 2045 | [V] [Banguat/Minfin](https://banguat.gob.gt/sites/default/files/banguat/participaciones/ResultadosQ_250325.pdf) |
+| Bonos del Tesoro, ventanilla para pequeños inversionistas (may 2025) | 6.00 % a 1 año · 6.125 % a 2 · 6.25 % a 3 | [V-sec] Minfin |
+| **Tasa pasiva bancaria promedio ponderada** | **5.10 % a 5.19 %** en 2025 | [V] [Banguat, serie IMM05](https://banguat.gob.gt/sites/default/files/banguat/imm/imm05.htm) |
+
+El 7 % del juego queda entre el bono a 2032 y el de 2038. Es el techo defendible, no un
+invento, y ahora está anclado.
+
+**No encontrado:** cualquier cifra de penalización por retiro anticipado en planes privados.
+Sigue siendo estimación en el juego y está marcada así.
+
+### E.4 Migración
+
+La fuente que carga casi todo este bloque es la **[Encuesta sobre Migración Internacional de
+Personas Guatemaltecas y Remesas 2022 de la OIM](https://infounitnca.iom.int/uploads/RemesasGT2022/EncuestaRemesas2022_gt.pdf)**,
+publicada en julio de 2023.
+
+| Concepto | Cifra | Etiqueta |
+|---|---|---|
+| **Crédito promedio contraído para el viaje** | **Q125,000** (unos US$16,700) | [V] OIM 2022 |
+| **Viajó con coyote** | **87.6 %** · por su cuenta 5.0 % · con visa de turismo 3.4 % | [V] OIM 2022 |
+| Rango que reporta la prensa | Q110,000 a Q200,000 según el caso y el año | [V-sec] InSight Crime, El País, Prensa Libre, GuateToday |
+
+**Cómo se paga el viaje** — OIM 2022, todos [V]: ahorros propios 26.9 % · **préstamo con
+prestamista 17.6 %** · préstamo de familiar en EE.UU. 11.5 % · préstamo de familiar en
+Guatemala 10.5 % · un familiar lo pagó 8.4 % · préstamo bancario **3.2 %** · venta de
+propiedades 2.7 %.
+
+**Qué dejaron en garantía** — OIM 2022, [V]: **19.8 % entregó bienes inmuebles**, repartido
+en 10.6 % las escrituras de su vivienda y 9.3 % las de su terreno.
+
+**Qué interés pagaron** — OIM 2022, [V]: **67.5 % pagó 5 % mensual** · 26.0 % pagó 10 % ·
+4.4 % pagó 20 % · 1.9 % pagó 15 %. Compuesto, el 5 % mensual son **79.6 % anual** y el 10 %
+son 213 % [E].
+
+**Cuántos lo logran al primer intento** — OIM 2022, [V]: un viaje **78.7 %** · dos 14.9 % ·
+tres 4.6 % · cuatro o más 1.8 %. Es decir, **el 21.3 % necesitó más de un intento** [E].
+
+**Retornados** [V-sec] IGM e ICE vía Prensa Libre: 2023 · 55,302 y 20,179 · **2024 · 61,681 y
+66,435** · 2025 hasta diciembre · 45,383 y 32,000. La OIM cuenta **más de 77,000 retornados
+en 2024** sumando los terrestres desde México [V].
+
+**Del otro lado** [V] Migration Policy Institute, 2023: ingreso mediano de los hogares
+encabezados por inmigrantes guatemaltecos **US$61,200 al año**, contra US$78,700 del conjunto
+de hogares inmigrantes. Pobreza 20 %. Participación laboral 74 %. El 72 % habla inglés menos
+que "muy bien". Ramas [V] OIM: servicios 27.8 %, **construcción 27.6 %**, comercio y
+restaurantes 21.8 %, agricultura 11.5 %.
+
+**La remesa** [V] OIM 2022: promedio mensual recibido **US$831**, más del doble de los US$379
+de 2016. Promedio por envío US$685. El 58.2 % la recibe cada mes. Y una frase del informe que
+vale por sí sola: **los montos son más altos en los primeros tres años tras el viaje, porque
+hay que pagar la deuda del viaje.**
+
+### E.5 Lo que cambió en el juego por este anexo
+
+| Valor | Antes | Ahora | Base |
+|---|---|---|---|
+| Gastos de cierre de la hipoteca | 3 % [E] | **5 %** | punto medio del 4-6 % documentado |
+| Carga máxima sobre el ingreso | 35 % [E] | **30 %** | el criterio más citado de la banca |
+| Costo del viaje migratorio | Q65,000 [E] | **Q125,000** | OIM, fuente primaria |
+| Riesgo de fracasar al migrar | 18 % [E] | **21 %** | OIM: 21.3 % necesitó más de un viaje |
+| Enganche normal 20 % y FHA 5 % | ya estaban | **sin cambio, ahora citados** | FHA |
+| Rendimiento de la pensión 7 % | [E] | **sin cambio, ahora anclado** | bonos del Tesoro 2032-2038 |
+| Edad de retiro 60 | [E] | **sin cambio, ahora [V]** | IGSS |
+| Penalización por retiro anticipado 25 % | [E] | **sin cambio** | no se encontró cifra publicada |
+
+Se comprobó que subir el viaje a Q125,000 no deja el módulo inalcanzable: un jugador
+ahorrador reúne esa cantidad a los **26 años de edad mediana**, dentro de la ventana de 20 a
+45 en que el juego permite irse. Antes lo lograba a los 23.
+
+### E.6 Un hueco de diseño que este anexo destapa
+
+El juego exige tener los Q125,000 **líquidos** para poder irse, y el comentario del propio
+archivo dice *"casi nadie lo paga de contado"*. La encuesta confirma que el comentario tiene
+razón y el código no: solo el 26.9 % usa ahorros propios, mientras que el 17.6 % se endeuda
+con un prestamista al 5 % mensual y **uno de cada cinco entrega las escrituras de su casa o
+su terreno**.
+
+Modelarlo cambiaría la lección del módulo. Hoy el juego enseña *ahorra y luego vete*. Con
+financiamiento enseñaría lo que de verdad pasa: **te vas debiendo Q125,000 al 5 % mensual con
+tu terreno de garantía, y los primeros tres años de remesas no son para tu familia, son para
+el coyote.** Está anotado como ampliación posible, **no implementado**, porque es una decisión
+de diseño y no una calibración.
+
+---
 ## Tabla maestra de cifras clave
 
 Todas las cifras están en quetzales salvo indicación. **[V]** = verificado con fuente · **[V-sec]** = verificado contra fuente secundaria · **[E]** = estimación propia.

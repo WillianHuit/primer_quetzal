@@ -437,6 +437,12 @@ son las que aún dependen de tu criterio.
 | Prima por informalidad | 15% más de ingreso en mano | config |
 | Fuga del efectivo | 8% mensual, tope Q400 | config |
 | Riesgo de perder el efectivo | 2% al mes, se va el 40% | config |
+| Gastos de cierre de la hipoteca | 5% del valor | **verificado**, anexo E |
+| Carga máxima de la cuota sobre el ingreso | 30% | **verificado**, anexo E |
+| Costo del viaje migratorio | Q125,000 | **verificado**, anexo E |
+| Riesgo de fracasar al migrar | 21% | **verificado**, anexo E |
+| Rendimiento del plan de pensiones | 7% anual | **anclado**, anexo E |
+| Edad de retiro del plan | 60 años | **verificado**, anexo E |
 | Costo de enfermarse | Q450 y faltas al trabajo | config |
 | Multiplicador del modo difícil | 0.65 | config |
 | Salarios base de los 13 empleos | Ver sección 7 | trabajos |
