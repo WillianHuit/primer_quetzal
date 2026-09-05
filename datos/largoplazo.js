@@ -61,7 +61,13 @@ var HIPOTECA = {
   // (Decreto 37-92), notario 1-2%, avaluo, inscripcion. En vivienda nueva el 12%
   // de IVA sustituye a los timbres y suele venir dentro del precio de lista.
   gastosDeCierre: 0.05,
-  apreciacionAnual: 0.03,     // ESTIMACION
+  // Guatemala NO tiene indice oficial de precios de vivienda: ni Banguat, ni el
+  // INE, ni la Camara de la Construccion lo publican. Lo mas cercano es comparar
+  // dos boletines trimestrales del FHA con la misma metodologia, y el agregado
+  // mas estable, el del municipio de Guatemala, da +2.4% de 2023 a 2024. La
+  // Camara de Corredores de Bienes Raices habla de 5% a 10% de retorno TOTAL,
+  // que incluye la renta y no solo la plusvalia. El 3% queda justo entre ambos.
+  apreciacionAnual: 0.03,
   descripcion: 'Comprar tu casa. Es la decisión financiera más grande de una vida.'
 };
 

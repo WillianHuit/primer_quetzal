@@ -57,16 +57,26 @@ var CONFIG = {
     cuarto: {
       nombre: 'Cuarto compartido',
       descripcion: 'Independencia, pero pagas todo.',
-      renta: 1200,           // ESTIMACION
+      // [V-sec] Mediana de los anuncios de alquiler de cuartos en la capital,
+      // septiembre 2026: Q1,800, con rango de Q850 en Mixco a Q4,500 en zona 10.
+      // La Camara Guatemalteca de la Construccion habla de "un alquiler promedio
+      // entre Q1,800 y Q2,500". El juego usa el piso de ese rango.
+      renta: 1800,
       serviciosComida: 950,  // canasta basica alimentaria urbana: Q945.74
       personal: 1100,        // ESTIMACION
-      requisitoIngreso: 4000
+      requisitoIngreso: 4800 // sube con la renta: el gasto del cuarto ya es Q3,850
     },
     apartamento: {
       nombre: 'Apartamento propio',
       descripcion: 'Tu espacio. Cuesta.',
-      renta: 2800,           // ESTIMACION
-      serviciosComida: 1400, // ESTIMACION
+      // [V-sec] Apartamento de un dormitorio FUERA del centro, Numbeo sept 2026:
+      // Q3,960. La mediana de anuncios en zonas no premium da Q4,475 y en zonas
+      // 10, 14, 15 y 16 se dispara a Q6,101. El juego usa el caso modesto.
+      renta: 4000,
+      // ESTIMACION del reparto: servicios reales rondan Q610 al mes (luz Q180 con
+      // la tarifa social de Q1.42/kWh, agua Q110, gas Q90, internet Q230), el
+      // resto es comida.
+      serviciosComida: 1400,
       personal: 1300,        // ESTIMACION
       requisitoIngreso: 7500
     }
@@ -128,8 +138,26 @@ var CONFIG = {
     dificil: { nombre: 'Economia informal',    multiplicadorSalario: 0.65, permiteFormal: false }
   },
 
-  // El informal gana mas hoy y menos toda la vida
-  primaInformalidad: 0.15, // ESTIMACION
+  /* El informal gana un poco mas por pago y bastante menos al anio.
+   *
+   * El 15% que habia aqui era estimacion y era demasiado. Con 14 pagos al anio
+   * para el formal y 12 para el informal, un 15% dejaba los dos casi empatados
+   * (14 contra 13.8 sueldos), o sea que la informalidad no costaba nada.
+   *
+   * Lo unico que un informal se ahorra de verdad EN EL MISMO PUESTO es el
+   * descuento del IGSS que le harian al formal: [V-sec] 4.83% del salario a
+   * cargo del trabajador. Ese es el numero honesto.
+   *
+   * Resultado: el informal se queda con 12 x 1.05 = 12.6 sueldos contra 14 del
+   * formal, un 10% menos al anio, ademas de quedarse sin seguro y sin historial.
+   *
+   * OJO con no confundir esto con la brecha poblacional. Los microdatos de la
+   * ENEIC IV-2025 del INE dan un ingreso medio de Q4,347.8 para los formales y
+   * Q1,977.3 para los informales, o sea que el informal gana el 45.5% del
+   * formal. Pero esa brecha compara PUESTOS DISTINTOS, y el juego ya la modela
+   * aparte con el selector de dificultad. Aplicarla aqui la contaria dos veces.
+   */
+  primaInformalidad: 0.05,
 
   espaciosPorMes: 4,
 

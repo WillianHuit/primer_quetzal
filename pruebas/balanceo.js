@@ -1,9 +1,18 @@
 // Prueba del motor sin navegador: simula 24 meses en varias estrategias.
-const { cargar } = require('./comun');
+const { cargar, conAzarSemilla } = require('./comun');
 const sandbox = cargar('es');
 const { Motor, CONFIG } = sandbox;
 
+// Semilla fija para que la corrida sea reproducible. Sin esto los numeros
+// bailaban miles de quetzales entre ejecuciones y no servian para comparar
+// un antes con un despues.
+const SEMILLA = 20260904;
+
 function correr(nombre, dificultad, estrategia) {
+  return conAzarSemilla(sandbox, SEMILLA, () => correrSinSemilla(nombre, dificultad, estrategia));
+}
+
+function correrSinSemilla(nombre, dificultad, estrategia, callado) {
   Motor.iniciar(dificultad, 1);
   const e = Motor.get();
   let errores = [];
@@ -90,3 +99,61 @@ console.log(`  informal en modo dificil         Q${d.toFixed(2)}`);
 console.log(`  independizado (call center)      Q${f.toFixed(2)}`);
 console.log(`\n  ventaja neta de bancarizarse:    Q${(b - c).toFixed(2)}`);
 console.log(`  ahorro promedio al mes (B):      Q${(b / 24).toFixed(2)}`);
+
+
+/* ----------------------------------------------------------------------
+ * La ventaja de bancarizarse, medida en serio.
+ *
+ * Una sola corrida no alcanza: con azar libre este numero oscilaba entre
+ * Q4 mil y Q11 mil segun la ejecucion, asi que no servia para saber si un
+ * cambio en la economia lo habia movido. Aqui se comparan las mismas dos
+ * estrategias sobre veintiun semillas, aislando el unico factor que las
+ * distingue: tener cuentas o guardar todo en efectivo.
+ * ---------------------------------------------------------------------- */
+
+const SEMILLAS = Array.from({ length: 21 }, (_, i) => 1000 + i * 7919);
+
+const conCuentas = (mes, M, e) => {
+  if (!e.empleo) M.tomarTrabajo('tienda', true);
+  if (mes === 0) M.abrirCuenta('monetaria', 200);
+  if (mes === 1 && e.ahorro === null && e.efectivo >= 100) M.abrirCuenta('ahorro', 100);
+  if (e.ahorro !== null && e.monetaria !== null && e.monetaria > 1500) {
+    M.mover('monetaria', 'ahorro', e.monetaria - 1200);
+  }
+  semanasCuidandoEnergia(M, e);
+};
+
+const soloEfectivo = (mes, M, e) => {
+  if (!e.empleo) M.tomarTrabajo('tienda', true);
+  semanasCuidandoEnergia(M, e);
+};
+
+function mediana(xs) {
+  const s = xs.slice().sort((x, y) => x - y);
+  return s[Math.floor(s.length / 2)];
+}
+
+const parejas = SEMILLAS.map(s => ({
+  banco: conAzarSemilla(sandbox, s, () => correrSinSemilla('con cuentas', 'normal', conCuentas, true)),
+  efectivo: conAzarSemilla(sandbox, s, () => correrSinSemilla('solo efectivo', 'normal', soloEfectivo, true))
+}));
+
+// La misma semilla para las dos estrategias, asi que la diferencia de cada
+// pareja aisla el efecto de bancarizarse sin el ruido de los eventos.
+const ventajas = parejas.map(p => p.banco - p.efectivo);
+const gana = ventajas.filter(v => v > 0).length;
+const Q = n => 'Q' + Math.round(n).toLocaleString('en-US');
+
+console.log('\n--- ventaja de bancarizarse, 21 semillas pareadas ---');
+console.log(`  mediana con cuentas    ${Q(mediana(parejas.map(p => p.banco)))}`);
+console.log(`  mediana solo efectivo  ${Q(mediana(parejas.map(p => p.efectivo)))}`);
+console.log(`  ventaja mediana        ${Q(mediana(ventajas))}`);
+console.log(`  gana en ${gana} de ${SEMILLAS.length} semillas   ` +
+            `(peor caso ${Q(Math.min(...ventajas))}, mejor ${Q(Math.max(...ventajas))})`);
+
+if (gana < SEMILLAS.length) {
+  console.log('  INCENTIVO AL REVES: bancarizarse pierde en alguna semilla');
+  process.exitCode = 1;
+} else {
+  console.log('  bancarizarse gana siempre');
+}

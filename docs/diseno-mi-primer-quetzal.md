@@ -428,13 +428,13 @@ son las que aún dependen de tu criterio.
 |---|---|---|
 | Efectivo inicial | Q1,200 | config |
 | Gasto total en casa familiar | Q2,200 al mes | config |
-| Gasto total en cuarto compartido | Q3,250 al mes | config |
-| Gasto total en apartamento | Q5,500 al mes | config |
-| Ingreso exigido para el cuarto | Q4,000 | config |
+| Gasto total en cuarto compartido | Q3,850 al mes | **verificado**, anexo F |
+| Gasto total en apartamento | Q6,700 al mes | **verificado**, anexo F |
+| Ingreso exigido para el cuarto | Q4,800 | config |
 | Ingreso exigido para el apartamento | Q7,500 | config |
 | Remesa del hermano | US$150 a US$200 cada 2 o 3 meses | config |
 | Tipo de cambio | Q7.70 por dólar | config |
-| Prima por informalidad | 15% más de ingreso en mano | config |
+| Prima por informalidad | 5% más de ingreso en mano | **corregido**, anexo F |
 | Fuga del efectivo | 8% mensual, tope Q400 | config |
 | Riesgo de perder el efectivo | 2% al mes, se va el 40% | config |
 | Gastos de cierre de la hipoteca | 5% del valor | **verificado**, anexo E |
@@ -583,13 +583,17 @@ Con los cinco de la versión 1 son ocho en total.
 
 ## 21. Cómo se verificó todo
 
-Seis suites de prueba corren con `node pruebas/todas.js` y suman **157 comprobaciones**.
-Todas pasan, y son deterministas.
+Seis suites de prueba corren con `node pruebas/todas.js`. Todas pasan y todas son
+deterministas, aunque dos de ellas no lo eran hasta que se revisó: **balanceo y vidas
+completas usaban azar libre**, así que sus números bailaban miles de quetzales entre
+corridas. Pasaban igual, porque solo miraban si había errores y nunca comparaban cifras.
+Ahora el azar va con semilla y las dos comparaciones que importan se miden sobre veintiuna
+semillas en vez de una.
 
 | Suite | Qué cubre |
 |---|---|
-| Balanceo | Cinco estrategias a 24 meses, para ver si algún incentivo quedó al revés |
-| Vidas completas | Cuatro partidas de 224 turnos hasta la jubilación |
+| Balanceo | Cinco estrategias a 24 meses, más la ventaja de bancarizarse sobre 21 semillas |
+| Vidas completas | Cuatro partidas hasta la jubilación, más la escalera educativa sobre 21 semillas |
 | Ciclo de crédito | Fiador, garantía, puntaje, mora, tarjeta y prestamista |
 | Largo plazo | Hipoteca, pensión, los tres orígenes y la migración completa |
 | Interfaz bilingüe | Las cinco pestañas en ambos idiomas y en todos los estados |

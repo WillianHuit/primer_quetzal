@@ -76,7 +76,7 @@ de fuente verificada y están documentadas en `docs/investigacion-economia-guate
 Las pruebas corren sin navegador con Node y son deterministas.
 
 ```
-node pruebas/todas.js          # las seis suites, 157 comprobaciones
+node pruebas/todas.js          # las seis suites
 ```
 
 O una por una:

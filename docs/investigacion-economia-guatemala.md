@@ -1970,6 +1970,194 @@ el coyote.** Está anotado como ampliación posible, **no implementado**, porque
 de diseño y no una calibración.
 
 ---
+## Anexo F. Vivienda, servicios e informalidad
+
+Cuarta tanda de verificación, sobre las estimaciones de `config.js`. Trae la corrección más
+importante de todas, porque no es una imprecisión sino un signo equivocado.
+
+**Nota de método útil para el futuro:** `ine.gob.gt` **sí funciona** desde esta red. Lo que
+fallaba era la verificación de revocación del certificado, no el DNS. Las páginas HTML dan
+CAPTCHA, pero la carpeta de descargas pasa limpia, y por ahí entraron los microdatos. Queda
+anotado porque hasta ahora se daba por inaccesible.
+
+Tipo de cambio usado en las conversiones: **Q7.62635 por dólar**, referencia del Banguat de
+septiembre de 2026.
+
+### F.1 Renta
+
+| Concepto | Cifra | Etiqueta |
+|---|---|---|
+| **Cuarto en casa compartida, mediana** | **Q1,800 al mes** (p25-p75: Q1,450 a Q2,000; total Q850 en Mixco a Q4,500 en zona 10) | [V-sec] anuncios de la capital, sep 2026 |
+| Corroboración independiente | *"un alquiler promedio entre Q1,800 y Q2,500"* | [V-sec] [Cámara Guatemalteca de la Construcción, boletín 72](https://construguate.com/wp-content/uploads/BEC_72.pdf) |
+| **Apartamento de un dormitorio, todas las zonas** | mediana **Q5,910** | [V-sec] anuncios, n=21 |
+| Apartamento de un dormitorio, zonas 10/14/15/16 | mediana Q6,101 | [V-sec] |
+| **Apartamento de un dormitorio, resto de zonas** | mediana **Q4,475** | [V-sec] |
+| **Apartamento 1 dormitorio fuera del centro** | **Q3,960** (rango Q2,500 a Q5,000) | [V-sec] [Numbeo, sep 2026](https://www.numbeo.com/cost-of-living/country_result.jsp?country=Guatemala) |
+| Apartamento 1 dormitorio en el centro | Q6,333 | [V-sec] Numbeo |
+
+El índice agregado y el raspado de anuncios convergen bien: Numbeo da Q6,333 para el centro y
+la mediana de anuncios en zonas premium es Q6,101.
+
+### F.2 Servicios
+
+| Servicio | Cifra | Etiqueta |
+|---|---|---|
+| **Electricidad, tarifa social EEGSA** | **Q1.42 por kWh** (no social Q1.51) | [V] [CNEE, tarifas ago-oct 2026](https://cnee.gob.gt/wp-content/uploads/2026/07/Comunicado-CNEE-tarifas-trimestrales-agosto-a-octubre.pdf) |
+| Gasto eléctrico de un hogar pequeño (100-150 kWh) | Q142 a Q213 más tasa municipal de alumbrado | [E] sobre tarifa [V] |
+| **Agua EMPAGUA, 1 a 20 m³** | **Q3.31 por m³**, más Q42.56 de cargo fijo y 22 % de alcantarillado | [V] [EMPAGUA, vigente desde dic 2025](https://empagua.com/home/nuevas-tarifas-de-agua) |
+| Factura de agua de un hogar pequeño (15 m³) | unos **Q110 al mes** | [E] sobre tarifa [V] |
+| **Gas propano, cilindro de 25 libras** | **Q115** (jun 2026); 35 lb Q161; 100 lb Q460 | [V-sec] Prensa Libre |
+| **Internet** | Tigo 150 Megas **Q235** · Claro 150 Megas **Q229** | [V] sitios oficiales, sep 2026 |
+| Servicios básicos de un piso de 85 m² (luz, agua, basura) | Q537.86 | [V-sec] Numbeo |
+
+Contexto: el agua subió hasta 60 % entre noviembre de 2023 y octubre de 2025 [V-sec].
+
+**No encontrado:** consumo mensual típico de cilindros de gas por hogar.
+
+### F.3 Precio de vivienda
+
+El hallazgo estructural: **el FHA publica precio promedio por metro cuadrado y tamaño
+promedio, por zona y municipio**, en sus boletines trimestrales. Es la mejor fuente que hay.
+[V] [Boletín 4º trimestre 2024](https://blobstoraged.fha.gob.gt/documentos/boletines/trimestrales/2024/Cuarto-trimestre-2024.pdf)
+
+| Zona | US$/m² | m² | Precio implícito |
+|---|---|---|---|
+| 3 | 693 | 46 | Q243,113 |
+| 18 | 845 | 46 | Q296,436 |
+| 21 | 1,177 | 46 | Q412,906 |
+| 7 | 1,595 | 66 | Q802,826 |
+| 1 | 1,684 | 67 | Q860,466 |
+| 14 | 2,281 | 72 | Q1,252,491 |
+| 10 | 2,399 | 85 | Q1,555,127 |
+| 15 | 1,995 | 142 | Q2,160,469 |
+
+Por municipio: San Juan Sacatepéquez Q387,312 · Mixco Q636,838 · Villa Canales Q673,445 ·
+Santa Catarina Pinula Q689,422 · Guatemala Q969,248. (Las dos primeras columnas son [V]; el
+precio implícito es multiplicación mía [E].)
+
+**Universo completo de proyectos elegibles para FHA**, raspado del catálogo vigente en
+septiembre de 2026, 59 proyectos [V]: mínimo **Q108,000** · p25 Q542,565 · **mediana
+Q650,000** · p75 Q875,000 · máximo **Q1,659,000**.
+
+| Segmento | Rango | Etiqueta |
+|---|---|---|
+| Interés social o popular | Q200,001 a Q600,000 | [V-sec] EXPOCASA vía CGC |
+| Techo del programa estatal Mi Primera Vivienda | **Q617,000**, con tasa del 5 % | [V-sec] Prensa Libre, nov 2024 |
+| Clase media | Q600,000 a Q1,300,000 | [E] derivado del FHA |
+| Clase media-alta | Q1,300,000 a Q2,200,000 | [E] derivado del FHA |
+
+Precios de anuncio, que van bastante más arriba porque son precios pedidos y sobrerrepresentan
+gama alta [V-sec]: apartamentos mediana Q1,713,260 · casas mediana Q2,800,000.
+
+**Las tres casas del juego (Q350,000 / Q650,000 / Q900,000) caen bien.** La mediana de lo
+elegible para FHA es exactamente Q650,000, y la casa barata queda entre la zona 21 y la zona
+17. No hace falta moverlas.
+
+**No encontrado, otra vez:** el techo normativo de vivienda asegurable del FHA. La ley y su
+reglamento están en un PDF cuyo texto fue convertido a trazos, así que no hay nada extraíble
+ni por OCR. La evidencia empírica de sustitución es que el proyecto elegible más caro del
+catálogo vigente cuesta Q1,659,000.
+
+### F.4 Apreciación inmobiliaria
+
+**Guatemala no tiene índice oficial de precios de vivienda.** No lo publican el Banguat, ni
+el INE, ni la Cámara de la Construcción, ni aparece en el BIS. Eso en sí mismo es el hallazgo.
+
+Lo mejor disponible es comparar dos boletines del FHA con metodología idéntica, de 2023 a 2024
+[V] los datos, [E] la derivación:
+
+| Nivel | Mediana | Media |
+|---|---|---|
+| Por zona (11 zonas comparables) | +9.9 % | +11.7 % |
+| Por municipio (5) | +5.5 % | +10.7 % |
+| **Municipio de Guatemala, el agregado más estable** | **+2.4 %** | — |
+
+La dispersión por zona es enorme (zona 1 +48.0 %, zona 7 −4.0 %) y buena parte es cambio de
+composición de la oferta, no plusvalía real: mide el precio medio de lo que está a la venta
+ese trimestre, no una canasta constante. Por eso el agregado amplio manda.
+
+Referencia de mercado: *"el retorno anual de la inversión en bienes raíces oscila entre 5 y
+10 %"* — Cámara de Corredores de Bienes Raíces vía Prensa Libre, feb 2025 [V-sec]. Es retorno
+**total**, renta incluida, no plusvalía pura.
+
+**El 3 % del juego queda entre el +2.4 % del agregado más fiable y el rango de la Cámara
+descontando la renta.** No se movió, pero ahora está anclado en vez de inventado.
+
+### F.5 La prima por informalidad estaba con el signo al revés
+
+Esta es la corrección seria de este anexo.
+
+El juego daba a los informales un **15 % más en la mano**. La creencia popular es esa, y es
+falsa a nivel de población. Los microdatos de la **ENEIC IV-2025 del INE** dan:
+
+| | Media | Mediana |
+|---|---|---|
+| Formal | **Q4,347.8** | Q3,700 |
+| Informal | **Q1,977.3** | Q1,500 |
+| **Brecha** | **−Q2,370.5, o sea −54.5 %** | −Q2,200 (−59.5 %) |
+| Total nacional | Q2,841.6 | Q2,400 |
+
+El informal gana el **45.5 %** de lo que gana un formal, y la serie es estable en cinco
+trimestres (−54.7 % en IV-2024, −55.9 % en II-2025, −54.5 % en IV-2025). [V]
+[ENEIC IV-2025, base de personas](https://www.ine.gob.gt/wp-content/uploads/2026/06/Base-de-datos-Personas-ENEIC-IV-2025.xlsx)
+
+Ninguna publicación oficial cruza ingreso con formalidad, así que la cifra se calculó del
+microdato. El método se validó reproduciendo al decimal lo que el INE sí publica: ingreso
+total Q2,841.6 contra Q2,842 publicado, e informalidad 65.63 % contra 65.6 %.
+
+**Por hora, controlando la jornada** [V]: formal Q24.67 (48.3 horas semanales) contra informal
+Q16.19 (40.1 horas), o sea **−34.4 %**. Un tercio de la brecha mensual viene de trabajar menos
+horas; la tarifa horaria informal sigue siendo un tercio más baja.
+
+**Lo que se hizo en el juego, y por qué no se aplicó el −54.5 %.** Esa brecha compara puestos
+distintos: el informal promedio hace otro trabajo, no el mismo trabajo sin papeles. El juego
+ya modela esa diferencia aparte, con el selector de dificultad que multiplica el salario por
+0.65 en la economía informal. Aplicar además el −54.5 % la contaría dos veces.
+
+Lo único que un informal se ahorra **en el mismo puesto** es el descuento del IGSS que le
+harían al formal: **4.83 % del salario a cargo del trabajador** [V-sec]. Ese es el número
+honesto, y es el que quedó.
+
+El efecto de haberlo tenido en 15 % era peor de lo que parece. Con 14 pagos al año para el
+formal y 12 para el informal, un 15 % dejaba los dos casi empatados: 14 sueldos contra 13.8.
+**La informalidad no costaba prácticamente nada.** Con 5 %, el informal se queda con 12.6
+sueldos contra 14, un 10 % menos al año, además de quedarse sin seguro y sin historial.
+
+### F.6 Contexto laboral que conviene tener a mano
+
+Todo [V], del INE y el IGSS:
+
+- Informalidad **64.9 %** (I-2026). Con la definición armonizada de la OIT sube a 73.5 %. No
+  mezclar las dos.
+- Ocupados en I-2026: 8.0 millones, de los cuales 2.8 millones formales y 5.2 millones
+  informales.
+- **Salario mínimo 2026**, circunscripción no agrícola: **Q4,002.28 más Q250 de bonificación =
+  Q4,252.28**.
+- **El 89.3 % de los informales gana por debajo del salario mínimo**, contra el 57.2 % de los
+  formales.
+- Salario medio de cotización al IGSS en mayo de 2026: **Q6,203.75**, con 1,818,411 afiliados.
+  Es decir, alrededor del 23 % de los ocupados tiene seguridad social, y ese afiliado promedio
+  gana **3.1 veces** lo que gana el informal promedio.
+
+**Tensión que esto deja abierta en el juego:** varios empleos que el jugador puede tomar como
+formales pagan menos que el salario mínimo de 2026 (dependiente de tienda Q3,000, repartidor
+Q2,800, construcción Q2,600). Es fiel a lo que gana la gente, pero legalmente un empleo formal
+no puede pagar eso. Queda anotado y **no corregido**, porque subir los sueldos base cambiaría
+todo el balance y es una decisión de diseño.
+
+### F.7 Lo que cambió en el juego por este anexo
+
+| Valor | Antes | Ahora | Base |
+|---|---|---|---|
+| **Prima por informalidad** | **+15 % [E]** | **+5 %** | el descuento de IGSS que el informal no paga |
+| Renta del cuarto compartido | Q1,200 [E] | **Q1,800** | mediana de anuncios y boletín de la CGC |
+| Ingreso exigido para el cuarto | Q4,000 | **Q4,800** | el gasto del cuarto subió a Q3,850 |
+| Renta del apartamento | Q2,800 [E] | **Q4,000** | Numbeo, un dormitorio fuera del centro |
+| Apreciación anual de la casa | 3 % [E] | **sin cambio, ahora anclada** | +2.4 % del municipio de Guatemala |
+| Precios de las tres casas | Q350k / Q650k / Q900k [E] | **sin cambio, ahora respaldados** | la mediana de lo elegible para FHA es Q650,000 |
+| Servicios del apartamento | Q1,400 [E] | **sin cambio, ahora desglosado** | luz Q180, agua Q110, gas Q90, internet Q230 |
+
+---
 ## Tabla maestra de cifras clave
 
 Todas las cifras están en quetzales salvo indicación. **[V]** = verificado con fuente · **[V-sec]** = verificado contra fuente secundaria · **[E]** = estimación propia.
