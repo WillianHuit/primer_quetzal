@@ -1618,6 +1618,209 @@ Si el juego apunta a jóvenes, este es el perfil real del público:
 
 ---
 
+## Anexo C. Crédito informal, usura y la escala completa de tasas
+
+Investigado después de terminar el juego, para reemplazar la única estimación gruesa que
+quedaba: la tasa del prestamista del barrio.
+
+### C.1 El "gota a gota"
+
+| Cifra | Detalle | Etiqueta |
+|---|---|---|
+| **25 % a 40 % por ciclo** (el ciclo ronda el mes) | Testimonio de un cobrador del circuito | [V-sec] [Plaza Pública, mar 2022](https://www.plazapublica.com.gt/content/gota-gota-de-sequias-prestamos-expres) |
+| **30 %, a veces hasta 50 %** | David Boteo, jefe de la División Especializada en Investigación Criminal de la PNC | [V-sec] misma nota |
+| Caso cerrado: **Q1,000 a 24 días, cuota diaria de Q60** | La cuota sube si un día no se junta el pago | [V-sec] misma nota |
+| Montos típicos **Q500 a Q5,000**, plazos de días o semanas | | [V-sec] [Prensa Libre, dic 2024](https://www.prensalibre.com/guatemala/comunitario/gota-a-gota-por-que-es-tan-dificil-escapar-de-estos-prestamos-que-llevan-a-deudas-y-extorsiones/) |
+| 5 % a 10 % por ciclo en los años noventa | El mismo circuito, tres décadas antes | [V-sec] Plaza Pública |
+
+Anualizando de forma compuesta, que es como se comporta la deuda cuando se renueva: 25 %
+mensual son **1,355 % anual**; 40 % son 5,569 %; 50 % son 12,875 %. La conversión es mía [E]
+sobre cifras [V-sec].
+
+**No existe ninguna cifra oficial guatemalteca** (MP, PNC, SIB, Banguat) que ponga número a
+la tasa del gota a gota. Los boletines de los operativos hablan de "intereses altos" sin
+porcentaje.
+
+Como contraste regional que confirma el orden de magnitud: en El Salvador el financiamiento
+informal a pymes promedia **1,869 % anual**, con casos de 13,564 % — [V-sec] informe *El
+Estado de las pymes* (2025) citado por [IPS, mar 2026](https://ipsnoticias.net/2026/03/credito-caro-y-exclusion-financiera-de-pymes-llega-a-la-usura-en-america-central/).
+
+### C.2 No hay tope legal a la tasa de interés. Confirmado en la ley.
+
+Esto ya se asumía en el diseño; ahora está verificado contra el texto primario.
+
+- **Ley de Bancos y Grupos Financieros, Decreto 19-2002, artículo 42**: los bancos
+  *"pactarán libremente con los usuarios las tasas de interés"*. El mismo artículo sí obliga
+  a hacer constar de forma expresa **la tasa efectiva anual equivalente** en todo contrato.
+  [V] [PDF oficial del Banguat](https://www.banguat.gob.gt/sites/default/files/banguat/leyes/2025/ley_bancos_y_grupos_financieros.pdf)
+- **Ley de Entidades de Microfinanzas, Decreto 25-2016, artículo 23**: redacción idéntica.
+  [V] [PDF oficial](https://www.banguat.gob.gt/sites/default/files/banguat/leyes/2025/ley_entidades_microfinanzas_sin_lucro.pdf)
+- **Código Penal, artículo 276**: castiga cobrar interés mayor que *"el tipo máximo que fije
+  la ley"* o *"evidentemente desproporcionado"*. Como ninguna ley fija ese máximo, en la
+  práctica solo opera el criterio abierto. Pena vigente de 6 meses a 2 años y multa de Q200
+  a Q2,000. [V-sec] [Prensa Libre, oct 2025](https://www.prensalibre.com/economia/ampliaran-penas-de-carcel-y-sanciones-por-el-delito-de-usura-y-su-ambito-de-aplicacion/)
+- Hay una reforma en trámite que subiría la pena a 10 años y las multas a Q200,000–Q500,000.
+  Es agravación penal, **no** un tope de tasa. [V-sec] misma nota.
+
+**Consecuencia para el juego:** la obligación legal de declarar la tasa efectiva anual es
+exactamente lo que el juego enseña en la pantalla de crédito. No es un invento pedagógico:
+es lo que la ley guatemalteca ya exige y casi nadie lee.
+
+### C.3 Quién le presta a quién
+
+Global Findex del Banco Mundial, población de 15 años o más, vía API oficial. Todo [V].
+
+| Indicador | 2024 | 2022 | 2017 | 2014 |
+|---|---|---|---|---|
+| Pidió prestado a alguien | **41.25 %** | 31.71 % | 32.40 % | 45.21 % |
+| A un banco o institución formal | **8.73 %** | 11.23 % | 12.66 % | 15.14 % |
+| A familia o amigos | **15.33 %** | 22.29 % | 13.07 % | 19.54 % |
+| A un grupo o club de ahorro | **2.83 %** | 2.73 % | 4.51 % | — |
+
+Dos lecturas [E] sobre datos [V]: **familia y amigos le prestan a 1.8 veces más gente que
+todo el sistema financiero formal**, y el acceso al crédito formal **cayó a la mitad** entre
+2014 y 2024. Findex no publica "prestamista informal" como categoría, así que el residual no
+se puede atribuir al gota a gota y no lo hice.
+
+### C.4 La escala completa, de la más barata a la más cara
+
+| Canal | Tasa anual | Etiqueta |
+|---|---|---|
+| Banco, préstamo típico del sistema | **13.08 %** (ago 2026) | [V] [Banguat, serie IMM04](https://www.banguat.gob.gt/sites/default/files/banguat/imm/imm04.xls) |
+| Cooperativa con programa subsidiado (Tob'anik, Decreto 17-2024) | **≤ 13.5 %** | [V-sec] CHN vía [Prensa Libre, jun 2025](https://www.prensalibre.com/economia/paso-a-paso-para-solicitar-un-credito-tobanik-en-cooperativa-autorizada-por-el-chn/) |
+| Microfinanzas reguladas | **~36 %** | [V-sec] Redimif vía IPS, mar 2026 |
+| Tarjeta de crédito | 45.84 % nominal (ver sección 4) | [V-sec] |
+| Gota a gota | **1,355 % a 12,875 %** compuesto | [V-sec] + conversión [E] |
+
+Crédito promedio del sector microfinanciero: **US$1,371.40** a diciembre de 2025, con 670,981
+clientes MIPYME, 70.5 % mujeres y 79 % rural — [V] [Redimif](https://www.redimif.org/).
+
+**Lo que cambió en el juego por este anexo:** el prestamista del barrio pasó de 20 % mensual
+(estimación) a **25 % mensual**, el extremo bajo del rango documentado. El juego se queda
+corto frente a la realidad a propósito; no la exagera.
+
+**Hueco que este anexo deja abierto:** entre el banco al 13 % y el gota a gota al 1,355 % hay
+dos peldaños reales que el juego no tiene, la cooperativa y la microfinanciera. Está anotado
+como posible ampliación, no implementado.
+
+---
+## Anexo D. Costos universitarios y saturación por carrera
+
+Investigado junto con el anexo C, para cerrar las tres estimaciones que quedaban en las
+rutas de estudio.
+
+**Hallazgo estructural que conviene saber:** la mayoría de universidades privadas
+guatemaltecas **no publica aranceles**. Se verificaron directamente las páginas de
+admisiones y pagos de Landívar, Mariano Gálvez, Galileo, Francisco Marroquín e
+InterNaciones: ninguna publica cuota ni inscripción. La **UNIS es la excepción** y publica
+un tarifario completo, por eso aparece tanto abajo.
+
+### D.1 Licenciatura, costo anual
+
+| Universidad | Carrera | Costo anual | Etiqueta |
+|---|---|---|---|
+| **USAC** (pública) | cualquiera | **Q91 al año** | [V-sec] [Agencia Universitaria de Noticias, may 2024](https://agenciauniversitariadenoticias.com.gt/universidad/quince-universidades-una-sola-publica-para-estudiar-en-guatemala/) |
+| Mariano Gálvez | Derecho (mismo esquema de 5 cursos) | ~Q12,840 | [E] sobre [V-sec] misma nota |
+| **Rafael Landívar** | **Administración de Empresas** | **Q29,159** (inscripción Q1,779 + 10 cuotas de Q2,738) | [E] sobre [V-sec] misma nota |
+| **Del Istmo (UNIS)** | Administración de Empresas | Q51,390 (2 × [matrícula Q1,695 + 5 cuotas de Q4,800]) | [E] sobre [V] [tarifario 2026](https://unis.edu.gt/wp-content/uploads/2026/02/Tarifario-general-2026.png) |
+
+Otras carreras del tarifario UNIS 2026, todas [V]: Derecho 5 cuotas de Q4,224 por semestre ·
+Ingeniería (Sistemas, Civil, Industrial, Mecatrónica) Q4,862 · Ingeniería Comercial Q4,488 ·
+Psicología Q4,480 · Arquitectura Q4,644 · Enfermería matrícula Q810 + 6 cuotas de Q2,000.
+Nota literal del tarifario: *"El valor del crédito académico puede variar anualmente entre
+un 3% y un 5%"*.
+
+### D.2 Maestría
+
+| Programa | Costo total | Duración | Etiqueta |
+|---|---|---|---|
+| **UNIS, Ingeniería Textil 2026** | **Q48,000** (3 semestres × [Q1,000 + 6 cuotas de Q2,500]) | 18 meses, 60 créditos | [E] sobre [V] [folleto oficial](https://unis.edu.gt/wp-content/uploads/2026/03/FING_Maestria-Textil_Folleto_2026.pdf) |
+| UNIS, Genética Biomédica 2025 | Q102,600 (24 cuotas de Q3,950 + 4 matrículas de Q1,950) | 24 meses | [E] sobre [V] [folleto oficial](https://unis.edu.gt/wp-content/uploads/2025/04/FSAL_Folleto_Maestria-Genetica-Biomedica_2025.pdf) |
+
+Rango documentado: **Q48,000 a Q102,600**, con ingeniería y gestión en el piso y ciencias de
+la salud en el techo.
+
+**No encontrado:** ningún arancel de maestrías de la USAC. Los subdominios de postgrado no
+responden. Esa cifra sigue siendo estimación en el juego y está marcada como tal.
+
+### D.3 Técnico y diplomado
+
+| Ruta | Costo | Duración | Etiqueta |
+|---|---|---|---|
+| Diplomado UNIS (Psicopedagogía, TEA) | **Q10,000** (10 cuotas de Q1,000) | ~10 meses | [V] folletos oficiales 2025 |
+| **INTECAP**, Técnico en Mecatrónica | **costo no publicado** | 2 a 2.5 años + 500 horas de práctica | [V] [ficha oficial](https://intecap.edu.gt/ctm/tecnico-en-mecatronica/) |
+| INTECAP, Analista de Datos | costo no publicado | 8 meses a 1.5 años | [V] ficha oficial |
+
+INTECAP se rige por el **Decreto 17-72**. Tiene el programa *Becas para Todos* para jóvenes
+de 14 a 29 años de escasos recursos, priorizando *"áreas con alta demanda de mano de obra
+calificada"*. **No publica ningún precio** en su sitio: se revisaron la portada, admisiones
+y unas 45 fichas de carrera. **La afirmación común de que se financia con un aporte patronal
+del 1% sobre planillas no pudo verificarse con fuente primaria y no debe darse por buena.**
+
+### D.4 Saturación: dónde estudia la gente vs. dónde hay trabajo
+
+**Distribución de graduados universitarios por área**, INE citado por
+[Prensa Libre, jul 2017](https://www.prensalibre.com/guatemala/comunitario/estudiar-viendo-hacia-el-futuro/) — [V-sec]:
+
+| Área | Graduados | Matriculados |
+|---|---|---|
+| **Ciencias Sociales** (administración, derecho, economía) | **57.2 %** | **64.3 %** |
+| Humanidades | 20.3 % | 14.8 % |
+| Ingeniería y Tecnología | 12.1 % | — |
+| Ciencias Médicas | 8.4 % | — |
+| Ciencias Naturales | 1.3 % | 1 % |
+| Ciencias Agrícolas | 0.6 % | — |
+
+**Concentración de la oferta académica** — [V-sec] Agencia Universitaria de Noticias, 2024:
+Derecho se imparte en **14 de las 15** universidades del país, Ingeniería en 14,
+Administración de Empresas en 13 y Medicina en 8. Hay 1,442 carreras en total.
+
+**Dónde declaran las empresas que falta gente** — ManpowerGroup, *Escasez de Talento*:
+en **2026 el 62 %** de los empleadores guatemaltecos no logra cubrir sus vacantes (era 70 %
+en 2025, 71 % en 2024, 78 % en 2022). Los puestos más difíciles de cubrir, en orden:
+**ventas y marketing, desarrollo de modelos de IA, atención al cliente, administración de
+oficina y operaciones/logística**. Sectores con más escasez: información, hospitalidad,
+sector público y salud. [V-sec]
+[blog ManpowerGroup](https://blog.manpowergroupcca.com/escasez-de-talento-2026-guatemala) ·
+[La Hora, mar 2026](https://lahora.gt/lh-economia/hloarca/2026/03/30/hay-escasez-de-talento-en-guatemala-conoce-los-puestos-que-mas-necesitan-las-empresas/)
+
+**Cuánta gente llega y cuánta termina** — [V-sec] Pronacom vía Prensa Libre: *"solo el 4.5 %
+de los jóvenes entre 18 y 30 años ingresan a la universidad y apenas el 19 % se gradúa"*.
+Matrícula de educación superior 2023: **420,443 estudiantes**, unos 230,000 de ellos en la
+USAC.
+
+**Graduados de la USAC por unidad académica** — [V] [Registro y Estadística USAC](https://registro.usac.edu.gt/formularios_rye/AvanceEstad02_2017.pdf),
+campus central, graduados en 2015: Humanidades 3,048 · Derecho 771 · Ingeniería 629 ·
+Ciencias Económicas 556 · Medicina 500 · Psicología 303. Total USAC 2009-2015: 89,145.
+
+Cruzando esa tabla con los inscritos de 2016 (Ciencias Económicas 20,484 · Derecho 18,975)
+sale un **ratio de graduación anual de 2.7 % en Económicas y 4.1 % en Derecho** — [E] sobre
+dos tablas [V], y consistente con el 19 % de Pronacom.
+
+**Contraste del mercado laboral** — [V] [INE, ENEI 2021](https://www.ine.gob.gt/ine/wp-content/uploads/2022/02/PublicacionResultadosENEI2021.pdf):
+desempleo abierto nacional **2.2**, pero **5.7 en el área metropolitana**, que es donde se
+concentran los profesionales. Subempleo visible 8.1. La presión sobre los graduados no
+aparece como desempleo: aparece como subempleo e informalidad.
+
+**No encontrado:** ningún estudio oficial del Ministerio de Trabajo, ANDI o CACIF que
+liste "carreras saturadas" por nombre. La evidencia de saturación es indirecta pero
+convergente.
+
+### D.5 Lo que cambió en el juego por este anexo
+
+| Valor | Antes | Ahora | Base |
+|---|---|---|---|
+| Licenciatura en administración, privada | Q35,000/año [E] | **Q29,200/año** | Landívar, la misma carrera |
+| Maestría privada | Q20,000/año (Q40,000 total) [E] | **Q24,000/año (Q48,000 total)** | UNIS, el piso documentado |
+| Demanda inicial de administración | 0.35 [E] | **0.30** | 57.2 % de los graduados, 13 de 15 universidades |
+| Demanda inicial de ingeniería | 0.60 [E] | **0.65** | 12.1 % de los graduados, escasez declarada en tecnología |
+| Maestría en la pública | Q20,000/año [E] | **sin cambio** | no se encontró arancel; sigue siendo estimación |
+
+Las dos tensiones que el juego ya explotaba quedan respaldadas: **la carrera más barata es
+también la de menor probabilidad de graduarse**, y **el área donde más gente estudia no es
+donde las empresas dicen que falta gente**.
+
+---
 ## Tabla maestra de cifras clave
 
 Todas las cifras están en quetzales salvo indicación. **[V]** = verificado con fuente · **[V-sec]** = verificado contra fuente secundaria · **[E]** = estimación propia.

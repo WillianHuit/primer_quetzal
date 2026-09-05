@@ -450,7 +450,12 @@ var UI = (function () {
                                                            : '🏦 ' + T('Préstamo personal')) + '</div>';
       h += fila(T('Saldo'), Q(p.saldo), 'neg');
       h += fila(T('Cuota'), Q(p.cuota));
-      h += fila(T('Tasa'), T('{0}% anual', (p.tasaMensual * 12 * 100).toFixed(2)), p.tipo === 'informal' ? 'neg' : '');
+      // Nominal y efectiva juntas a proposito: es el concepto que el glosario
+      // marca como el peor entendido del pais, y verlas lado a lado lo ensena.
+      var efectiva = (Math.pow(1 + p.tasaMensual, 12) - 1) * 100;
+      h += fila(T('Tasa nominal'), T('{0}% anual', (p.tasaMensual * 12 * 100).toFixed(2)));
+      h += fila(T('Tasa efectiva'), T('{0}% anual', efectiva.toFixed(2)),
+                p.tipo === 'informal' ? 'neg' : '');
       h += fila(T('Le faltan'), T('{0} cuotas', p.mesesRestantes));
       if (p.atrasos) h += '<p class="aviso">' + T('Llevas {0} cuota(s) de atraso.', p.atrasos) + '</p>';
       h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-abonar="' + i +
@@ -1492,7 +1497,7 @@ var UI = (function () {
   function flujoInformal() {
     var c = CREDITOS.informal;
     var h = '<span class="icono">🚩</span><h2>' + T('Prestamista del barrio') + '</h2>';
-    h += '<p>' + T('Presta a cualquiera, hoy mismo, sin papeles. Cobra veinte por ciento al mes.') + '</p>';
+    h += '<p>' + T('Presta a cualquiera, hoy mismo, sin papeles. Cobra veinticinco por ciento al mes.') + '</p>';
     h += fila(T('Interés'), T('{0} mensual', pct(c.tasaMensual)));
     h += fila(T('En términos anuales'), Math.round((Math.pow(1 + c.tasaMensual, 12) - 1) * 100) + '%', 'neg');
     h += '<div class="letra-chica"><strong>' + T('Léelo dos veces.') + '</strong> ' +

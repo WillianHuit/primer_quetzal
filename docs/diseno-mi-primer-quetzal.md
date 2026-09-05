@@ -151,9 +151,9 @@ abandona a mitad pierde cinco años y no gana casi nada.
 |---|---|---|---|
 | Ninguna | — | — | — |
 | Técnico | 2 años | Q0 (USAC) | Q13,726 al año |
-| Licenciatura administrativa | 5 años | Q0 (USAC) | Q35,000 al año [E] |
+| Licenciatura administrativa | 5 años | Q0 (USAC) | Q29,200 al año [V-sec] |
 | Licenciatura en ingeniería | 5 años | Q0 (USAC) | Q77,054 al año |
-| Maestría | 2 años, requiere licenciatura | Q40,000 total [E] | Q40,000 total [E] |
+| Maestría | 2 años, requiere licenciatura | Q40,000 total [E] | Q48,000 total [V] |
 
 La universidad pública es **gratuita desde 2026**, sin inscripción ni matrícula. El dilema
 del estudio no es de dinero, es de **tiempo**: cada espacio en la universidad es un espacio
@@ -201,8 +201,11 @@ La demanda de cada carrera es **visible** en un panel de mercado laboral, pero *
 el tiempo** y hay indicador de tendencia. La lección es doble: investiga antes de estudiar,
 y aun así diversifica porque el mercado se mueve.
 
-Estado inicial propuesto [E]: administración saturada, ingeniería demanda media, técnicos
-demanda alta con poca oferta.
+Estado inicial: administración saturada, ingeniería demanda media-alta, técnicos demanda
+alta con poca oferta. Ya no es intuición: Ciencias Sociales concentra el 57.2% de los
+graduados del país y administración se imparte en 13 de las 15 universidades, mientras que
+ingeniería y tecnología son solo el 12.1% de los graduados y ManpowerGroup reporta que el
+62% de los empleadores no encuentra el talento que busca. Ver anexo D de la investigación.
 
 ## 8. Vivienda y gastos fijos
 
@@ -417,6 +420,10 @@ migratoria como emisor de remesas, un minijuego avanzado por carrera.
 Todos estos valores viven en `datos/config.js` y `datos/trabajos.js`, y se pueden corregir
 sin saber programar. Cambia el número, guarda y recarga el juego.
 
+Las cuatro que estaban marcadas `pendiente` **ya se investigaron y quedaron con fuente**:
+están en los anexos C y D de la investigación. Las que siguen en esta tabla sin esa marca
+son las que aún dependen de tu criterio.
+
 | Concepto | Valor propuesto | Archivo |
 |---|---|---|
 | Efectivo inicial | Q1,200 | config |
@@ -434,11 +441,11 @@ sin saber programar. Cambia el número, guarda y recarga el juego.
 | Multiplicador del modo difícil | 0.65 | config |
 | Salarios base de los 13 empleos | Ver sección 7 | trabajos |
 | Aumento por año de experiencia | 3.5% | trabajos |
-| Tasa del prestamista informal | ~700% anual | pendiente |
+| Tasa del prestamista informal | 25% mensual = 1,355% anual | **verificado**, anexo C |
 | Capital para abrir tienda | Q8,000 | trabajos |
-| Licenciatura privada administrativa | Q35,000 al año | pendiente |
-| Maestría | Q40,000 total | pendiente |
-| Saturación inicial por carrera | Ver sección 7 | pendiente |
+| Licenciatura privada administrativa | Q29,200 al año | **verificado**, anexo D |
+| Maestría privada | Q48,000 total | **verificado**, anexo D |
+| Saturación inicial por carrera | Ver sección 7 | **verificado**, anexo D |
 
 Todo lo demás viene de fuente verificada y está en `investigacion-economia-guatemala.md`.
 
@@ -479,7 +486,7 @@ prueba corren sin navegador y comprueban 65 aserciones en total:
   al mes con un sueldo de Q3,000. Las dos cosas están corregidas.
 - **Vidas completas**: cuatro partidas de 224 turnos hasta la jubilación, sin errores.
 - **Ciclo de crédito**: diecinueve comprobaciones. Confirma que Q1,000 con el prestamista
-  se devuelven como Q1,804 en seis meses, y que pagando solo el mínimo de la tarjeta una
+  se devuelven como Q2,033 en seis meses, y que pagando solo el mínimo de la tarjeta una
   deuda de Q1,000 apenas baja a Q819 en doce meses.
 - **Interfaz bilingüe**: las cinco pestañas se dibujan en ambos idiomas, en todos los
   estados del juego, y ninguna etiqueta española se cuela en la versión inglesa.

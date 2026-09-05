@@ -2,10 +2,16 @@
  *
  * Tasas reales del sistema bancario guatemalteco (ver investigacion, seccion 4):
  *   consumo 18.68% | tarjeta 45.84% (revolvente 51.9%, maxima publicada ~124% TEA)
- * No hay techo legal a las tasas en Guatemala.
+ * No hay techo legal a las tasas en Guatemala, y eso esta verificado en la ley:
+ * el articulo 42 del Decreto 19-2002 dice que los bancos "pactaran libremente"
+ * las tasas, y el delito de usura del Codigo Penal remite a un tipo maximo que
+ * ninguna ley fija. Ese mismo articulo si obliga a declarar la tasa efectiva
+ * anual en todo contrato (ver investigacion, anexo C).
  *
- * El prestamista informal es ESTIMACION. El credito informal (26.2% de la
- * poblacion) duplica al formal (15.5%), asi que es la opcion mas usada del pais.
+ * Quien le presta a quien, Findex 2024 del Banco Mundial: el 41.25% de los
+ * adultos pidio prestado, pero solo el 8.73% a una institucion formal y el
+ * 15.33% a familia o amigos. La familia le presta a casi el doble de gente que
+ * todo el sistema financiero, y el acceso formal cayo a la mitad desde 2014.
  */
 
 var CREDITOS = {
@@ -45,13 +51,16 @@ var CREDITOS = {
     id: 'informal',
     nombre: 'Prestamista del barrio',
     icono: '🚩',
-    tasaMensual: 0.20,          // ESTIMACION: ~792% anual
+    // [V-sec] Plaza Publica 2022 y la PNC documentan 25% a 40% por ciclo (~mensual)
+    // en el credito 'gota a gota'. El juego usa el extremo BAJO del rango real.
+    // 25% mensual compuesto = ~1,355% anual. No lo exagera: lo suaviza.
+    tasaMensual: 0.25,
     plazos: [3, 6],
-    montoMinimo: 500,
+    montoMinimo: 500,           // [V-sec] Prensa Libre 2024: montos tipicos Q500 a Q5,000
     montoMaximo: 5000,
     puntajeMinimo: null,        // no pregunta nada
     sinRequisitos: true,
-    descripcion: 'Presta a cualquiera, hoy mismo, sin papeles. Cobra veinte por ciento al mes.'
+    descripcion: 'Presta a cualquiera, hoy mismo, sin papeles. Cobra veinticinco por ciento al mes.'
   }
 };
 

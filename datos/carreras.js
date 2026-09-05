@@ -22,6 +22,8 @@ var CARRERAS = [
     costoAnualPublico: 0,        // USAC gratuita desde 2026
     costoAnualPrivado: 13726,    // UVG profesorado, dato verificado
     descripcion: 'Dos años. Oficio con demanda alta y poca competencia.',
+    // [V-sec] ManpowerGroup 2026: 62% de los empleadores no encuentra talento, y
+    // 'tecnicos' y 'oficios calificados' aparecen entre los mas dificiles de cubrir.
     demandaInicial: 0.85
   },
   {
@@ -32,9 +34,15 @@ var CARRERAS = [
     requiere: 'bachiller',
     mesesRequeridos: 60,
     costoAnualPublico: 0,
-    costoAnualPrivado: 35000,    // ESTIMACION
+    // [V-sec] URL Landivar, Administracion de Empresas: inscripcion Q1,779 +
+    // 10 mensualidades de Q2,738 = Q29,159 al anio. Referencia privada media-alta.
+    // La UMG ronda Q12,800 y la UNIS Q51,390; esta queda en medio.
+    costoAnualPrivado: 29200,
     descripcion: 'Cinco años. Es la carrera con más graduados del país.',
-    demandaInicial: 0.35
+    // [V-sec] INE via Prensa Libre: Ciencias Sociales concentra el 57.2% de los
+    // graduados y el 64.3% de la matricula. Administracion se imparte en 13 de
+    // las 15 universidades del pais. Es el mercado mas saturado que hay.
+    demandaInicial: 0.30
   },
   {
     id: 'ingenieria',
@@ -46,7 +54,10 @@ var CARRERAS = [
     costoAnualPublico: 0,
     costoAnualPrivado: 77054,    // UVG Ingenieria Industrial, dato verificado
     descripcion: 'Cinco años y la privada es carísima. La pública es gratis.',
-    demandaInicial: 0.60
+    // [V-sec] Ingenieria y Tecnologia son solo el 12.1% de los graduados, y
+    // ManpowerGroup 2026 pone los perfiles de tecnologia entre los dos puestos
+    // mas dificiles de llenar en Guatemala.
+    demandaInicial: 0.65
   },
   {
     id: 'maestria',
@@ -55,8 +66,13 @@ var CARRERAS = [
     nivelQueOtorga: 'maestria',
     requiere: 'licenciatura',
     mesesRequeridos: 24,
-    costoAnualPublico: 20000,    // ESTIMACION: la maestria no es gratis ni en la publica
-    costoAnualPrivado: 20000,    // ESTIMACION
+    // ESTIMACION: no se encontro ningun arancel publicado de maestrias de la USAC.
+    // La maestria no es gratuita ni en la publica, pero el numero sigue sin fuente.
+    costoAnualPublico: 20000,
+    // [V] UNIS, Maestria en Ingenieria Textil 2026: 3 semestres de Q1,000 de
+    // matricula + 6 cuotas de Q2,500 = Q48,000 en total. Es el PISO documentado;
+    // la Maestria en Genetica Biomedica de la misma universidad llega a Q102,600.
+    costoAnualPrivado: 24000,
     descripcion: 'Dos años más. Aquí sí se duplica el sueldo.',
     demandaInicial: 0.75
   }

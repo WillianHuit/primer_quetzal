@@ -211,6 +211,13 @@
   };
 
   // ---------- glosario nuevo ----------
+  X.glosario_termino['Usura'] = 'Usury';
+  X.glosario_texto['Usura'] =
+    'Charging outrageous interest. Guatemalan banking law says rates are freely agreed, and the '+
+    'crime of usury punishes charging more than "the maximum rate set by law" — a maximum no law '+
+    'actually sets. That is how the neighbourhood lender can charge 25% a month without breaking '+
+    'any cap: there is no cap. What the law does require is that every contract state the '+
+    'effective annual rate. Look for it before you sign.';
   X.glosario_termino['Hipoteca'] = 'Mortgage';
   X.glosario_termino['Enganche'] = 'Down payment';
   X.glosario_termino['Plan de pensiones'] = 'Pension plan';
@@ -224,5 +231,9 @@
   X.glosario_texto['Plan de pensiones'] =
     'You set an amount aside every month for decades and the return compounds on itself. What ' +
     'makes it work is not how much you put in, it is how many years you leave it alone.';
+
+  // ---------- tasa nominal vs efectiva en la lista de prestamos ----------
+  ui['Tasa nominal'] = 'Nominal rate';
+  ui['Tasa efectiva'] = 'Effective rate';
 
 })(typeof TEXTOS_EN !== 'undefined' ? TEXTOS_EN : undefined);

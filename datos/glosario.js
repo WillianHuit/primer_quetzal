@@ -58,6 +58,15 @@ var GLOSARIO = [
     clave: true
   },
   {
+    termino: 'Usura',
+    texto: 'Cobrar un interés desmedido. En Guatemala la ley de bancos dice que las tasas se pactan ' +
+           'libremente, y el delito de usura castiga cobrar más que "el tipo máximo que fije la ley", ' +
+           'un máximo que ninguna ley fija. Por eso el prestamista del barrio puede cobrarte 25% al mes ' +
+           'sin romper ningún tope: no hay tope. Lo que sí exige la ley es que todo contrato te diga ' +
+           'la tasa efectiva anual. Búscala antes de firmar.',
+    clave: true
+  },
+  {
     termino: 'Empleo formal e informal',
     texto: 'Formal es con contrato: tienes Bono 14, aguinaldo, seguro social y comprobante de ingresos. ' +
            'Informal es sin nada de eso, aunque a veces recibas más en la mano. Dos de cada tres ' +

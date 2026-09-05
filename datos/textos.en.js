@@ -159,8 +159,8 @@ var TEXTOS_EN = {
     'Pedir el préstamo': 'Take the loan',
     'Préstamo con garantía': 'Secured loan',
     'Dejas ese mismo monto congelado en tu ahorro.': 'That same amount gets frozen in your savings.',
-    'Presta a cualquiera, hoy mismo, sin papeles. Cobra veinte por ciento al mes.':
-      'Lends to anyone, today, no paperwork. Charges twenty percent a month.',
+    'Presta a cualquiera, hoy mismo, sin papeles. Cobra veinticinco por ciento al mes.':
+      'Lends to anyone, today, no paperwork. Charges twenty-five percent a month.',
     'Interés': 'Interest',
     '{0} mensual': '{0} per month',
     'En términos anuales': 'In annual terms',
