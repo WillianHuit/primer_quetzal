@@ -233,6 +233,53 @@
     'makes it work is not how much you put in, it is how many years you leave it alone.';
 
   // ---------- tasa nominal vs efectiva en la lista de prestamos ----------
+  // ---------- primer turno guiado ----------
+  // Los textos de los pasos se pasan a T() por variable, asi que el extractor
+  // del que se ayuda la prueba bilingue no los ve. Van a mano, y si falta uno
+  // el juego lo muestra en español en vez de romperse.
+  ui['Paso {0} de {1}'] = 'Step {0} of {1}';
+  ui['Llévame ahí'] = 'Take me there';
+  ui['Ya sé jugar'] = 'I know how to play';
+  ui['Sin empleo no entra dinero. Entra a Trabajo y acepta uno: fíjate que el formal y el informal pagan distinto.'] =
+    'No job means no money coming in. Go to Work and take one: notice that formal and informal pay differently.';
+  ui['Ahora reparte tus cuatro semanas del mes. Toca una semana y elige qué hacer con ella.'] =
+    'Now split up your four weeks. Tap a week and choose what to do with it.';
+  ui['Llena las cuatro. Trabajar las cuatro paga completo, pero te deja sin energía y enfermarte cuesta más que una semana.'] =
+    'Fill all four. Working all four pays in full, but it drains your energy, and getting sick costs more than a week of pay.';
+  ui['Abre una cuenta en el Banco. En efectivo tu dinero se encoge solo, y sin cuenta las remesas te cobran más comisión.'] =
+    'Open an account at the Bank. Cash shrinks on its own, and without an account remittances charge you a bigger fee.';
+  ui['Listo. Cierra el mes y mira el resumen: te va a mostrar en una barra a dónde se fue cada quetzal.'] =
+    'That is it. Close the month and look at the summary: a bar will show you where every quetzal went.';
+
+  // ---------- portada que explica el juego ----------
+  ui['Un simulador para aprender a usar el banco sin arriesgar dinero de verdad.'] =
+    'A simulator for learning to use a bank without risking real money.';
+  ui['Empiezas con 18 años y sin cuenta'] = 'You start at 18 with no bank account';
+  ui['Acabas de salir de diversificado. Eliges de qué familia sales y en qué Guatemala te toca vivir.'] =
+    'You have just finished secondary school. You choose the family you come from and which Guatemala you live in.';
+  ui['Cada mes reparte cuatro semanas'] = 'Every month you split four weeks';
+  ui['Trabajar, estudiar, hacer un trabajo extra o descansar. No alcanza para todo, y ahí está el juego.'] =
+    'Work, study, take a side job or rest. There is never enough for all of it, and that is the game.';
+  ui['Usas productos bancarios de verdad'] = 'You use real banking products';
+  ui['Cuenta monetaria, ahorro, plazo fijo, préstamo, tarjeta, hipoteca y pensión. Con las tasas que se cobran en Guatemala.'] =
+    'Checking, savings, fixed-term deposit, loan, credit card, mortgage and pension. At the rates actually charged in Guatemala.';
+  ui['Llegas a los 65 y ves el resultado'] = 'You reach 65 and see how it went';
+  ui['Una gráfica de toda tu vida y el recuento de lo que cada decisión te costó o te dio.'] =
+    'A chart of your whole life and a tally of what each decision cost you or earned you.';
+  ui['Banco Cardamomo es un banco inventado. Los precios, sueldos y tasas son de Guatemala y están documentados.'] =
+    'Banco Cardamomo is a made-up bank. The prices, wages and rates are Guatemalan and every one of them is sourced.';
+
+  // ---------- graficos y resumen visual del mes ----------
+  ui['Entró'] = 'In';
+  ui['Salió'] = 'Out';
+  ui['Te quedó'] = 'Left over';
+  ui['Te faltó'] = 'Short by';
+  ui['Transporte'] = 'Transport';
+  ui['Deudas e intereses'] = 'Debt and interest';
+  ui['Impuestos y aportes'] = 'Taxes and contributions';
+  ui['máximo {0}'] = 'peak {0}';
+  ui['Tu patrimonio a lo largo de la vida'] = 'Your net worth over your lifetime';
+
   ui['Intereses pagados'] = 'Interest paid';
   ui['Tasa nominal'] = 'Nominal rate';
   ui['Tasa efectiva'] = 'Effective rate';

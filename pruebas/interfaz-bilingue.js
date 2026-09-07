@@ -233,7 +233,7 @@ ok(Array.isArray(rep.lecciones) && rep.lecciones.every(l => l.clave),
   ok(sinTraducir.length === 0,
      sinTraducir.length === 0
        ? `las ${pedidas.size} tienen traduccion al ingles`
-       : `quedan ${sinTraducir.length} sin traducir: ${sinTraducir.slice(0, 5).join(' | ')}`);
+       : `quedan ${sinTraducir.length} sin traducir: ${sinTraducir.slice(0, 25).join(" | ")}`);
 
   // Y al reves: claves que sobran en el diccionario, que suelen ser textos
   // renombrados en el codigo y olvidados en la traduccion.

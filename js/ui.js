@@ -638,6 +638,8 @@ var UI = (function () {
     return h + '</nav>';
   }
 
+  var latirBarra = false;
+
   function render() {
     var cuerpo = pestana === 'casa' ? vistaCasa()
                : pestana === 'trabajo' ? vistaTrabajo()
@@ -645,6 +647,14 @@ var UI = (function () {
                : pestana === 'banco' ? vistaBanco()
                : vistaExtra();
     app.innerHTML = barra() + '<main>' + cuerpo + '</main>' + pestanas();
+    pintarGuia();
+    // La barra de dinero late cuando el saldo cambio, para que el jugador vea
+    // que algo paso sin tener que comparar cifras de memoria.
+    if (latirBarra) {
+      latirBarra = false;
+      var c = app.querySelector('.barra .cifras');
+      if (c) c.classList.add('late');
+    }
   }
 
   // =============== tarjetas superpuestas ===============
@@ -698,12 +708,274 @@ var UI = (function () {
           '<button class="btn-primario" data-cerrar>' + T('Está bien') + '</button>');
   }
 
+  // =============== gráficos ===============
+
+  /* Barra de flujo del mes.
+   *
+   * El resumen del mes era una lista de renglones con totales, y ahi es donde
+   * el jugador se perdia: veia "gastos Q2,440" sin saber en que. Esto parte lo
+   * que entro y lo que salio en segmentos proporcionales, asi que de un golpe
+   * se ve que la renta se come la mitad del sueldo, sin leer una cifra.
+   */
+
+  var COLOR_ENTRA = {
+    salario:  '#1f7a5a',
+    bono:     '#2f9b74',
+    remesa:   '#2c5f8a',
+    extras:   '#4b86ae',
+    intereses:'#7cb342'
+  };
+  var COLOR_SALE = {
+    vivienda:    '#b8422e',
+    transporte:  '#c4603f',
+    colegiatura: '#8a4b8f',
+    deuda:       '#8c2f1f',
+    enviado:     '#2c5f8a',
+    imprevistos: '#b5811f',
+    fuga:        '#9a8f6b',
+    impuestos:   '#6b7a75'
+  };
+
+  function segmentos(pares, colores, total) {
+    var h = '';
+    for (var i = 0; i < pares.length; i++) {
+      var pct = total > 0 ? (pares[i].monto / total) * 100 : 0;
+      if (pct <= 0) continue;
+      h += '<div class="flujo-seg" style="width:' + pct.toFixed(2) + '%;background:' +
+           colores[pares[i].id] + '" title="' + esc(pares[i].nombre) + '"></div>';
+    }
+    return h;
+  }
+
+  function leyenda(pares, colores, total) {
+    var h = '<div class="flujo-leyenda">';
+    for (var i = 0; i < pares.length; i++) {
+      if (pares[i].monto <= 0) continue;
+      var pct = total > 0 ? Math.round((pares[i].monto / total) * 100) : 0;
+      h += '<span class="flujo-item"><span class="flujo-punto" style="background:' +
+           colores[pares[i].id] + '"></span>' + esc(pares[i].nombre) +
+           ' <b>' + Q(pares[i].monto) + '</b>' + (pct >= 8 ? ' · ' + pct + '%' : '') + '</span>';
+    }
+    return h + '</div>';
+  }
+
+  function barraFlujo(m) {
+    var entra = [
+      { id: 'salario',   nombre: T('Salario'),          monto: (m.salario || 0) + (m.bono || 0) },
+      { id: 'remesa',    nombre: T('Remesas'),          monto: m.remesa || 0 },
+      { id: 'extras',    nombre: T('Ingresos extra'),   monto: m.extras || 0 },
+      { id: 'intereses', nombre: T('Intereses ganados'), monto: (m.intereses || 0) + (m.rendimientoPension || 0) }
+    ];
+    var sale = [
+      { id: 'vivienda',    nombre: T('Vivienda y gastos'), monto: m.vivienda || 0 },
+      { id: 'transporte',  nombre: T('Transporte'),        monto: m.transporte || 0 },
+      { id: 'colegiatura', nombre: T('Colegiatura'),       monto: m.colegiatura || 0 },
+      { id: 'deuda',       nombre: T('Deudas e intereses'),
+        monto: (m.cuotasPagadas || 0) + (m.pagoTarjeta || 0) + (m.cuotaHipoteca || 0) + (m.interesesPagados || 0) },
+      { id: 'enviado',     nombre: T('Mandado a tu familia'),
+        monto: (m.enviado || 0) + (m.comisionEnvio || 0) + (m.comisionRemesa || 0) },
+      { id: 'imprevistos', nombre: T('Imprevistos'),
+        monto: (m.imprevistos || 0) + (m.enfermedad || 0) },
+      { id: 'fuga',        nombre: T('Gastos hormiga'),
+        monto: (m.fuga || 0) + (m.perdidaEfectivo || 0) },
+      { id: 'impuestos',   nombre: T('Impuestos y aportes'),
+        monto: (m.isr || 0) + (m.aportePension || 0) }
+    ];
+
+    var suma = function (xs) { var t = 0; for (var i = 0; i < xs.length; i++) t += xs[i].monto; return t; };
+    var totalEntra = suma(entra), totalSale = suma(sale);
+    if (totalEntra <= 0 && totalSale <= 0) return '';
+
+    // Las dos barras se miden contra el mismo maximo, si no la comparacion miente
+    var tope = Math.max(totalEntra, totalSale, 1);
+    var neto = totalEntra - totalSale;
+
+    var h = '<div class="flujo">';
+    h += '<div class="flujo-fila"><div class="flujo-tit"><span>' + T('Entró') +
+         '</span><b class="pos">' + Q(totalEntra) + '</b></div>' +
+         '<div class="flujo-barra" style="width:' + ((totalEntra / tope) * 100).toFixed(1) + '%">' +
+         segmentos(entra, COLOR_ENTRA, totalEntra) + '</div>' +
+         leyenda(entra, COLOR_ENTRA, totalEntra) + '</div>';
+    h += '<div class="flujo-fila salidas"><div class="flujo-tit"><span>' + T('Salió') +
+         '</span><b class="neg">' + Q(totalSale) + '</b></div>' +
+         '<div class="flujo-barra" style="width:' + ((totalSale / tope) * 100).toFixed(1) + '%">' +
+         segmentos(sale, COLOR_SALE, totalSale) + '</div>' +
+         leyenda(sale, COLOR_SALE, totalSale) + '</div>';
+    h += '<div class="flujo-neto ' + (neto >= 0 ? 'bien' : 'mal') + '"><span>' +
+         (neto >= 0 ? T('Te quedó') : T('Te faltó')) + '</span><b>' + Q(Math.abs(neto)) + '</b></div>';
+    return h + '</div>';
+  }
+
+  /* Gráfica del patrimonio a lo largo de la vida.
+   * SVG a mano, sin librerias. Dibuja el cero porque estar debajo de esa
+   * linea es la informacion mas importante que puede dar la grafica.
+   */
+  function graficaPatrimonio(serie) {
+    if (!serie || serie.length < 2) return '';
+    var an = 320, al = 132, pad = 6;
+    var vals = serie.map(function (p) { return p.patrimonio; });
+    var max = Math.max.apply(null, vals), min = Math.min.apply(null, vals);
+    if (max === min) { max = max + 1; min = min - 1; }
+    var rango = max - min;
+    var x = function (i) { return pad + (i / (serie.length - 1)) * (an - pad * 2); };
+    var y = function (v) { return pad + (1 - (v - min) / rango) * (al - pad * 2); };
+
+    var linea = '', area = '';
+    for (var i = 0; i < serie.length; i++) {
+      linea += (i ? ' L' : 'M') + x(i).toFixed(1) + ',' + y(vals[i]).toFixed(1);
+    }
+    area = linea + ' L' + x(serie.length - 1).toFixed(1) + ',' + y(Math.max(min, 0)).toFixed(1) +
+           ' L' + x(0).toFixed(1) + ',' + y(Math.max(min, 0)).toFixed(1) + ' Z';
+
+    var h = '<svg class="grafica" viewBox="0 0 ' + an + ' ' + al + '" preserveAspectRatio="none" ' +
+            'role="img" aria-label="' + T('Tu patrimonio a lo largo de la vida') + '">';
+    h += '<path class="relleno" d="' + area + '"/>';
+    if (min < 0 && max > 0) {
+      h += '<line class="cero" x1="' + pad + '" y1="' + y(0).toFixed(1) +
+           '" x2="' + (an - pad) + '" y2="' + y(0).toFixed(1) + '"/>';
+    }
+    h += '<path class="linea" d="' + linea + '"/>';
+    h += '<circle class="punto" cx="' + x(serie.length - 1).toFixed(1) + '" cy="' +
+         y(vals[vals.length - 1]).toFixed(1) + '" r="3.5"/>';
+    h += '</svg>';
+    h += '<div class="grafica-pie"><span>' + T('{0} años', serie[0].edad) + '</span>' +
+         '<span>' + T('máximo {0}', Q(max)) + '</span>' +
+         '<span>' + T('{0} años', serie[serie.length - 1].edad) + '</span></div>';
+    return h;
+  }
+
+  /* Moneda que sube cuando entra dinero. Puro adorno, pero es la unica
+   * confirmacion inmediata de que algo funciono. */
+  function monedaVuela(elemento) {
+    if (!elemento || !elemento.getBoundingClientRect) return;
+    try {
+      var r = elemento.getBoundingClientRect();
+      var s = document.createElement('span');
+      s.className = 'moneda-vuela';
+      s.textContent = '🪙';
+      s.style.left = (r.left + r.width / 2 - 11) + 'px';
+      s.style.top = (r.top + window.scrollY - 6) + 'px';
+      document.body.appendChild(s);
+      setTimeout(function () { s.remove(); }, 800);
+    } catch (e) {}
+  }
+
+  // =============== primer turno guiado ===============
+
+  /* La guia avanza sola segun lo que el jugador YA hizo, no con un boton de
+   * siguiente. Cada paso tiene una condicion: mientras no se cumpla, la guia
+   * se queda ahi y señala donde hay que tocar. Asi nadie termina el tutorial
+   * sin haber hecho nunca lo que el tutorial explica.
+   *
+   * Se puede salir en un toque. Alguien que ya entiende no tiene por que
+   * pasar por esto, y a quien vuelve meses despues le sirve empezar de nuevo.
+   */
+
+  var PASOS_GUIA = [
+    {
+      id: 'empleo',
+      txt: 'Sin empleo no entra dinero. Entra a Trabajo y acepta uno: fíjate que el formal y el informal pagan distinto.',
+      senala: '[data-pestana="trabajo"]',
+      hecho: function (e) { return !!e.empleo; }
+    },
+    {
+      id: 'semanas',
+      txt: 'Ahora reparte tus cuatro semanas del mes. Toca una semana y elige qué hacer con ella.',
+      senala: '.semanas',
+      pestana: 'casa',
+      hecho: function (e) { return e.espacios.some(function (x) { return !!x; }); }
+    },
+    {
+      id: 'llenar',
+      txt: 'Llena las cuatro. Trabajar las cuatro paga completo, pero te deja sin energía y enfermarte cuesta más que una semana.',
+      senala: '.semanas',
+      pestana: 'casa',
+      hecho: function (e) { return e.espacios.every(function (x) { return !!x; }); }
+    },
+    {
+      id: 'cuenta',
+      txt: 'Abre una cuenta en el Banco. En efectivo tu dinero se encoge solo, y sin cuenta las remesas te cobran más comisión.',
+      senala: '[data-pestana="banco"]',
+      hecho: function (e) { return e.monetaria !== null || e.ahorro !== null; }
+    },
+    {
+      id: 'cerrar',
+      txt: 'Listo. Cierra el mes y mira el resumen: te va a mostrar en una barra a dónde se fue cada quetzal.',
+      senala: '#cerrar-turno',
+      pestana: 'casa',
+      hecho: function (e) { return e.mesesJugados > 0; }
+    }
+  ];
+
+  function guiaActiva() {
+    var e = Motor.get();
+    if (!e || e.vistos.guiaSaltada || e.vistos.guiaTerminada) return null;
+    for (var i = 0; i < PASOS_GUIA.length; i++) {
+      if (!PASOS_GUIA[i].hecho(e)) return { paso: PASOS_GUIA[i], n: i + 1 };
+    }
+    // Se cumplieron todos: no volver a mostrarla
+    e.vistos.guiaTerminada = true;
+    Motor.guardar();
+    return null;
+  }
+
+  function pintarGuia() {
+    var vieja = document.querySelector('.guia');
+    if (vieja) vieja.remove();
+    var previo = document.querySelector('.senala');
+    if (previo) previo.classList.remove('senala');
+
+    var act = guiaActiva();
+    if (!act) return;
+
+    var d = document.createElement('div');
+    d.className = 'guia';
+    d.innerHTML = '<div class="guia-cinta">' +
+      '<div class="guia-paso">' + T('Paso {0} de {1}', act.n, PASOS_GUIA.length) + '</div>' +
+      '<div class="guia-txt">' + T(act.paso.txt) + '</div>' +
+      '<div class="guia-btns">' +
+        (act.paso.pestana && pestana !== act.paso.pestana
+          ? '<button class="btn-primario" data-guia-ir="' + act.paso.pestana + '">' + T('Llévame ahí') + '</button>'
+          : '') +
+        '<button class="salir" data-guia-salir>' + T('Ya sé jugar') + '</button>' +
+      '</div></div>';
+    document.body.appendChild(d);
+
+    // La cinta vive fuera de #app, asi que la delegacion de clics de la
+    // aplicacion no la alcanza: escucha por su cuenta.
+    var salir = d.querySelector('[data-guia-salir]');
+    if (salir) salir.addEventListener('click', saltarGuia);
+    var ir = d.querySelector('[data-guia-ir]');
+    if (ir) ir.addEventListener('click', function () {
+      pestana = ir.getAttribute('data-guia-ir');
+      espacioSel = null;
+      render();
+    });
+
+    // Señala el elemento del paso, si esta a la vista en esta pestaña
+    if (act.paso.senala) {
+      var obj = document.querySelector(act.paso.senala);
+      if (obj) obj.classList.add('senala');
+    }
+  }
+
+  function saltarGuia() {
+    var e = Motor.get();
+    e.vistos.guiaSaltada = true;
+    Motor.guardar();
+    var g = document.querySelector('.guia');
+    if (g) g.remove();
+    var s = document.querySelector('.senala');
+    if (s) s.classList.remove('senala');
+  }
+
   // =============== resumen del turno ===============
 
   function resumenTurno(m, pendientes) {
     var h = '<span class="icono">📅</span><h2 style="text-transform:capitalize">' +
             esc(m.mes) + ' ' + m.anio +
             (m.mesesCubiertos > 1 ? ' · ' + T('{0} meses', m.mesesCubiertos) : '') + '</h2>';
+    h += barraFlujo(m);
     if (m.salario) h += fila(T('Salario'), Q(m.salario), 'pos');
     if (m.bono) h += fila(T('Bono de ley'), Q(m.bono), 'pos');
     if (m.remesa) h += fila(T('Remesas'), Q(m.remesa), 'pos');
@@ -808,6 +1080,7 @@ var UI = (function () {
     var delta = previo ? r.patrimonio - previo.patrimonio : r.patrimonio;
 
     var h = '<span class="icono">🗓️</span><h2>' + T('Cerraste el año {0}', r.anio) + '</h2>';
+    h += graficaPatrimonio(e.resumenesAnuales);
     h += fila(T('Edad'), T('{0} años', r.edad));
     h += fila(T('Patrimonio'), Q(r.patrimonio));
     h += fila(T('Cambió en el año'), (delta >= 0 ? '+' : '') + Q(delta), delta >= 0 ? 'pos' : 'neg');
@@ -839,6 +1112,7 @@ var UI = (function () {
     var r = Motor.reporte();
     Motor.archivarPartida();
     var h = '<span class="icono">🏁</span><h2>' + T('Tu vida en números') + '</h2>';
+    h += graficaPatrimonio(Motor.get().resumenesAnuales);
     h += fila(T('Edad final'), T('{0} años', r.edad));
     h += fila(T('Patrimonio'), Q(r.patrimonio), r.patrimonio >= 0 ? 'pos' : 'neg');
     h += fila(T('Deuda'), Q(r.deuda), r.deuda > 0 ? 'neg' : '');
@@ -988,6 +1262,7 @@ var UI = (function () {
       if (res.pago > 0) {
         if (e.monetaria !== null) e.monetaria += res.pago; else e.efectivo += res.pago;
         Sonido.tono('moneda');
+        monedaVuela(interior);
       }
       Motor.guardar();
       interior.innerHTML =
@@ -1228,6 +1503,7 @@ var UI = (function () {
       }
 
       if (el.id === 'cerrar-turno') {
+        latirBarra = true;
         if (Motor.espaciosLibres() === CONFIG.espaciosPorMes) {
           return aviso(T('No has hecho nada'), T('Asigna al menos una semana antes de cerrar.'));
         }
@@ -1568,11 +1844,35 @@ var UI = (function () {
         h += '</div>';
       });
     } else {
-      h += '<div class="tarjeta"><p>' +
-        T('Tienes 18 años, acabas de salir de diversificado y no tienes cuenta bancaria. De aquí a los 65, todo lo decides tú.') +
-        '</p></div>';
+      /* Portada de primera vez.
+       * Antes solo habia una frase y un boton, asi que el jugador entraba sin
+       * saber a que. Esto dice de que trata el juego con cuatro pasos, cada
+       * uno con su icono, para que se entienda de un vistazo y no leyendo.
+       */
+      h += '<div class="portada">';
+      h += '<p class="lema">' + T('Un simulador para aprender a usar el banco sin arriesgar dinero de verdad.') + '</p>';
+      h += '<div class="pasos">';
+      h += '<div class="paso"><span class="ic">🧍</span><span class="tx"><b>' +
+           T('Empiezas con 18 años y sin cuenta') + '</b>' +
+           T('Acabas de salir de diversificado. Eliges de qué familia sales y en qué Guatemala te toca vivir.') +
+           '</span></div>';
+      h += '<div class="paso"><span class="ic">🗓️</span><span class="tx"><b>' +
+           T('Cada mes reparte cuatro semanas') + '</b>' +
+           T('Trabajar, estudiar, hacer un trabajo extra o descansar. No alcanza para todo, y ahí está el juego.') +
+           '</span></div>';
+      h += '<div class="paso"><span class="ic">🏦</span><span class="tx"><b>' +
+           T('Usas productos bancarios de verdad') + '</b>' +
+           T('Cuenta monetaria, ahorro, plazo fijo, préstamo, tarjeta, hipoteca y pensión. Con las tasas que se cobran en Guatemala.') +
+           '</span></div>';
+      h += '<div class="paso"><span class="ic">🏁</span><span class="tx"><b>' +
+           T('Llegas a los 65 y ves el resultado') + '</b>' +
+           T('Una gráfica de toda tu vida y el recuento de lo que cada decisión te costó o te dio.') +
+           '</span></div>';
+      h += '</div>';
       h += '<div class="btn-fila"><button class="btn-primario" data-nueva="1">' +
            T('Empezar') + '</button></div>';
+      h += '<p class="aviso">' + T('Banco Cardamomo es un banco inventado. Los precios, sueldos y tasas son de Guatemala y están documentados.') + '</p>';
+      h += '</div>';
     }
     h += '</main>';
     app.innerHTML = h;

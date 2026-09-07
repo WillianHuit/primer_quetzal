@@ -121,5 +121,6 @@ archivo al juego, agrégalo también a la lista `ARCHIVOS` de ese módulo y a `i
 
 ## Documentos
 
+- `PENDIENTE.md` — lo que falta, con las decisiones ya tomadas y sin construir.
 - `docs/diseno-mi-primer-quetzal.md` — el diseño completo y las decisiones tomadas.
 - `docs/investigacion-economia-guatemala.md` — las 197 cifras que sostienen el juego.
