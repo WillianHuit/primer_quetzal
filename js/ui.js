@@ -1530,7 +1530,7 @@ var UI = (function () {
       Motor.guardar(); render();
       tarjetaEducativa('informalcredito', '🚩', T('Le pediste al prestamista'),
         T('Tienes el dinero hoy, sin papeles y sin fiador. Tu cuota es {0} por seis meses.', Q(r.cuota)),
-        T('Este préstamo no construye ningún historial. Al contrario: te consume el ingreso que necesitas para calificar en el banco. En Guatemala 41 de cada 100 adultos piden prestado, pero solo 9 lo logran en un banco.'));
+        T('Este préstamo no construye ningún historial. Al contrario: te consume el ingreso que necesitas para calificar en el banco. Es la trampa donde cae el 26.2% del país.'));
     });
   }
 

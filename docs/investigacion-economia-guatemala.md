@@ -1659,8 +1659,9 @@ Esto ya se asumía en el diseño; ahora está verificado contra el texto primari
   la ley"* o *"evidentemente desproporcionado"*. Como ninguna ley fija ese máximo, en la
   práctica solo opera el criterio abierto. Pena vigente de 6 meses a 2 años y multa de Q200
   a Q2,000. [V-sec] [Prensa Libre, oct 2025](https://www.prensalibre.com/economia/ampliaran-penas-de-carcel-y-sanciones-por-el-delito-de-usura-y-su-ambito-de-aplicacion/)
-- Hay una reforma en trámite que subiría la pena a 10 años y las multas a Q200,000–Q500,000.
-  Es agravación penal, **no** un tope de tasa. [V-sec] misma nota.
+- La pena **ya fue reformada** a 4-10 años de prisión y multa de Q200,000 a Q500,000 (ver
+  sección 6.8, que es la referencia buena aquí). Es agravación penal, **no** un tope de tasa.
+  [V-sec]
 
 **Consecuencia para el juego:** la obligación legal de declarar la tasa efectiva anual es
 exactamente lo que el juego enseña en la pantalla de crédito. No es un invento pedagógico:
@@ -1702,6 +1703,39 @@ corto frente a la realidad a propósito; no la exagera.
 **Hueco que este anexo deja abierto:** entre el banco al 13 % y el gota a gota al 1,355 % hay
 dos peldaños reales que el juego no tiene, la cooperativa y la microfinanciera. Está anotado
 como posible ampliación, no implementado.
+
+---
+### C.5 Dónde este anexo contradice a la sección 6, y qué se hizo
+
+Este anexo se investigó mucho después que el cuerpo del informe, y en dos puntos choca con
+él. Se dejan los dos a la vista en vez de borrar uno.
+
+**El interés del gota a gota.** La sección 6.8 dice **20 % diario**, citando a Insight Crime
+vía La Hora de abril de 2026. Este anexo encontró **25 % a 40 % por ciclo**, con el ciclo
+rondando el mes, citando a Plaza Pública y a la PNC. La diferencia no es de matiz: 20 % diario
+sobre Q1,000 serían Q200 al día.
+
+El caso cerrado que reporta Plaza Pública permite arbitrar: **Q1,000 a 24 días con cuota
+diaria de Q60** son Q1,440 en total, o sea un 44 % sobre el capital en 24 días, que es **1.5 %
+diario**, no 20 %. La lectura más probable es que "20 % diario" mezcle la tasa con la
+frecuencia de cobro: son préstamos al 20 % o más **con pago diario**, y la prensa lo comprimió.
+
+**No se resolvió a favor de ninguna de las dos**, porque las dos son secundarias. Lo que sí
+queda claro es que el 25 % mensual que usa el juego está por debajo de ambas, así que la
+decisión de quedarse corto a propósito se sostiene con cualquiera de las dos lecturas.
+
+**La pena por usura.** Este anexo la describió como reforma *en trámite*, con la pena vigente
+de 6 meses a 2 años. La sección 6.8 es más precisa y más reciente: **el artículo 276 ya está
+reformado**, con pena de **4 a 10 años** y multa de **Q200,000 a Q500,000**. Vale la sección
+6.8. Lo que no cambia es el fondo: agravar la pena no crea un tope de tasa, y el artículo
+sigue remitiendo a un máximo que ninguna ley fija.
+
+**Quién presta a quién.** El anexo trajo Findex 2024 del Banco Mundial y la sección 6 ya tenía
+la **ENIFH 2025**, que es guatemalteca y mejor apuntada al problema: mide un **26.2 %** de
+adultos con crédito en instituciones **no** financieras, categoría que incluye expresamente a
+los prestamistas gota a gota, contra un **15.5 %** en instituciones financieras. Findex no
+desglosa "prestamista" como fuente, así que no sirve para dimensionar el gota a gota. **El
+juego usa la ENIFH**; Findex queda como contexto sobre la caída del acceso formal.
 
 ---
 ## Anexo D. Costos universitarios y saturación por carrera
@@ -2184,7 +2218,7 @@ Todas las cifras están en quetzales salvo indicación. **[V]** = verificado con
 | 16 | Ingreso mediano sector FORMAL / INFORMAL | Q3,600 / **Q1,500** | T2 2025 | [V] |
 | 17 | Ingreso promedio urbano metropolitano / rural | Q3,901 / **Q1,986** | T2 2025 | [V] |
 | 18 | P25 / P75 / P90 / P99 del ingreso | Q1,000 / Q3,600 / Q5,000 / **Q12,000** | T2 2025 | [V] |
-| 19 | **Tasa de informalidad** | **66.2 %** (5.3 millones) | T2 2025 | [V] |
+| 19 | **Tasa de informalidad** | **66.2 %** (5.3 millones) · **64.9 %** en I-2026, ver anexo F | T2 2025 / I-2026 | [V] |
 | 20 | Cotizantes activos al IGSS | 1,742,810 (**~22 %** de los ocupados) | cierre 2025 | [V] / [E] |
 | 21 | Pobreza total / extrema | **56.0 %** / 16.2 % | ENCOVI 2023 | [V] |
 
@@ -2229,7 +2263,7 @@ Todas las cifras están en quetzales salvo indicación. **[V]** = verificado con
 | 46 | Hogar de referencia del INE | **4.16 personas** | ENIGH 2022-23 | [V] |
 | 47 | CBA Urbana por hogar | ≈ Q3,934 | jul 2026 | [V-sec] |
 | 48 | Canasta Ampliada Urbana por hogar | ≈ Q9,499 | jun 2026 | [E] |
-| 49 | Renta: cuarto en casa compartida | Q800 – Q1,500 | 2026 | [E] |
+| 49 | Renta: cuarto en casa compartida | ~~Q800 – Q1,500~~ → **mediana Q1,800**, ver anexo F | 2026 | [V-sec] |
 | 50 | Renta: apartamento zonas periféricas | Q2,300 – Q4,600 | 2026 | [V-sec] |
 | 51 | Renta: estudio o 1 dorm. en zonas 10/14/15 | Q3,000 – Q7,900 | 2026 | [V-sec] |
 | 52 | Electricidad EEGSA, tarifa social / no social | Q1.42 / Q1.51 por kWh | may–jul 2026 | [V-sec] |
@@ -2320,7 +2354,7 @@ Todas las cifras están en quetzales salvo indicación. **[V]** = verificado con
 | 127 | **Hipoteca vía FHA: enganche** | **5 %** vivienda nueva / **10 %** existente | 2026 | [V] |
 | 128 | Prima FHA (se SUMA a la tasa) | **1.26 %** (1.00 % hipoteca + 0.26 % desgravamen) | 2026 | [V] |
 | 129 | ¿Existe límite regulatorio de cuota/ingreso? | **NO.** Política de cada banco (BI: 30 %) | JM-93-2005 | [V] |
-| 130 | Gastos de cierre de una compra de vivienda | 4 % – 8 % del valor | 2026 | [E] |
+| 130 | Gastos de cierre de una compra de vivienda | **4 % – 6 %** del valor, ver anexo E | 2026 | [V-sec] |
 | 131 | IVA (1.ª venta) / Timbres (2.ª y siguientes) | 12 % / 3 % | 2026 | [V-sec] |
 | 132 | **Subsidio FOPAVI (no reembolsable)** | **Q35,000**, ingreso máx. 4 salarios mínimos | 2026 | [V] |
 | 133 | Financiamiento de vehículo nuevo | 80 %–90 %, ≈18 %, hasta 7 años | 2026 | [V-sec] |
@@ -2392,7 +2426,7 @@ Todas las cifras están en quetzales salvo indicación. **[V]** = verificado con
 | 189 | Brecha territorial: capital vs. Huehuetenango | **63.3 % vs. 19.5 %** | ENIFH 2025 | [V] |
 | 190 | Puntos de acceso bancario | 68,078 (**592 por 100,000 adultos**); **100 % de los municipios** | dic 2025 | [V] |
 | 191 | Sucursales por 100,000 adultos: Guatemala vs. ALC | **21.9 vs. 11.7** (el doble que la región) | 2024 | [V] |
-| 192 | **Interés del "gota a gota"** | **desde 20 % DIARIO** | 2026 | [V-sec] |
+| 192 | **Interés del "gota a gota"** | **desde 20 % DIARIO** · en conflicto con el 25-40 % por ciclo del anexo C, ver C.5 | 2026 | [V-sec] |
 | 193 | Pena por usura (Art. 276 Código Penal) | 4 a 10 años + multa de Q200,000 a Q500,000 | 2026 | [V-sec] |
 | 194 | Ciberdelitos: 2019 → 2025 | **1,292 → 14,871 (+1,051 %)** | 2025 | [V-sec] |
 | 195 | Denuncias por estafas electrónicas ene–jun 2026 | 7,925 (más de 50 diarias) | 2026 | [V-sec] |

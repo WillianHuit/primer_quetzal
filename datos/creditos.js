@@ -8,10 +8,17 @@
  * ninguna ley fija. Ese mismo articulo si obliga a declarar la tasa efectiva
  * anual en todo contrato (ver investigacion, anexo C).
  *
- * Quien le presta a quien, Findex 2024 del Banco Mundial: el 41.25% de los
- * adultos pidio prestado, pero solo el 8.73% a una institucion formal y el
- * 15.33% a familia o amigos. La familia le presta a casi el doble de gente que
- * todo el sistema financiero, y el acceso formal cayo a la mitad desde 2014.
+ * Quien le presta a quien. Dos encuestas que miden cosas distintas y las dos
+ * importan:
+ *   ENIFH 2025 (Guatemala): el 26.2% de los adultos pidio prestado a una
+ *   institucion NO financiera, categoria que incluye expresamente al gota a
+ *   gota, contra el 15.5% que lo hizo en una institucion financiera. El credito
+ *   informal DUPLICA al formal. Es la cifra que usa el juego, porque es la que
+ *   cubre justo el producto que modela el prestamista del barrio.
+ *   Findex 2024 (Banco Mundial): el 41.25% pidio prestado a alguien, pero solo
+ *   el 8.73% a una institucion formal y el 15.33% a familia o amigos. Findex no
+ *   desglosa "prestamista", asi que no sirve para dimensionar el gota a gota.
+ * Dato que las dos comparten: el acceso al credito formal viene cayendo.
  */
 
 var CREDITOS = {
