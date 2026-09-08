@@ -1,14 +1,15 @@
-/* Prueba de las mejoras: la capa de tycoon.
+/* Prueba de las mejoras: las tres cadenas que mejoran a la PERSONA.
  *
  * Son lo único del juego que se compra una vez y rinde para siempre, así que
  * son también la forma más fácil de romper la economía sin darse cuenta: una
- * mejora demasiado buena convierte el juego en "compra la canasta y espera",
- * y una demasiado mala no la toca nadie.
+ * mejora demasiado buena convierte el juego en "cómprala y espera", y una
+ * demasiado mala no la toca nadie.
  *
- * Lo que más importa de este archivo es la última comprobación: que **seguir
- * estudiando siga siendo mejor que montar un negocio y dejar el colegio**. Si
- * eso se invierte, el juego enseña lo contrario de lo que quiere enseñar, y
- * ninguna prueba de que "no lanza errores" lo habría notado.
+ * Aquí había una cuarta cadena, `negocio`, y aquí vivía la comprobación de que
+ * el tycoon no se come a la escuela. Las dos se mudaron a pruebas/imperio.js
+ * cuando los negocios pasaron a ser de verdad: se abren, se les contrata gente
+ * y pueden quebrar. Lo que queda en este archivo son las herramientas, los
+ * útiles y la cama.
  */
 
 const { cargar, Marcador, adulto, conAzarSemilla } = require('./comun');
@@ -20,10 +21,10 @@ const ok = M.ok.bind(M);
 
 // ---------- 1. están bien escritas ----------
 
-ok(Array.isArray(MEJORAS) && MEJORAS.length >= 10, `hay ${MEJORAS.length} mejoras`);
+ok(Array.isArray(MEJORAS) && MEJORAS.length >= 6, `hay ${MEJORAS.length} mejoras`);
 ok(Array.isArray(CADENAS) && CADENAS.length >= 3, `en ${CADENAS.length} cadenas`);
 
-const EFECTOS = ['bonoJornada', 'avanceEstudio', 'ingresoPasivo', 'costoMensual', 'energiaExtra'];
+const EFECTOS = ['bonoJornada', 'avanceEstudio', 'costoMensual', 'energiaExtra'];
 const malas = [];
 const ids = new Set();
 MEJORAS.forEach(function (m) {
@@ -61,7 +62,7 @@ CADENAS.forEach(function (c) {
     if (lista[i].costo <= lista[i - 1].costo) {
       noSuben.push(c.id + ': ' + lista[i].id + ' no cuesta más que el anterior');
     }
-    const vale = m => (m.efecto.ingresoPasivo || 0) + (m.efecto.bonoJornada || 0) * 100 +
+    const vale = m => (m.efecto.bonoJornada || 0) * 100 +
                       (m.efecto.avanceEstudio || 0) * 10000 + (m.efecto.energiaExtra || 0) * 50;
     if (vale(lista[i]) <= vale(lista[i - 1])) {
       noSuben.push(c.id + ': ' + lista[i].id + ' no da más que el anterior');
@@ -99,59 +100,42 @@ ok(faltan.length === 0,
 
 Motor.iniciar('normal', 1, 'apoyo');
 const e = Motor.get();
-e.efectivo = 400;
+e.efectivo = 1000;
 
-ok(Motor.nivelDeCadena('negocio') === 0, 'una partida nueva no tiene ninguna mejora');
-ok(Motor.siguienteMejora('negocio').id === 'canasta',
-   'y la siguiente de la cadena del negocio es la primera de la lista');
+ok(Motor.nivelDeCadena('oficio') === 0, 'una partida nueva no tiene ninguna mejora');
+ok(Motor.siguienteMejora('oficio').id === 'herramienta',
+   'y la siguiente de la cadena del oficio es la primera de la lista');
 
-const saltar = Motor.comprarMejora('carreta');
+const saltar = Motor.comprarMejora('uniforme');
 ok(!saltar.ok && saltar.motivo === 'orden',
    'no se puede saltar un escalón: ' + saltar.razon);
 
 const antes = e.efectivo;
-const compra = Motor.comprarMejora('canasta');
+const compra = Motor.comprarMejora('herramienta');
 ok(compra.ok, 'la primera mejora se compra');
-ok(Math.abs((antes - 180) - e.efectivo) < 0.01,
+ok(Math.abs((antes - 220) - e.efectivo) < 0.01,
    `y se paga de verdad (Q${antes} a Q${e.efectivo})`);
-ok(Motor.nivelDeCadena('negocio') === 1, 'el nivel de la cadena subió a uno');
-ok(Motor.tieneMejora('canasta'), 'y la mejora queda registrada');
-ok(!Motor.comprarMejora('canasta').ok, 'no se puede comprar dos veces');
+ok(Motor.nivelDeCadena('oficio') === 1, 'el nivel de la cadena subió a uno');
+ok(Motor.tieneMejora('herramienta'), 'y la mejora queda registrada');
+ok(!Motor.comprarMejora('herramienta').ok, 'no se puede comprar dos veces');
 
-ok(Motor.efectosDeMejoras().ingresoPasivo === 30,
-   'los efectos se suman: Q30 al mes de ingreso pasivo');
+ok(Motor.efectosDeMejoras().bonoJornada === 3,
+   'los efectos se suman: Q3 más por cada jornada trabajada');
 
-const porEdad = Motor.comprarMejora('carreta');
+ok(Motor.comprarMejora('uniforme').ok, 'el segundo escalón sí, ya en orden');
+
+const porEdad = Motor.comprarMejora('transporte');
 ok(!porEdad.ok && porEdad.motivo === 'edad',
-   'la carreta no se la venden a un chico de 13: ' + porEdad.razon);
+   'la moto no se la venden a un chico de 13: ' + porEdad.razon);
 
 e.edad = 16;
 e.efectivo = 50;
-const sinPlata = Motor.comprarMejora('carreta');
+const sinPlata = Motor.comprarMejora('transporte');
 ok(!sinPlata.ok && sinPlata.motivo === 'dinero',
    'y sin dinero tampoco: ' + sinPlata.razon);
 ok(e.efectivo === 50, 'y no le cobran nada al fallar');
 
 // ---------- 4. los efectos se sienten al cerrar el mes ----------
-
-/* El negocio produce sin gastar jornadas. Es la única entrada del juego que no
- * cuesta tiempo, así que es la que hay que comprobar de verdad. */
-(function elNegocioProduce() {
-  const sbN = cargar('es');
-  const MN = sbN.Motor;
-  MN.iniciar('normal', 2, 'apoyo');
-  const z = adulto(sbN, { efectivo: 5000 });
-  MN.tomarTrabajo('tienda', true);
-  MN.comprarMejora('canasta');
-
-  const m = conAzarSemilla(sbN, 4242, function () {
-    for (let i = 0; i < 8; i++) MN.asignarEspacio(i, 'descanso');   // ni una jornada
-    return MN.cerrarTurno();
-  });
-  ok(m.negocio > 0, `el negocio produjo Q${Math.round(m.negocio)} sin trabajar ni una jornada`);
-  ok(Math.abs(m.negocio - 30) < 30 * sbN.NEGOCIO_VARIANZA + 1,
-     'y lo que produjo anda dentro de su variación');
-})();
 
 /* La herramienta paga por jornada trabajada, no al mes. */
 (function laHerramientaPaga() {
@@ -180,21 +164,27 @@ ok(e.efectivo === 50, 'y no le cobran nada al fallar');
      `ocho jornadas con Q3 de bono pagan Q24 más (Q${Math.round(conH - sinH)})`);
 })();
 
-/* El mantenimiento se cobra cada mes, y se ve. */
+/* El mantenimiento se cobra cada mes, y se ve.
+ *
+ * Es el número que delató que el transporte estaba mal tarifado: costaba
+ * Q3,200 para dejar Q12 al mes, o sea 267 meses en pagarse. Nadie lo habría
+ * comprado nunca. */
 (function elMantenimientoSeCobra() {
   const sbM = cargar('es');
   const MM = sbM.Motor;
   MM.iniciar('normal', 4, 'apoyo');
-  const z = adulto(sbM, { efectivo: 20000 });
+  adulto(sbM, { efectivo: 20000 });
   MM.tomarTrabajo('tienda', true);
-  MM.comprarMejora('canasta');
-  z.edad = 16; MM.comprarMejora('carreta');
-  ok(MM.efectosDeMejoras().costoMensual === 20, 'la carreta cuesta Q20 al mes de mantenimiento');
+  MM.comprarMejora('herramienta');
+  MM.comprarMejora('uniforme');
+  MM.comprarMejora('transporte');
+  ok(MM.efectosDeMejoras().costoMensual === 45,
+     'la moto cuesta Q45 al mes de gasolina y mantenimiento');
   const m = conAzarSemilla(sbM, 99, function () {
     for (let i = 0; i < 8; i++) MM.asignarEspacio(i, 'trabajo');
     return MM.cerrarTurno();
   });
-  ok(m.mantenimiento === 20, `y se cobra en el resumen del mes (Q${m.mantenimiento})`);
+  ok(m.mantenimiento === 45, `y se cobra en el resumen del mes (Q${m.mantenimiento})`);
 })();
 
 /* Una cama de verdad hace rendir el descanso. */
@@ -214,119 +204,4 @@ ok(e.efectivo === 50, 'y no le cobran nada al fallar');
      `el rincón propio suma energía al descansar (quedó en ${Math.round(z.energia)})`);
 })();
 
-// ---------- 5. la escalera educativa sigue siendo la buena ----------
-
-/* La comprobación que sostiene todo el juego.
- *
- * El riesgo de meter una capa de tycoon en un juego sobre educación financiera
- * es obvio: si montar un negocio rinde más que estudiar, el juego enseña que
- * el colegio es una pérdida de tiempo. Aquí se corren las dos vidas completas
- * sobre las mismas semillas y se compara la mediana.
- *
- * Se permite que el negocio quede CERCA —tiene que valer la pena, si no nadie
- * lo toca— pero no que gane.
- */
-function mediana(xs) {
-  const s2 = xs.slice().sort((a, b) => a - b);
-  return s2[Math.floor(s2.length / 2)];
-}
-
-function vida(sbV, estrategia, semilla) {
-  const MV = sbV.Motor;
-  return conAzarSemilla(sbV, semilla, function () {
-    MV.iniciar('normal', 8, 'apoyo');
-    const z = MV.get();
-    let vueltas = 0;
-    while (!z.jubilado && vueltas < 700) {
-      vueltas++;
-      estrategia(MV, z, sbV);
-      MV.cerrarTurno();
-      // Las decisiones se resuelven siempre con la segunda opción, la sobria
-      MV.get().bitacora.slice(-1).forEach(function (m) {
-        (m.decisiones || []).forEach(d => MV.aplicarDecision(d.clase, d.ref, 1));
-      });
-    }
-    return MV.reporte().patrimonio;
-  });
-}
-
-function cuentas(MV, z) {
-  if (z.monetaria === null && z.efectivo >= MV.aperturaMinima('monetaria')) {
-    MV.abrirCuenta('monetaria', MV.aperturaMinima('monetaria'));
-  } else if (z.ahorro === null && z.efectivo >= MV.aperturaMinima('ahorro')) {
-    MV.abrirCuenta('ahorro', MV.aperturaMinima('ahorro'));
-  } else if (z.ahorro !== null && z.monetaria !== null && z.monetaria > 2500) {
-    MV.mover('monetaria', 'ahorro', z.monetaria - 2000);
-  }
-}
-
-function reparte(MV, z, trabajoSemanas) {
-  const descanso = z.energia < 70 ? 2 : 0;
-  const libres = [];
-  for (let i = 0; i < 8; i++) if (!MV.espacioBloqueado(i)) libres.push(i);
-  const tope = Math.max(0, libres.length - descanso);
-  let k = 0;
-  for (let n = 0; n < trabajoSemanas * 2 && k < tope; n++, k++) MV.asignarEspacio(libres[k], 'trabajo');
-  while (k < libres.length) MV.asignarEspacio(libres[k++], 'descanso');
-}
-
-function mejorEmpleo(MV, z, sbV, formal) {
-  let mejor = null, paga = 0;
-  for (const t of sbV.TRABAJOS) {
-    if (!MV.puedeAplicar(t).ok) continue;
-    const q = MV.salarioEsperado(t, formal);
-    if (!mejor || q > paga) { mejor = t; paga = q; }
-  }
-  if (mejor && (!z.empleo || z.empleo.id !== mejor.id)) MV.tomarTrabajo(mejor.id, formal);
-}
-
-/* A: no estudia nunca y mete todo lo que puede en el negocio. */
-function tycoonSinEstudiar(MV, z, sbV) {
-  if (z.decisionEstudio === null) MV.decidirEstudio('no');
-  mejorEmpleo(MV, z, sbV, z.edad >= sbV.CONFIG.mayoriaDeEdad);
-  cuentas(MV, z);
-  ['negocio', 'oficio', 'casa'].forEach(function (c) {
-    const sig = MV.siguienteMejora(c);
-    if (sig && !MV.faltaParaMejora(sig.id)) MV.comprarMejora(sig.id);
-  });
-  reparte(MV, z, 3);
-}
-
-/* B: sube la escalera completa y también invierte en mejoras. */
-function escaleraConMejoras(MV, z, sbV) {
-  if (!z.estudio) {
-    if (z.educacion === 'primaria') MV.inscribirse('basicos', false);
-    else if (z.educacion === 'basicos') MV.inscribirse('bachillerato', false, 'am');
-    else if (z.educacion === 'diversificado') MV.inscribirse('ingenieria', false);
-    else if (z.educacion === 'licenciatura' && z.edad < 40) MV.inscribirse('maestria', false);
-  }
-  mejorEmpleo(MV, z, sbV, z.edad >= sbV.CONFIG.mayoriaDeEdad);
-  cuentas(MV, z);
-  CADENAS.forEach(function (c) {
-    const sig = MV.siguienteMejora(c.id);
-    if (sig && !MV.faltaParaMejora(sig.id)) MV.comprarMejora(sig.id);
-  });
-  reparte(MV, z, z.estudio ? 2 : 3);
-}
-
-const SEMILLAS = Array.from({ length: 11 }, (_, i) => 3000 + i * 7919);
-const soloNegocio = SEMILLAS.map(s => vida(cargar('es'), tycoonSinEstudiar, s));
-const conEscalera = SEMILLAS.map(s => vida(cargar('es'), escaleraConMejoras, s));
-
-const Q = n => 'Q' + Math.round(n).toLocaleString('en-US');
-const medNegocio = mediana(soloNegocio);
-const medEscalera = mediana(conEscalera);
-
-console.log('\n--- ¿el tycoon se come a la escuela? mediana de 11 vidas ---');
-console.log(`  negocio sin estudiar   ${Q(medNegocio)}`);
-console.log(`  escalera con mejoras   ${Q(medEscalera)}`);
-
-ok(medNegocio > 0,
-   `montar un negocio sin estudiar deja al jugador en positivo (${Q(medNegocio)})`);
-ok(medEscalera > medNegocio,
-   `y estudiar sigue rindiendo más (${Q(medEscalera)} contra ${Q(medNegocio)})`);
-ok(medNegocio > medEscalera * 0.15,
-   `pero el negocio vale la pena de verdad: es el ${
-     Math.round((medNegocio / medEscalera) * 100)}% de la ruta larga, no una migaja`);
-
-M.imprimir('las mejoras y la capa de tycoon');
+M.imprimir('las mejoras que te mejoran a ti');

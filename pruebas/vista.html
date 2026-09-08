@@ -39,7 +39,7 @@
   var ARCHIVOS = [
     'datos/config.js', 'datos/trabajos.js', 'datos/carreras.js', 'datos/creditos.js',
     'datos/eventos.js', 'datos/largoplazo.js', 'datos/origenes.js', 'datos/migracion.js',
-    'datos/glosario.js', 'datos/decisiones.js', 'datos/mejoras.js',
+    'datos/glosario.js', 'datos/decisiones.js', 'datos/mejoras.js', 'datos/negocios.js',
     'datos/progreso.js',
     'datos/textos.en.js', 'datos/textos.en.v2.js',
     'vendor/lucide.js', 'vendor/chart.js',
@@ -157,9 +157,19 @@
     Motor.inscribirse('tecnico', false);
     Motor.solicitarTarjeta();
     // Unas mejoras compradas, para poder mirar la pantalla con niveles
-    ['canasta', 'carreta', 'herramienta', 'uniforme', 'utiles'].forEach(function (id) {
+    ['herramienta', 'uniforme', 'utiles', 'libros'].forEach(function (id) {
       Motor.comprarMejora(id);
     });
+    /* Y un imperio a medio construir: dos negocios, uno subido de nivel y con
+     * gente adentro. Sin esto la pantalla del imperio se ve vacia y no sirve
+     * para revisar el diseno. */
+    z.efectivo += 40000;
+    Motor.abrirNegocio('refrescos');
+    Motor.abrirNegocio('lavado');
+    Motor.subirNivelNegocio('lavado');
+    Motor.subirNivelNegocio('lavado');
+    Motor.contratar('lavado', 'informal');
+    Motor.contratar('lavado', 'formal');
     // Dos meses cerrados: con uno solo la ruta todavía no abre las Noticias,
     // y esta vista existe para poder mirarlas.
     for (var v = 0; v < 2; v++) {

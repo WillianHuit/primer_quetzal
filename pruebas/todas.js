@@ -11,7 +11,8 @@ const SUITES = [
   ['minijuegos-valen.js',   'Los minijuegos valen la jornada que cuestan'],
   ['ruta.js',               'La ruta que se va abriendo'],
   ['decisiones.js',         'Las tarjetas de decisión'],
-  ['mejoras.js',            'Las mejoras y la capa de tycoon'],
+  ['mejoras.js',            'Las mejoras que te mejoran a ti'],
+  ['imperio.js',            'El imperio: negocios, planilla y techos'],
   ['iconos.js',             'Iconos y transiciones de pestaña'],
   ['interfaz-bilingue.js',  'Interfaz en español e inglés'],
   ['dom-real.js',           'Interacción real en el navegador']

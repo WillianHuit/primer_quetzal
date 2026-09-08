@@ -881,13 +881,76 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
 }
 .mejora-barra { margin: 10px 0 4px; }
 
-/* ---------- mejoras: la capa de tycoon ----------
-   Es la única pantalla donde los números suben, así que es la única que se
-   permite verse como un juego: medallón grande, puntos de nivel y un botón
-   de comprar del tamaño de un botón de comprar. */
+/* ---------- el imperio ----------
 
-.tarjeta.produce .tres-cifras { margin-bottom: 6px; }
-.tarjeta.produce .sutil { margin: 0; }
+   La calle puede ser más ancha que la tarjeta: el SVG se pide con un
+   `min-width` en línea proporcional al número de locales, así que con un
+   negocio no hay barra y con cinco hay que arrastrar. Que no quepa es parte
+   del premio, y por eso aquí NO se encoge la escena para que entre. */
+.escena-caja {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.escena-caja .escena { margin-bottom: 0; }
+.escena-caja::-webkit-scrollbar { height: 7px; }
+.escena-caja::-webkit-scrollbar-thumb {
+  background: var(--linea-honda); border-radius: 99px;
+}
+
+/* Las tres cifras de un negocio suelto, más chicas que las del imperio */
+.tres-cifras.chico b { font-size: 17px; }
+.tres-cifras.chico .etq { font-size: 10px; }
+
+/* Los dos techos. Están arriba de todo a propósito: es el sitio donde el
+   colegio se convierte en tamaño de empresa, y una barra que sube al
+   graduarse convence más que cualquier texto. */
+.tarjeta.techos { padding: 12px 13px 10px; }
+.techo + .techo { margin-top: 10px; }
+.techo .progreso { margin: 6px 0 0; }
+.techo .etq { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.progreso-relleno.tope {
+  background: linear-gradient(180deg, var(--ambar), var(--ambar-hondo));
+}
+
+/* La planilla del negocio */
+.gente {
+  margin-top: 11px; padding-top: 11px;
+  border-top: 2px dashed var(--linea);
+}
+.empleado {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 8px; padding: 7px 9px;
+  background: var(--fondo); border: 2px solid var(--linea);
+  border-radius: 12px;
+}
+.emp-nom { font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 7px; }
+.emp-nom small { display: block; font-weight: 600; font-size: 11px; color: var(--gris); }
+
+/* Los dos contratos, uno al lado del otro con su precio de verdad. Es la
+   comparación más útil de todo el juego para quien algún día tenga un
+   negocio, así que se le da sitio en vez de esconderla en un texto. */
+.contrato {
+  margin-top: 9px; padding: 9px 10px;
+  background: var(--fondo); border: 2px solid var(--linea);
+  border-radius: 13px;
+}
+.contrato.formal { border-color: var(--verde-borde); background: var(--verde-claro); }
+.contrato .sutil { margin: 4px 0 0; font-size: 11.5px; }
+.contrato .btn-chico { margin-top: 8px; }
+
+/* Una oferta de negocio: la misma tarjeta, sin el borde verde de lo que ya
+   es tuyo. */
+.cadena.oferta { border-style: dashed; }
+.cadena.oferta .cadena-nom small { font-weight: 500; }
+
+/* ---------- mejoras: las que te mejoran a ti ----------
+   Es una de las pantallas donde los números suben, así que se permite verse
+   como un juego: medallón grande, puntos de nivel y un botón
+   de comprar del tamaño de un botón de comprar. */
 
 .cadena {
   background: var(--tarjeta);

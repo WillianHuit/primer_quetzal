@@ -46,6 +46,8 @@ var CONFIG = {
     // Por JORNADA, o sea la mitad de lo que costaba una semana entera
     porEspacio: {
       trabajo: -6,
+      // Atender tu propio negocio cansa igual que atender el de otro
+      negocio: -6,
       estudio: -5,
       minijuego: -6,
       'minijuego-usado': -6,

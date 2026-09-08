@@ -48,16 +48,27 @@ informal). De ahí en adelante:
 - **La primera pantalla del juego es una decisión**: a los 13, con la primaria terminada,
   estudias básicos o te pones a trabajar. El juego no juzga ninguna de las dos, te muestra
   todas las opciones de estudio que tienes, y la pregunta vuelve cada vez que te graduas.
-- **Una capa de tycoon con su escenario dibujado**: cuatro cadenas de mejoras —tu
-  negocio, tus herramientas, tu estudio y tu descanso— que suben de nivel, y **un
-  escenario que crece con ellas**: el terreno vacío, después la canasta, después la
-  carreta con sus ruedas, después el puesto con su toldo, y al final un local con puerta y
-  rótulo, con la bicicleta, los libros y la lámpara alrededor. Con monedas que suben
-  cuando el negocio produce y una gráfica de lo que ha producido, mes por mes.
+- **Un imperio, con su calle dibujada**: el jugador **abre negocios** —un puesto de
+  dulces, un lavado de carros, una tortillería, un taller, una distribuidora— les sube el
+  nivel y **contrata gente**, y cada negocio abierto aparece como un local en su calle, con
+  su gente parada enfrente. La calle **se alarga** conforme el imperio crece: con un negocio
+  cabe en la pantalla, con cinco hay que arrastrar. Con monedas que suben de los locales que
+  produjeron y una gráfica de lo que han dejado, mes por mes.
 
-  Y sigue siendo educación financiera: cada mejora dice **en cuántos meses se paga sola**,
-  que es el único cálculo que hay que hacer antes de comprar una herramienta. El negocio
-  produce sin gastarte jornadas, y puede quebrar si no le guardas colchón.
+  Y sigue siendo educación financiera, sin trampa. Un negocio se lee con **dos** números y
+  no con uno: lo que vende y lo que le queda. La tortillería vende casi el doble que el
+  lavado de carros y gana menos. Y contratar enseña la cifra que más negocios hunde: una
+  persona con contrato cuesta **el sueldo por 1.42 más Q250**, no el sueldo.
+
+  Lo que frena al imperio son cuatro cosas reales: cuántos negocios puedes llevar a la vez,
+  cuánta gente puedes administrar —las dos suben cuando terminas de estudiar, y se ven en su
+  barra arriba de la pantalla—, qué negocios te piden colegio terminado, y que un negocio al
+  que no le pones ni una jornada rinde un 30% menos. Además puede quebrar, y se evita
+  guardando tres meses de sus propios costos.
+
+- **Tres cadenas de mejoras para ti**: tus herramientas, tu estudio y tu descanso. Cada una
+  dice **en cuántos meses se paga sola**, que es el único cálculo que hay que hacer antes de
+  comprar una herramienta.
 - **Una ruta que se va abriendo.** El juego no arranca con todo encima: al empezar solo
   existe el estudio. El trabajo aparece cuando contestas esa primera pregunta, el banco
   cuando tienes de dónde entre dinero, la cuenta de ahorro cuando abres la monetaria, el
@@ -129,7 +140,7 @@ de fuente verificada y están documentadas en `docs/investigacion-economia-guate
 Las pruebas corren sin navegador con Node y son deterministas.
 
 ```
-node pruebas/todas.js          # las once suites
+node pruebas/todas.js          # las doce suites
 ```
 
 O una por una:
@@ -158,12 +169,25 @@ dibujo y que todo dibujo se use. Un nombre mal escrito no lanza ningún error, s
 hueco en la pantalla. Vigila también al personaje: que cada empleo tenga uniforme y que
 ningún uniforme pida una pieza que no existe.
 
-`mejoras.js` es el que hay que mirar al tocar los números de una mejora. Lo que de verdad
-comprueba es que **estudiar siga rindiendo más que montar un negocio y dejar el colegio**:
-corre las dos vidas completas sobre once semillas y compara la mediana. Hoy da Q3.0
-millones contra Q1.4, o sea que el negocio vale casi la mitad de la ruta larga —tiene que
-valer la pena, si no nadie lo toca— pero no gana. Lo que sostiene ese orden es que los dos
-escalones grandes del negocio piden nivel educativo terminado.
+`imperio.js` es el que hay que mirar al tocar los números de un negocio, de la planilla o
+de los techos. Lo que de verdad comprueba son dos órdenes, corriendo tres vidas completas de
+los 13 a los 65 sobre once semillas:
+
+| Ruta | Patrimonio mediano a los 65 |
+|---|---|
+| Sin estudiar y sin negocios | Q1.5 millones |
+| Sin estudiar, con negocios | Q7.1 millones |
+| Escalera completa y negocios | Q36.0 millones |
+
+**Estudiar tiene que seguir rindiendo más** (5 a 1) y **montar negocios tiene que cambiarle
+la vida a quien no estudió** (4.7 veces). Si alguno de los dos se invierte, la suite falla.
+Lo que sostiene el primero son los dos techos —cuántos negocios y cuánta gente puedes
+llevar— que suben con el estudio.
+
+Si algún día esos números salen raros, corre `TRAZA=1 node pruebas/imperio.js`: imprime de
+dónde salió y a dónde se fue cada quetzal de una vida completa. Es lo que encontró las cuatro
+razones distintas por las que el imperio empobrecía al jugador (§24.4 del documento de
+diseño), y sin eso las tres primeras eran indistinguibles entre sí.
 
 `decisiones.js` es el que hay que mirar al escribir una tarjeta nueva. Una tarjeta mal
 escrita no lanza ningún error: una opción que no hace nada se ve igual que una que sí, y
@@ -253,12 +277,18 @@ pruebas/vista.html?mj=presupuesto   un minijuego abierto
 - **Un uniforme para el personaje**: agrega una entrada a `ROPA` en `js/personaje.js` con
   el id del empleo y hasta cuatro piezas (color de playera, algo en la cabeza, algo encima
   y algo en la mano). Un empleo sin entrada sale en ropa de calle.
+- **Un negocio**: copia un bloque de `TIPOS_NEGOCIO` en `datos/negocios.js` y cambia lo
+  que cuesta abrirlo, lo que vende una jornada adentro, su margen, su renta y cuánta gente
+  cabe. **No hay que dibujar nada**: el local se dibuja solo y su fachada usa el icono que
+  le pongas. El número que de verdad hay que pensar es `ventaPorJornada × 8 × margen −
+  costoMensual`, que es lo que deja al mes con una sola persona adentro, y la pantalla lo
+  imprime.
 - **Una pieza al escenario**: agrega una función a la lista de su cadena en `js/escena.js`.
   Lo único que hay que respetar es el reparto de zonas del eje horizontal que está
   documentado ahí arriba: la primera versión no lo tenía y el rótulo del oficio le quedó
-  cruzado en la cara al personaje. Si agregas un nivel a una cadena de `mejoras.js` y no
-  dibujas su pieza, `pruebas/iconos.js` falla: el jugador compraría el nivel y la pantalla
-  se vería igual.
+  cruzado en la cara al personaje. Si agregas un nivel a una cadena de `mejoras.js`, o un
+  nivel de negocio, y no dibujas su pieza, `pruebas/iconos.js` falla: el jugador compraría
+  el nivel y la pantalla se vería igual.
 - **Una tarjeta de decisión**: agrega un bloque a `DECISIONES` en `datos/decisiones.js`.
   La regla al escribirla es que la opción de no hacer nada tenga que ser defendible: si una
   de las dos es obviamente la buena, no es una decisión, es un peaje.

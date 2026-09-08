@@ -1,31 +1,41 @@
-/* Mi Primer Quetzal — el escenario que crece
+/* Mi Primer Quetzal — la calle del jugador
  *
- * Lo que le faltaba al juego para parecer un tycoon.
+ * Lo que hace que esto parezca un tycoon y no una hoja de cálculo.
  *
- * Las mejoras ya subían de nivel y ya cambiaban los números, pero el jugador
- * no veía nada: leía "Nivel 2 de 4" y tenía que imaginárselo. Un tycoon se
- * mira. Esto dibuja el negocio del jugador y le va agregando cosas conforme
- * compra: la canasta en el suelo, después la carreta con sus ruedas, después el
- * puesto con su toldo, y al final un local con puerta, ventana y rótulo.
+ * Aquí había un escenario con UN negocio que subía por cuatro escalones
+ * dibujados a mano: canasta, carreta, puesto, local. Se quedó corto en cuanto
+ * el jugador pudo tener varios negocios a la vez, que es de lo que va el juego
+ * ahora. Esto dibuja **una calle**: un local por cada negocio abierto, con su
+ * gente parada enfrente, y la calle se alarga conforme el imperio crece.
  *
- * Las otras tres cadenas también aparecen, alrededor: la mochila y los libros
- * si está estudiando, la caja de herramientas y la bicicleta si compró
- * herramientas, el banquito y la lámpara si arregló su casa. La escena de
- * alguien que lleva veinte niveles comprados está llena de cosas, y eso —que se
- * vea lleno— es todo el premio.
+ * Que la calle se alargue es a propósito y es la mitad del premio. Con un
+ * negocio la escena cabe en la tarjeta; con cinco hay que arrastrar para verla
+ * toda. El jugador nota que ya no le cabe lo que tiene.
+ *
+ * ---------------------------------------------------------------------------
+ * Un local nuevo no necesita que nadie lo dibuje
+ * ---------------------------------------------------------------------------
+ * Esto es lo importante del archivo. El local NO está dibujado por tipo de
+ * negocio: está dibujado una sola vez, de forma genérica, y crece con el nivel
+ * (caja, toldo, rótulo, segundo piso). Lo único que distingue una tortillería
+ * de un taller es el **emblema** de su fachada, y ese emblema sale de
+ * `js/iconos.js` usando el campo `icono` que el tipo de negocio ya tiene.
+ *
+ * O sea: quien agregue un negocio a datos/negocios.js no tiene que dibujar
+ * nada. Antes sí, y era una trampa: se agregaba un nivel, el jugador lo
+ * compraba y la pantalla se veía igual.
  *
  * ---------------------------------------------------------------------------
  * Cómo está dibujado
  * ---------------------------------------------------------------------------
- * SVG propio, de una sola cuadrícula de 200x116, en el estilo de los paquetes
- * de arte de juego: formas macizas, esquinas redondas y contorno gordo del
- * color de la tinta. No hay imágenes que cargar ni librería que instalar, y
- * **todos los colores salen de la paleta**: si mañana cambia --verde, cambia
- * el toldo del puesto.
+ * SVG propio, en el estilo de los paquetes de arte de juego: formas macizas,
+ * esquinas redondas y contorno gordo del color de la tinta. No hay imágenes
+ * que cargar ni librería que instalar, y **todos los colores salen de la
+ * paleta**: si mañana cambia --verde, cambia el toldo.
  *
- * Se dibuja por capas y de atrás hacia adelante: suelo, negocio, cosas
- * alrededor, personaje. Cada pieza es una función que devuelve su trozo de SVG
- * y no sabe nada de las demás.
+ * Se dibuja de atrás hacia adelante: cielo, suelo, cosas del margen, locales,
+ * gente, personaje. Cada pieza es una función que devuelve su trozo de SVG y
+ * no sabe nada de las demás.
  *
  * ---------------------------------------------------------------------------
  * Las zonas, que es lo único que hay que respetar al agregar una pieza
@@ -34,11 +44,12 @@
  * este reparto del eje horizontal. La primera versión no lo tenía y el rótulo
  * del oficio le quedó cruzado en la cara al personaje.
  *
- *      x: 2         26          70    92              168      198
- *         |  CASA   | PERSONAJE | OFI |    NEGOCIO     | ESCUELA |
+ *   x: 2    22        70        96      126                    126+46n
+ *      |CASA| PERSONA | ESCUELA | OFICIO |  LA CALLE, 46 por local  |
  *
- * El rótulo colgado del oficio es la única pieza que sale de su zona, y lo
- * hace hacia arriba (y < 42), donde no hay nada.
+ * El suelo está en y = 96 y todo se para encima. El rótulo colgado del oficio
+ * es la única pieza que sale de su zona, y lo hace hacia arriba (y < 42),
+ * donde no hay nada.
  */
 
 var Escena = (function () {
@@ -59,133 +70,222 @@ var Escena = (function () {
   function T(g) { return ' stroke="' + C.tinta + '" stroke-width="' + (g || 2.4) +
                          '" stroke-linejoin="round" stroke-linecap="round"'; }
 
-  // ---------- el suelo ----------
+  var X_CALLE = 126;      // donde empieza la calle
+  var ANCHO_LOCAL = 46;   // lo que ocupa cada negocio
+  var SUELO = 96;         // la línea donde todo se para
 
-  function suelo() {
-    return '<rect x="2" y="96" width="196" height="18" rx="7" fill="' + C.claro + '"' + T() + '/>' +
-           '<path d="M14 105h20M52 108h16M120 105h22M158 108h14"' +
+  /* Cuatro colores que se van repartiendo entre los locales, para que dos
+   * negocios seguidos no salgan del mismo color. */
+  var TECHOS = [C.rojo, C.verde, C.azul, C.ambar];
+
+  function anchoDe(cuantos) {
+    return Math.max(200, X_CALLE + Math.max(cuantos, 1) * ANCHO_LOCAL + 6);
+  }
+
+  // ---------- el fondo ----------
+
+  function suelo(w) {
+    return '<rect x="2" y="' + SUELO + '" width="' + (w - 4) + '" height="18" rx="7" fill="' +
+             C.claro + '"' + T() + '/>' +
+           '<path d="M14 105h20M52 108h16M100 105h16M150 108h18"' +
              ' stroke="' + C.verde + '" stroke-width="2" stroke-linecap="round" opacity=".55"/>';
   }
 
-  function sol() {
-    return '<circle cx="152" cy="16" r="10" fill="' + C.ambar + '" opacity=".22"/>' +
-           '<circle cx="152" cy="16" r="6.5" fill="' + C.ambar + '" opacity=".48"/>';
+  function sol(w) {
+    var cx = w - 26;
+    return '<circle cx="' + cx + '" cy="16" r="10" fill="' + C.ambar + '" opacity=".22"/>' +
+           '<circle cx="' + cx + '" cy="16" r="6.5" fill="' + C.ambar + '" opacity=".48"/>';
   }
 
-  // ---------- el negocio, nivel por nivel ----------
+  // ---------- un local ----------
 
-  var NEGOCIO = [
-    // 0: todavía nada. Un cajón vacío en el suelo, para que se note el hueco.
-    function () {
-      return '<rect x="112" y="82" width="30" height="14" rx="3" fill="none"' +
-             ' stroke="' + C.linea + '" stroke-width="2.4" stroke-dasharray="5 4"/>';
-    },
-    // 1: una canasta
-    function () {
-      return '<path d="M108 78h34l-4 18h-26z" fill="' + C.ambar + '" opacity=".75"' + T() + '/>' +
-             '<path d="M115 78c0-7 4-11 10-11s10 4 10 11" fill="none"' + T(2) + '/>' +
-             '<path d="M110 85h30" stroke="' + C.tinta + '" stroke-width="1.6" opacity=".5"/>' +
-             '<circle cx="120" cy="90" r="2.6" fill="' + C.rojo + '"' + T(1.4) + '/>' +
-             '<circle cx="130" cy="90" r="2.6" fill="' + C.rojo + '"' + T(1.4) + '/>';
-    },
-    // 2: una carreta con ruedas
-    function () {
-      return '<path d="M100 70h48l-3 18h-42z" fill="' + C.madera + '"' + T() + '/>' +
-             '<path d="M103 78h42" stroke="' + C.tinta + '" stroke-width="1.6" opacity=".45"/>' +
-             '<path d="M148 74l12-6" fill="none"' + T(2.2) + '/>' +
-             '<circle cx="112" cy="93" r="7" fill="' + C.tinta + '"/>' +
-             '<circle cx="112" cy="93" r="2.6" fill="' + C.linea + '"/>' +
-             '<circle cx="138" cy="93" r="7" fill="' + C.tinta + '"/>' +
-             '<circle cx="138" cy="93" r="2.6" fill="' + C.linea + '"/>' +
-             '<rect x="106" y="60" width="12" height="10" rx="2" fill="' + C.rojo + '" opacity=".8"' + T(1.8) + '/>' +
-             '<rect x="122" y="62" width="14" height="8" rx="2" fill="' + C.verde + '" opacity=".8"' + T(1.8) + '/>';
-    },
-    // 3: un puesto con toldo y mostrador
-    function () {
-      return '<path d="M96 60h56v6H96z" fill="' + C.madera + '"' + T() + '/>' +
-             // el toldo a rayas
-             '<path d="M92 60l8-18h48l8 18z" fill="' + C.lona + '"' + T() + '/>' +
-             '<path d="M104 42l-5 18M118 42l-3 18M132 42l3 18M146 42l5 18"' +
-               ' stroke="' + C.rojo + '" stroke-width="4" opacity=".8"/>' +
-             // patas y mostrador
-             '<path d="M99 66v30M149 66v30"' + T(2.6) + '/>' +
-             '<rect x="96" y="80" width="56" height="10" rx="2" fill="' + C.madera + '"' + T() + '/>' +
-             '<rect x="104" y="70" width="12" height="9" rx="2" fill="' + C.verde + '" opacity=".85"' + T(1.8) + '/>' +
-             '<rect x="122" y="70" width="12" height="9" rx="2" fill="' + C.ambar + '" opacity=".85"' + T(1.8) + '/>' +
-             '<circle cx="144" cy="75" r="4" fill="' + C.rojo + '" opacity=".85"' + T(1.6) + '/>';
-    },
-    // 4: un local con puerta, ventana y rótulo
-    function () {
-      return '<rect x="96" y="38" width="68" height="58" rx="4" fill="' + C.claro + '"' + T(2.6) + '/>' +
-             // techo
-             '<path d="M90 38l40-15 40 15z" fill="' + C.rojo + '" opacity=".85"' + T(2.6) + '/>' +
-             // rótulo
-             '<rect x="104" y="43" width="50" height="13" rx="3" fill="' + C.verde + '"' + T(2) + '/>' +
-             '<path d="M112 49.5h34" stroke="' + C.lona + '" stroke-width="3" stroke-linecap="round"/>' +
-             // ventana
-             '<rect x="103" y="63" width="22" height="20" rx="2" fill="' + C.azul + '" opacity=".35"' + T(2) + '/>' +
-             '<path d="M114 63v20M103 73h22" stroke="' + C.tinta + '" stroke-width="1.8"/>' +
-             // puerta
-             '<rect x="134" y="64" width="22" height="32" rx="2" fill="' + C.madera + '"' + T(2.2) + '/>' +
-             '<circle cx="139" cy="81" r="1.8" fill="' + C.tinta + '"/>';
+  /* Lo que mide un local según su nivel. El techo sube: un negocio con
+   * sucursal se ve más alto que uno recién abierto, y eso es todo lo que hay
+   * que ver. */
+  var ALTO_POR_NIVEL = [24, 30, 36, 46];
+
+  function altoDe(nivel) {
+    var i = Math.max(0, Math.min((nivel || 1) - 1, ALTO_POR_NIVEL.length - 1));
+    return ALTO_POR_NIVEL[i];
+  }
+
+  /* El emblema de la fachada, tomado de js/iconos.js.
+   *
+   * Los trazos de ese archivo no traen color ni grosor —los pone el CSS
+   * cuando van dentro de un <svg class="ic">— así que aquí hay que ponérselos
+   * a mano en el grupo que los envuelve. */
+  function emblema(nombre, cx, cy, lado) {
+    if (typeof Iconos === 'undefined') return '';
+    var d = Iconos.trazo(nombre);
+    if (!d) return '';
+    var s = lado / 24;
+    return '<g transform="translate(' + (cx - lado / 2) + ',' + (cy - lado / 2) +
+             ') scale(' + s.toFixed(3) + ')" fill="none" stroke="' + C.tinta +
+             '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' +
+             ' opacity=".85">' + d + '</g>';
+  }
+
+  /* El terreno vacío. Sale cuando el jugador todavía no tiene ningún negocio,
+   * y sale con el contorno punteado para que se note que ahí falta algo. */
+  function terrenoVacio(x0) {
+    var x = x0 + 7;
+    return '<rect x="' + x + '" y="' + (SUELO - 14) + '" width="32" height="14" rx="3"' +
+             ' fill="none" stroke="' + C.linea + '" stroke-width="2.4" stroke-dasharray="5 4"/>';
+  }
+
+  /* Un local completo. Genérico: lo único propio del negocio es el emblema.
+   *
+   *   x0        dónde empieza su hueco en la calle
+   *   nivel     1 a 4. Sube el techo y le agrega toldo, rótulo y segundo piso
+   *   icono     el emblema de la fachada
+   *   color     índice del color de techo
+   */
+  function local(x0, nivel, icono, color) {
+    var n = Math.max(1, Math.min(nivel || 1, ALTO_POR_NIVEL.length));
+    var alto = altoDe(n);
+    var x = x0 + 7;
+    var y = SUELO - alto;
+    var techo = TECHOS[color % TECHOS.length];
+    var h = '';
+
+    // el segundo piso, que es lo que hace que el nivel 4 se vea de lejos
+    if (n >= 4) {
+      h += '<rect x="' + (x + 4) + '" y="' + (y - 12) + '" width="24" height="13" rx="3" fill="' +
+             C.claro + '"' + T(2.2) + '/>' +
+           '<rect x="' + (x + 10) + '" y="' + (y - 9) + '" width="11" height="8" rx="1.5" fill="' +
+             C.azul + '" opacity=".35"' + T(1.6) + '/>';
     }
-  ];
 
-  // ---------- lo que aportan las otras cadenas ----------
+    // el cuerpo y el techo
+    h += '<rect x="' + x + '" y="' + y + '" width="32" height="' + alto + '" rx="3" fill="' +
+           C.claro + '"' + T(2.4) + '/>';
+    h += '<path d="M' + (x - 4) + ' ' + y + 'L' + (x + 16) + ' ' + (y - 9) +
+           'L' + (x + 36) + ' ' + y + 'z" fill="' + techo + '" opacity=".85"' + T(2.2) + '/>';
 
-  /* Zona x: 70 a 90, y el rótulo colgado hacia arriba. */
+    // el toldo a rayas, desde el nivel 2
+    if (n >= 2) {
+      h += '<path d="M' + (x - 2) + ' ' + (y + 9) + 'h36l-4 8h-28z" fill="' + C.lona + '"' + T(2) + '/>' +
+           '<path d="M' + (x + 6) + ' ' + (y + 9) + 'l-2 8M' + (x + 16) + ' ' + (y + 9) + 'v8M' +
+             (x + 26) + ' ' + (y + 9) + 'l2 8" stroke="' + techo +
+             '" stroke-width="3" opacity=".75"/>';
+    }
+
+    // el rótulo con su nombre, desde el nivel 3
+    if (n >= 3) {
+      h += '<rect x="' + (x + 3) + '" y="' + (y + 20) + '" width="26" height="8" rx="2" fill="' +
+             C.verde + '"' + T(1.8) + '/>' +
+           '<path d="M' + (x + 8) + ' ' + (y + 24) + 'h16" stroke="' + C.lona +
+             '" stroke-width="2.4" stroke-linecap="round"/>';
+    }
+
+    // la puerta, siempre
+    h += '<rect x="' + (x + 21) + '" y="' + (SUELO - 15) + '" width="9" height="15" rx="1.5" fill="' +
+           C.madera + '"' + T(2) + '/>';
+
+    // y el emblema, que es lo único que dice qué negocio es
+    h += emblema(icono, x + 11, SUELO - (n >= 3 ? 9 : 8), 13);
+    return h;
+  }
+
+  /* La gente que trabaja adentro, parada enfrente.
+   *
+   * Es la pieza que más se nota al contratar: el jugador paga la planilla y
+   * ve aparecer una persona. Se dibujan hasta cuatro y el resto se cuenta con
+   * un número, porque a la quinta ya no caben en el hueco. */
+  function gente(x0, cuantos) {
+    if (!cuantos) return '';
+    var h = '';
+    var caben = Math.min(cuantos, 4);
+    for (var i = 0; i < caben; i++) {
+      var x = x0 + 8 + i * 8;
+      h += '<g>' +
+             '<circle cx="' + x + '" cy="' + (SUELO - 8) + '" r="2.7" fill="' + C.lona + '"' + T(1.4) + '/>' +
+             '<path d="M' + (x - 2.6) + ' ' + SUELO + 'v-4a2.6 2.6 0 0 1 5.2 0v4z" fill="' +
+               C.azul + '" opacity=".85"' + T(1.4) + '/>' +
+           '</g>';
+    }
+    if (cuantos > caben) {
+      h += '<text x="' + (x0 + 8 + caben * 8) + '" y="' + (SUELO - 1) +
+             '" font-size="9" font-weight="700" fill="' + C.tinta + '">+' +
+             (cuantos - caben) + '</text>';
+    }
+    return h;
+  }
+
+  /* Las monedas que suben de un local que produjo.
+   * Es lo único que se mueve sin que el jugador toque nada. */
+  function monedas(x0, cuantas) {
+    var h = '';
+    var sitios = [[x0 + 10, 56], [x0 + 23, 46], [x0 + 34, 58]];
+    for (var i = 0; i < Math.min(cuantas, 3); i++) {
+      h += '<g class="esc-moneda esc-moneda-' + (i + 1) + '">' +
+             '<circle cx="' + sitios[i][0] + '" cy="' + sitios[i][1] + '" r="5.4" fill="' +
+               C.ambar + '"' + T(1.8) + '/>' +
+             '<path d="M' + (sitios[i][0] - 2.2) + ' ' + sitios[i][1] +
+               'h4.4" stroke="' + C.tinta + '" stroke-width="1.6"/>' +
+           '</g>';
+    }
+    return h;
+  }
+
+  // ---------- lo que aportan las tres cadenas de mejoras ----------
+
+  /* Zona x: 96 a 118, y el rótulo colgado hacia arriba. */
   var OFICIO = [
     function () { return ''; },
     // caja de herramientas
     function () {
-      return '<rect x="70" y="84" width="19" height="12" rx="2" fill="' + C.rojo + '" opacity=".85"' + T(1.8) + '/>' +
-             '<path d="M75 84v-4h9v4" fill="none"' + T(1.8) + '/>' +
-             '<path d="M70 89h19" stroke="' + C.tinta + '" stroke-width="1.4" opacity=".5"/>';
+      return '<rect x="96" y="84" width="19" height="12" rx="2" fill="' + C.rojo + '" opacity=".85"' + T(1.8) + '/>' +
+             '<path d="M101 84v-4h9v4" fill="none"' + T(1.8) + '/>' +
+             '<path d="M96 89h19" stroke="' + C.tinta + '" stroke-width="1.4" opacity=".5"/>';
     },
     // un rótulo colgado, que es lo que hace que te vuelvan a llamar
     function () {
-      return '<path d="M70 84h19v12h-19z" fill="' + C.rojo + '" opacity=".85"' + T(1.8) + '/>' +
-             '<path d="M75 84v-4h9v4" fill="none"' + T(1.8) + '/>' +
-             '<path d="M80 14v10" fill="none"' + T(1.8) + '/>' +
-             '<rect x="64" y="24" width="32" height="16" rx="4" fill="' + C.lona + '"' + T(1.8) + '/>' +
-             '<path d="M71 32h18" stroke="' + C.verde + '" stroke-width="3" stroke-linecap="round"/>';
+      return '<path d="M96 84h19v12H96z" fill="' + C.rojo + '" opacity=".85"' + T(1.8) + '/>' +
+             '<path d="M101 84v-4h9v4" fill="none"' + T(1.8) + '/>' +
+             // el poste baja hasta la caja: un rotulo colgado del aire se veia raro
+             '<path d="M106 40v44" fill="none"' + T(1.8) + '/>' +
+             '<rect x="90" y="24" width="32" height="16" rx="4" fill="' + C.lona + '"' + T(1.8) + '/>' +
+             '<path d="M97 32h18" stroke="' + C.verde + '" stroke-width="3" stroke-linecap="round"/>';
     },
     // una bicicleta
     function () {
-      return '<path d="M80 14v10" fill="none"' + T(1.8) + '/>' +
-             '<rect x="64" y="24" width="32" height="16" rx="4" fill="' + C.lona + '"' + T(1.8) + '/>' +
-             '<path d="M71 32h18" stroke="' + C.verde + '" stroke-width="3" stroke-linecap="round"/>' +
-             '<circle cx="72" cy="89" r="6.5" fill="none"' + T(2.2) + '/>' +
-             '<circle cx="88" cy="89" r="6.5" fill="none"' + T(2.2) + '/>' +
-             '<path d="M72 89l7-11h6l3 11M79 78h6M81 89h7" fill="none"' + T(2) + '/>' +
-             '<path d="M84 76h5" fill="none"' + T(2) + '/>';
+      return '<path d="M106 40v42" fill="none"' + T(1.8) + '/>' +
+             '<rect x="90" y="24" width="32" height="16" rx="4" fill="' + C.lona + '"' + T(1.8) + '/>' +
+             '<path d="M97 32h18" stroke="' + C.verde + '" stroke-width="3" stroke-linecap="round"/>' +
+             '<circle cx="98" cy="89" r="6.5" fill="none"' + T(2.2) + '/>' +
+             '<circle cx="114" cy="89" r="6.5" fill="none"' + T(2.2) + '/>' +
+             '<path d="M98 89l7-11h6l3 11M105 78h6M107 89h7" fill="none"' + T(2) + '/>' +
+             '<path d="M110 76h5" fill="none"' + T(2) + '/>';
     }
   ];
 
+  /* Zona x: 70 a 94. Los libros van junto al jugador y no al otro lado de la
+   * calle, que es donde estaban antes de que la calle existiera. */
   var ESCUELA = [
     function () { return ''; },
     // una mochila en el suelo
     function () {
-      return '<path d="M174 78h16v16a2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2z" fill="' + C.rojo + '" opacity=".8"' + T(1.8) + '/>' +
-             '<path d="M178 78v-4a4 4 0 0 1 8 0v4" fill="none"' + T(1.6) + '/>';
+      return '<path d="M76 78h16v16a2 2 0 0 1-2 2H78a2 2 0 0 1-2-2z" fill="' + C.rojo + '" opacity=".8"' + T(1.8) + '/>' +
+             '<path d="M80 78v-4a4 4 0 0 1 8 0v4" fill="none"' + T(1.6) + '/>';
     },
     // libros apilados
     function () {
-      return '<rect x="170" y="88" width="24" height="5" rx="1.5" fill="' + C.azul + '" opacity=".85"' + T(1.4) + '/>' +
-             '<rect x="172" y="83" width="20" height="5" rx="1.5" fill="' + C.verde + '" opacity=".85"' + T(1.4) + '/>' +
-             '<rect x="174" y="78" width="17" height="5" rx="1.5" fill="' + C.ambar + '" opacity=".85"' + T(1.4) + '/>';
+      return '<rect x="72" y="88" width="24" height="5" rx="1.5" fill="' + C.azul + '" opacity=".85"' + T(1.4) + '/>' +
+             '<rect x="74" y="83" width="20" height="5" rx="1.5" fill="' + C.verde + '" opacity=".85"' + T(1.4) + '/>' +
+             '<rect x="76" y="78" width="17" height="5" rx="1.5" fill="' + C.ambar + '" opacity=".85"' + T(1.4) + '/>';
     },
     // una antena, que es el internet en casa
     function () {
-      return '<rect x="170" y="88" width="24" height="5" rx="1.5" fill="' + C.azul + '" opacity=".85"' + T(1.4) + '/>' +
-             '<rect x="172" y="83" width="20" height="5" rx="1.5" fill="' + C.verde + '" opacity=".85"' + T(1.4) + '/>' +
-             '<path d="M182 78V58" fill="none"' + T(2) + '/>' +
-             '<path d="M176 60a9 9 0 0 1 12 0" fill="none"' + T(1.8) + '/>' +
-             '<path d="M172 54a15 15 0 0 1 20 0" fill="none"' + T(1.6) + '/>';
+      return '<rect x="72" y="88" width="24" height="5" rx="1.5" fill="' + C.azul + '" opacity=".85"' + T(1.4) + '/>' +
+             '<rect x="74" y="83" width="20" height="5" rx="1.5" fill="' + C.verde + '" opacity=".85"' + T(1.4) + '/>' +
+             '<path d="M84 78V58" fill="none"' + T(2) + '/>' +
+             '<path d="M78 60a9 9 0 0 1 12 0" fill="none"' + T(1.8) + '/>' +
+             '<path d="M74 54a15 15 0 0 1 20 0" fill="none"' + T(1.6) + '/>';
     }
   ];
 
-  /* Zona x: 2 a 26, al borde izquierdo. */
+  /* Zona x: 2 a 22, al borde izquierdo. */
   var CASA = [
     function () { return ''; },
     // un banquito
@@ -203,22 +303,6 @@ var Escena = (function () {
     }
   ];
 
-  /* Las monedas que suben del negocio. Solo salen si el negocio produce, y es
-   * la parte que hace que la pantalla se sienta viva: es lo único que se mueve
-   * sin que el jugador toque nada. */
-  function monedas(cuantas) {
-    var h = '';
-    var sitios = [[104, 56], [126, 48], [146, 58]];
-    for (var i = 0; i < Math.min(cuantas, 3); i++) {
-      h += '<g class="esc-moneda esc-moneda-' + (i + 1) + '">' +
-             '<circle cx="' + sitios[i][0] + '" cy="' + sitios[i][1] + '" r="6" fill="' + C.ambar + '"' + T(1.8) + '/>' +
-             '<path d="M' + (sitios[i][0] - 2.5) + ' ' + sitios[i][1] +
-               'h5" stroke="' + C.tinta + '" stroke-width="1.6"/>' +
-           '</g>';
-    }
-    return h;
-  }
-
   /* El personaje, encogido y puesto de pie en el suelo de la escena.
    * Se reusa js/personaje.js entero: aquí solo se lo coloca. */
   function personaje(op) {
@@ -232,38 +316,63 @@ var Escena = (function () {
   }
 
   function pieza(lista, nivel) {
-    var i = Math.max(0, Math.min(nivel, lista.length - 1));
+    var i = Math.max(0, Math.min(nivel || 0, lista.length - 1));
     return lista[i]();
   }
 
-  /* Dibuja la escena completa.
+  /* Dibuja la calle completa.
    *
-   *   negocio, oficio, escuela, casa   el nivel de cada cadena
-   *   produce   true si el negocio esta dando dinero: saca las monedas
+   *   negocios  lista de { icono, nivel, empleados, produce }, uno por local
+   *   oficio, escuela, casa   el nivel de cada cadena de mejoras
    *   trabajo   id del empleo, para vestir al personaje
    *   estudia   true si va al colegio
+   *   graduado  true si ya terminó algo
+   *
+   * El ancho del SVG crece con el número de locales, y el `min-width` en
+   * línea es lo que hace que la tarjeta le ponga barra de arrastre en vez de
+   * encoger todo hasta que no se vea. Con un negocio no hay barra.
    */
   function dibujar(op) {
     var o = op || {};
-    var h = '<svg class="escena" viewBox="0 0 200 116" aria-hidden="true" focusable="false">';
-    h += sol();
-    h += suelo();
-    h += pieza(ESCUELA, o.escuela || 0);
-    h += pieza(NEGOCIO, o.negocio || 0);
-    h += pieza(CASA, o.casa || 0);
-    h += pieza(OFICIO, o.oficio || 0);
-    if (o.produce) h += monedas((o.negocio || 0) + 1);
+    var negs = o.negocios || [];
+    var w = anchoDe(negs.length);
+    var h = '<svg class="escena" viewBox="0 0 ' + w + ' 116" preserveAspectRatio="xMinYMid meet"' +
+            ' style="min-width:' + Math.round(w * 1.5) + 'px"' +
+            ' aria-hidden="true" focusable="false">';
+    h += sol(w);
+    h += suelo(w);
+    h += pieza(ESCUELA, o.escuela);
+    h += pieza(CASA, o.casa);
+    h += pieza(OFICIO, o.oficio);
+
+    if (!negs.length) {
+      h += terrenoVacio(X_CALLE);
+    } else {
+      for (var i = 0; i < negs.length; i++) {
+        var n = negs[i] || {};
+        var x0 = X_CALLE + i * ANCHO_LOCAL;
+        h += local(x0, n.nivel, n.icono, i);
+        h += gente(x0, n.empleados || 0);
+        if (n.produce) h += monedas(x0, (n.nivel || 1));
+      }
+    }
+
     h += personaje({ trabajo: o.trabajo, estudia: o.estudia, graduado: o.graduado });
     return h + '</svg>';
   }
 
   return {
     dibujar: dibujar,
-    // Cuántos niveles sabe dibujar de cada cadena, que es lo que la prueba
-    // compara contra datos/mejoras.js: una cadena más larga que su dibujo
-    // dejaría de crecer en pantalla sin que nadie se diera cuenta.
+    anchoDe: anchoDe,
+    /* Cuántos niveles sabe dibujar de cada cosa.
+     *
+     * Es lo que la prueba compara contra los datos: una cadena de mejoras más
+     * larga que su dibujo, o un negocio con más niveles que ALTO_POR_NIVEL,
+     * dejaría de crecer en pantalla sin que nadie se diera cuenta. El jugador
+     * pagaría el nivel y no vería nada, que es lo peor que le puede pasar a
+     * un tycoon. */
     niveles: {
-      negocio: NEGOCIO.length - 1,
+      negocio: ALTO_POR_NIVEL.length,
       oficio: OFICIO.length - 1,
       escuela: ESCUELA.length - 1,
       casa: CASA.length - 1

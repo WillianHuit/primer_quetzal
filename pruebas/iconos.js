@@ -273,12 +273,12 @@ ok(munecoVestido.indexOf('var(--ambar') > 0,
    'y sus colores salen de la paleta del juego, no de colores nuevos');
 ok(!EMOJI.test(leer('js/personaje.js')), 'el personaje no trae emoji');
 
-// ---------- 9. el escenario crece con las cadenas ----------
+// ---------- 9. la calle crece con el imperio ----------
 
-/* El escenario dibuja un nivel distinto por cada escalon de cada cadena. Si
- * alguien agrega un quinto nivel al negocio en datos/mejoras.js y no dibuja su
- * pieza, la escena deja de crecer y nadie se entera: el jugador compra el
- * nivel, le suben los numeros y la pantalla se ve igual. */
+/* Las tres cadenas de mejoras dibujan un nivel distinto por cada escalon. Si
+ * alguien agrega un cuarto escalon a una cadena de datos/mejoras.js y no
+ * dibuja su pieza, la escena deja de crecer y nadie se entera: el jugador
+ * compra el nivel, le suben los numeros y la pantalla se ve igual. */
 const cortos = sb.CADENAS.filter(function (c) {
   const escalones = sb.MEJORAS.filter(m => m.cadena === c.id).length;
   return sb.Escena.niveles[c.id] < escalones;
@@ -289,14 +289,44 @@ ok(cortos.length === 0,
      ? 'el escenario tiene un dibujo por cada escalon de cada cadena'
      : 'cadenas que crecen mas de lo que se dibuja: ' + cortos.join(' | '));
 
+/* Y lo mismo con los niveles de un negocio: NIVELES_NEGOCIO y los altos de
+ * escena.js tienen que medir igual. Si alguien agrega un quinto nivel sin
+ * dibujarlo, el local se deja de ver mas grande al subirlo. */
+ok(sb.Escena.niveles.negocio === sb.NIVELES_NEGOCIO.length,
+   'la calle sabe dibujar los ' + sb.NIVELES_NEGOCIO.length +
+   ' niveles que puede tener un negocio');
+
+/* Un tipo de negocio sin icono dibujable saldria como un local sin emblema, o
+ * sea indistinguible de los demas. */
+const sinEmblema = sb.TIPOS_NEGOCIO.filter(t => !sb.Iconos.tiene(t.icono))
+                                   .map(t => t.id + ' -> ' + t.icono);
+ok(sinEmblema.length === 0,
+   sinEmblema.length === 0
+     ? 'cada tipo de negocio tiene un emblema que se puede dibujar'
+     : 'negocios sin emblema: ' + sinEmblema.join(' | '));
+
 const vacia = sb.Escena.dibujar({});
-const llena = sb.Escena.dibujar({ negocio: 4, oficio: 3, escuela: 3, casa: 2,
-                                  produce: true, trabajo: 'construccion', estudia: true });
+const llena = sb.Escena.dibujar({
+  negocios: [{ icono: 'dulce', nivel: 4, empleados: 3, produce: true },
+             { icono: 'sarten', nivel: 2, empleados: 1, produce: true }],
+  oficio: 3, escuela: 3, casa: 2, trabajo: 'construccion', estudia: true
+});
 ok(vacia.indexOf('<svg class="escena"') === 0, 'la escena sale como un svg propio');
 ok(llena.length > vacia.length * 1.6,
-   'y con todo comprado trae bastante mas que vacia');
-ok(llena.indexOf('esc-moneda') > 0, 'con el negocio produciendo salen las monedas');
-ok(vacia.indexOf('esc-moneda') < 0, 'y sin negocio no');
+   'y con el imperio montado trae bastante mas que vacia');
+ok(llena.indexOf('esc-moneda') > 0, 'con los negocios produciendo salen las monedas');
+ok(vacia.indexOf('esc-moneda') < 0, 'y sin negocios no');
+
+/* La calle se alarga con el numero de negocios, y eso es la mitad del premio:
+ * el jugador nota que ya no le cabe lo que tiene. */
+ok(sb.Escena.anchoDe(5) > sb.Escena.anchoDe(1),
+   'la calle se alarga cuando hay mas negocios');
+
+/* El emblema de la fachada sale de js/iconos.js, no de un dibujo aparte: es
+ * lo que permite agregar un negocio nuevo sin dibujar nada. */
+ok(llena.indexOf(sb.Iconos.trazo('sarten').slice(0, 40)) > 0,
+   'el emblema del local es el icono del negocio, tomado de iconos.js');
+
 ok(llena.indexOf('var(--verde') > 0 && !EMOJI.test(leer('js/escena.js')),
    'la escena usa la paleta y no trae emoji');
 

@@ -191,6 +191,17 @@ var UI = (function () {
                    'minijuego-usado': 'visto', descanso: 'luna', '': 'mas' };
     var claves = { trabajo: 'Trabajo', estudio: 'Estudio', minijuego: 'Extra',
                    'minijuego-usado': 'Hecho', descanso: 'Descanso', '': 'Libre' };
+
+    /* Una casilla puede decir 'negocio:dulces'. Se dibuja con el icono de ESE
+     * negocio y con su nombre, no con un genérico: cuando el jugador tiene
+     * tres, tiene que ver de un golpe a cuál le puso cada jornada. */
+    function pintaCasilla(v) {
+      var tn = Motor.negocioDeEspacio(v);
+      if (!tn) return { ic: iconos[v], nom: T(claves[v]) };
+      var t = Motor.tipoDeNegocio(tn);
+      return t ? { ic: t.icono, nom: esc(D(t, 'nombre')) }
+               : { ic: 'tienda', nom: T('Tu negocio') };
+    }
     var semanas = CONFIG.jornadasPorMes / CONFIG.jornadasPorSemana;
 
     var h = '<div class="jornadas" style="--semanas:' + semanas + '">';
@@ -205,10 +216,11 @@ var UI = (function () {
         var i = Motor.indiceDe(sm, j);
         var tipo = e.espacios[i];
         var bloq = Motor.espacioBloqueado(i);
+        var pin = pintaCasilla(tipo);
         h += '<div class="jornada' + (tipo ? ' lleno' : '') + (bloq ? ' bloqueado' : '') +
              (espacioSel === i ? ' sel' : '') + '" data-espacio="' + i + '">' +
-             '<div class="ic-caja">' + Ico(bloq ? 'birrete' : iconos[tipo]) + '</div>' +
-             '<div class="nom">' + T(claves[tipo]) + '</div></div>';
+             '<div class="ic-caja">' + Ico(bloq ? 'birrete' : pin.ic) + '</div>' +
+             '<div class="nom">' + pin.nom + '</div></div>';
       }
     });
     return h + '</div>';
@@ -229,11 +241,19 @@ var UI = (function () {
               Motor.bonoPorJornada() * espT;
     }
     if (Motor.esMenor()) entra += e.mesada || 0;
-    // El negocio produce sin gastar jornadas: es la entrada que no cuesta tiempo
-    var efM = Motor.efectosDeMejoras();
-    entra += efM.ingresoPasivo;
 
+    /* Lo que van a dejar los negocios. Se cuenta en bruto arriba y la
+     * planilla y la renta bajan como gasto, a propósito: el jugador tiene que
+     * ver la planilla como un renglón que sale, no recibir un neto ya
+     * digerido. Es la diferencia entre saber que ganó poco y saber en qué se
+     * le fue. */
+    var imp = Motor.imperio();
+    entra += imp.margen;
+
+    var efM = Motor.efectosDeMejoras();
     var detalle = [];
+    if (imp.planilla) detalle.push([T('Planilla de tu gente'), imp.planilla]);
+    if (imp.costos) detalle.push([T('Renta y luz de tus negocios'), imp.costos]);
     if (efM.costoMensual) detalle.push([T('Mantenimiento de tus mejoras'), efM.costoMensual]);
 
     var nombreVivienda = e.migracion ? T('Vivir en Estados Unidos')
@@ -324,6 +344,15 @@ var UI = (function () {
     if (espacioSel !== null) {
       h += '<div class="btn-fila acciones-jornada">';
       h += '<button class="btn-chico" data-poner="trabajo"' + (puedeTrabajar ? '' : ' disabled') + '>' + Ico('maletin') + ' ' + T('Trabajar') + '</button>';
+      /* Un botón por cada negocio abierto. Es donde el jugador decide a cuál
+       * de sus negocios le pone la cara este mes, y esa decisión importa: al
+       * que no le pone ninguna jornada le rinde menos. */
+      Motor.negociosAbiertos().forEach(function (neg) {
+        var tneg = Motor.tipoDeNegocio(neg.tipoId);
+        if (!tneg) return;
+        h += '<button class="btn-chico" data-poner="negocio:' + neg.tipoId + '">' +
+             Ico(tneg.icono) + ' ' + esc(D(tneg, 'nombre')) + '</button>';
+      });
       // Estudiar solo tiene sentido con una carrera de horario libre: en el
       // colegio las jornadas ya vienen puestas y no se agregan a mano.
       if (e.estudio && !e.estudio.jornada) {
@@ -1222,57 +1251,340 @@ var UI = (function () {
    * Lo que la pantalla enseña a leer es **en cuántos meses se paga sola**, que
    * es el único cálculo que hay que hacer antes de comprar una herramienta.
    */
-  function vistaMejoras() {
+  /* =============== pestaña: el imperio ===============
+   *
+   * Esta pantalla es la respuesta a "no parece un tycoon".
+   *
+   * Antes eran cuatro tarjetas de mejoras con un "Nivel 2 de 4" escrito y un
+   * número que subía. Ahora es lo que un tycoon tiene que ser: la calle con
+   * tus locales, la gente que trabaja adentro, lo que vendieron, lo que se
+   * fue en planilla y lo que quedó limpio.
+   *
+   * El orden de la pantalla es el orden en que un chico la va a leer:
+   *
+   *   1. la calle          lo que ya tiene, dibujado
+   *   2. el marcador       vende / planilla / queda limpio
+   *   3. los dos techos    cuántos negocios y cuánta gente aguanta HOY, y eso
+   *                        depende de hasta dónde estudió. Es el sitio donde
+   *                        el colegio se convierte en tamaño de empresa, y
+   *                        está a la vista a propósito.
+   *   4. sus negocios      uno por uno, con lo que se puede hacer con cada uno
+   *   5. lo que puede abrir
+   *   6. las mejoras para él mismo
+   */
+  function vistaImperio() {
     var e = Motor.get();
-    var ef = Motor.efectosDeMejoras();
     var t = Motor.trabajoActual();
-    var h = '<h2>' + T('Mejoras') + '</h2>';
+    var imp = Motor.imperio();
+    var negs = Motor.negociosAbiertos();
+    var h = '<h2>' + T('Tu imperio') + '</h2>';
 
-    /* --- el escenario, que es lo que hace que esto parezca un tycoon ---
-     *
-     * Antes esta pantalla eran cuatro tarjetas con un "Nivel 2 de 4" escrito,
-     * y el jugador tenía que imaginarse el resto. Ahora ve su negocio, y ve
-     * que le crece. */
+    // --- 1. la calle ---
     h += '<div class="tarjeta escenario">';
     h += '<div class="escena-caja' + (escenaCrecio ? ' crecio' : '') + '">';
     escenaCrecio = false;
     h += Escena.dibujar({
-      negocio: Motor.nivelDeCadena('negocio'),
+      negocios: negs.map(function (n) {
+        var tn = Motor.tipoDeNegocio(n.tipoId);
+        return {
+          icono: tn ? tn.icono : 'tienda',
+          nivel: n.nivel,
+          empleados: n.empleados.length,
+          produce: (n.gananciaUltimoMes || 0) > 0
+        };
+      }),
       oficio: Motor.nivelDeCadena('oficio'),
       escuela: Motor.nivelDeCadena('escuela'),
       casa: Motor.nivelDeCadena('casa'),
-      produce: ef.ingresoPasivo > 0,
       trabajo: t ? t.id : null,
       estudia: !!e.estudio,
       graduado: e.carrerasTerminadas.length > 0 && !e.estudio
     });
     h += '</div>';
 
-    // --- lo que produce hoy, que es el marcador del tycoon ---
-    var porJornada = Motor.bonoPorJornada();
-    var netoNegocio = ef.ingresoPasivo - ef.costoMensual;
+    // --- 2. el marcador ---
+    var sale = imp.planilla + imp.costos;
     h += '<div class="tres-cifras">' +
-      '<div><span class="etq">' + T('Por jornada') + '</span><b class="' +
-        (porJornada > 0 ? 'pos' : '') + '">+' + Q0(porJornada) + '</b></div>' +
-      '<div><span class="etq">' + T('Tu negocio') + '</span><b class="' +
-        (ef.ingresoPasivo > 0 ? 'pos' : '') + '">' + Q0(ef.ingresoPasivo) + '</b></div>' +
+      '<div><span class="etq">' + T('Venden') + '</span><b class="' +
+        (imp.venta > 0 ? 'pos' : '') + '">' + Q0(imp.venta) + '</b></div>' +
+      '<div><span class="etq">' + T('Sale') + '</span><b class="' +
+        (sale > 0 ? 'neg' : '') + '">' + Q0(sale) + '</b></div>' +
       '<div class="queda"><span class="etq">' + T('Queda limpio') + '</span><b class="' +
-        (netoNegocio >= 0 ? 'pos' : 'neg') + '">' + Q0(netoNegocio) + '</b></div>' +
+        (imp.neto >= 0 ? 'pos' : 'neg') + '">' + Q0(imp.neto) + '</b></div>' +
       '</div>';
     h += '<p class="sutil" style="margin:0">' +
-      T('Tienes {0} para invertir. Lo que compres aquí se queda contigo para siempre.',
-        Q0(Motor.dineroDisponible())) + '</p>';
+      T('Tienes {0} para invertir.', Q0(Motor.dineroDisponible())) + '</p>';
     h += '</div>';
+
+    // --- 3. los dos techos, que es donde el colegio se vuelve tamaño ---
+    h += tarjetaTechos(imp);
 
     h += graficaNegocio(e);
 
+    // --- 4. sus negocios ---
+    if (negs.length) {
+      h += '<h3>' + T('Tus negocios') + '</h3>';
+      negs.forEach(function (neg) { h += tarjetaNegocio(neg); });
+    }
+
+    // --- 5. lo que puede abrir ---
+    h += ofertasDeNegocio(imp);
+
+    // --- 6. las mejoras para él mismo ---
+    h += '<h3>' + T('Mejoras para ti') + '</h3>';
     CADENAS.forEach(function (cad) { h += tarjetaCadena(e, cad); });
 
     h += porQue('mejoras',
-      '<p>' + T('Una mejora no es un gasto: es una inversión, y una inversión se mide en cuántos meses tarda en pagarse sola.') + '</p>' +
-      '<p>' + T('Divide lo que cuesta entre lo que te da al mes. Si el resultado es menos que los meses que la vas a usar, conviene. Ese cálculo sirve igual para una canasta de Q150 que para un camión.') + '</p>',
-      T('Cómo se decide una mejora'));
+      '<p>' + T('Un negocio se mide con dos números, no con uno: lo que vende y lo que le queda. Un negocio que vende el doble que otro puede ganar la mitad.') + '</p>' +
+      '<p>' + T('Y una mejora no es un gasto: es una inversión, y una inversión se mide en cuántos meses tarda en pagarse sola. Divide lo que cuesta entre lo que te deja al mes.') + '</p>',
+      T('Cómo se lee un negocio'));
     return h;
+  }
+
+  /* Los dos techos del imperio, con su barra.
+   *
+   * Está arriba y no escondido porque es el corazón del juego: el jugador ve
+   * que puede con dos negocios y tres personas, y ve que el número sube
+   * cuando termina de estudiar. Ningún texto convence tanto como esa barra. */
+  function tarjetaTechos(imp) {
+    function barra(ico, etq, hay, techo) {
+      var pc = techo > 0 ? Math.min(100, Math.round((hay / techo) * 100)) : 0;
+      return '<div class="techo">' +
+        '<div class="fila"><span class="etq">' + Ico(ico) + ' ' + etq + '</span>' +
+        '<span class="val">' + hay + ' ' + T('de') + ' ' + techo + '</span></div>' +
+        '<div class="progreso"><div class="progreso-relleno' + (hay >= techo ? ' tope' : '') +
+          '" style="width:' + pc + '%"></div></div></div>';
+    }
+    var h = '<div class="tarjeta techos">';
+    h += barra('tienda', T('Negocios a la vez'), imp.negocios, imp.techoNegocios);
+    h += barra('personas', T('Gente que puedes administrar'), imp.empleados, imp.techoEmpleados);
+    h += '<p class="sutil">' +
+      T('Los dos suben cuando terminas de estudiar. Llevar dos negocios son dos contabilidades, y una planilla hay que saber llevarla.') +
+      '</p>';
+    return h + '</div>';
+  }
+
+  /* Un negocio: lo que produce y todo lo que se puede hacer con él. */
+  function tarjetaNegocio(neg) {
+    var tn = Motor.tipoDeNegocio(neg.tipoId);
+    if (!tn) return '';
+    var pr = Motor.proyeccionDeNegocio(neg);
+    var esc0 = Motor.nivelDeNegocio(neg);
+    var mias = Motor.jornadasDelDueno(neg.tipoId);
+
+    var h = '<div class="cadena negocio activa">';
+    h += '<div class="cadena-alto">';
+    h += '<span class="cadena-ic">' + Ico(tn.icono) + '</span>';
+    h += '<span class="cadena-nom">' + esc(D(tn, 'nombre')) +
+         '<small>' + esc(K('nivel_negocio', esc0.nombre, esc0.nombre)) + '</small></span>';
+    h += '</div>';
+
+    // los puntos del nivel
+    h += '<div class="niveles">';
+    for (var i = 0; i < NIVELES_NEGOCIO.length; i++) {
+      h += '<span class="punto' + (i < (neg.nivel || 1) ? ' lleno' : '') + '"></span>';
+    }
+    h += '<span class="niveles-txt">' +
+         T('Nivel {0} de {1}', neg.nivel || 1, NIVELES_NEGOCIO.length) + '</span>';
+    h += '</div>';
+
+    /* Los dos números que importan, uno al lado del otro. Que "vende" y
+     * "queda" sean cifras distintas es la lección entera de este archivo. */
+    h += '<div class="tres-cifras chico">' +
+      '<div><span class="etq">' + T('Vende') + '</span><b>' + Q0(pr.venta) + '</b></div>' +
+      '<div><span class="etq">' + T('Le sale') + '</span><b class="neg">' +
+        Q0(pr.costoMensual + pr.planilla) + '</b></div>' +
+      '<div class="queda"><span class="etq">' + T('Le queda') + '</span><b class="' +
+        (pr.neto >= 0 ? 'pos' : 'neg') + '">' + Q0(pr.neto) + '</b></div>' +
+      '</div>';
+
+    h += pastillas([
+      pastilla('personas', T('{0} de {1} plazas llenas',
+        neg.empleados.length + (mias > 0 ? 1 : 0), pr.plazas)),
+      pastilla('manana', T('{0} jornadas tuyas', mias), mias > 0 ? 'ok' : 'mal')
+    ]);
+
+    /* Un negocio sin jornadas y sin gente no vende NADA y la renta corre
+     * igual. En pantalla eso salía como un "Vende Q0" sin explicación, que es
+     * la peor forma de enseñar algo: el jugador ve el número raro y no sabe
+     * qué hacer. */
+    if (mias === 0 && !neg.empleados.length) {
+      h += '<p class="aviso">' +
+        T('Vacío no vende nada y la renta corre igual. Ponle una jornada en la pestaña del mes, o contrata a alguien.') +
+        '</p>';
+    } else if (pr.sinDueno) {
+      h += '<p class="aviso">' +
+        T('No le pusiste ninguna jornada este mes, así que rinde {0}% menos. Delegar funciona; desaparecer, no.',
+          Math.round((1 - RENDIMIENTO_SIN_DUENO) * 100)) + '</p>';
+    }
+    if (pr.llena && pr.plazas > 1) {
+      h += '<p class="sutil">' + T('Está lleno: no cabe una jornada más. Súbele el nivel.') + '</p>';
+    }
+
+    // --- subir de nivel ---
+    var sig = (neg.nivel || 1) < NIVELES_NEGOCIO.length ? NIVELES_NEGOCIO[neg.nivel] : null;
+    if (sig) {
+      var costo = Motor.costoDeSubirNivel(neg.tipoId);
+      var faltaN = Motor.faltaParaSubirNivel(neg.tipoId);
+      h += '<div class="mejora-sig">';
+      h += '<div class="titulo">' + Ico('trending-up') + ' ' +
+           esc(K('nivel_negocio', sig.nombre, sig.nombre)) + '</div>';
+      h += pastillas([
+        pastilla('tendencia', T('vende {0}% más',
+          Math.round((sig.multiplicador / esc0.multiplicador - 1) * 100)), 'ok'),
+        pastilla('personas', T('+{0} plazas', sig.plazasExtra), 'ok')
+      ]);
+      h += barraDeMeta(costo);
+      if (faltaN) {
+        h += '<p class="aviso">' + esc(K('mejora_falta', faltaN.motivo, faltaN.razon)) + '</p>';
+        h += '<button class="btn-primario" disabled>' + T('Subir por {0}', Q0(costo)) + '</button>';
+      } else {
+        h += '<button class="btn-primario" data-subir-negocio="' + neg.tipoId + '">' +
+             Ico('mas') + ' ' + T('Subir por {0}', Q0(costo)) + '</button>';
+      }
+      h += '</div>';
+    }
+
+    // --- la gente ---
+    h += tarjetaGente(neg, pr);
+
+    // --- traspasarlo, discreto y al final ---
+    var vale = Motor.valorDeTraspaso(neg.tipoId);
+    h += '<button class="porque-btn" data-traspasar="' + neg.tipoId + '">' +
+         Ico('adelantar') + ' ' +
+         (vale >= 0 ? T('Traspasarlo y recuperar {0}', Q0(vale))
+                    : T('Cerrarlo (te cuesta {0})', Q0(-vale))) + '</button>';
+
+    return h + '</div>';
+  }
+
+  /* La planilla de un negocio: quién trabaja ahí y qué cuesta.
+   *
+   * Los dos botones de contratar están uno al lado del otro con su precio
+   * completo, y ahí está la lección más útil de todo el juego para quien
+   * algún día tenga un negocio: el formal NO cuesta su sueldo. */
+  function tarjetaGente(neg, pr) {
+    var h = '<div class="gente">';
+    h += '<div class="fila"><span class="etq">' + Ico('personas') + ' ' + T('Tu gente') +
+         '</span><span class="val">' + (neg.empleados.length
+           ? '-' + Q0(pr.planilla) + ' ' + T('al mes') : T('nadie todavía')) + '</span></div>';
+
+    neg.empleados.forEach(function (emp, k) {
+      var pl = PLANILLA[emp.tipo] || PLANILLA.informal;
+      var indem = Motor.indemnizacionDe(emp);
+      h += '<div class="empleado">' +
+        '<span class="emp-nom">' + Ico('persona') + ' ' +
+          esc(K('planilla_nombre', emp.tipo, pl.nombre)) +
+          '<small>' + Q0(Motor.costoDeEmpleado(emp.tipo)) + ' ' + T('al mes') + '</small></span>' +
+        '<button class="btn-chico" data-despedir="' + neg.tipoId + '" data-emp="' + k + '">' +
+          (indem > 0 ? T('Despedir ({0})', Q0(indem)) : T('Despedir')) + '</button>' +
+        '</div>';
+    });
+
+    // Y los dos contratos, con su precio de verdad
+    ['informal', 'formal'].forEach(function (tipo) {
+      var pl = PLANILLA[tipo];
+      var faltaC = Motor.faltaParaContratar(neg.tipoId, tipo);
+      // Si no cabe nadie o no puede administrar más, no se ofrece: se explica
+      if (faltaC && (faltaC.motivo === 'plazas' || faltaC.motivo === 'techo')) return;
+      var costo = Motor.costoDeEmpleado(tipo);
+      h += '<div class="contrato' + (tipo === 'formal' ? ' formal' : '') + '">';
+      h += '<div class="fila"><span class="etq">' +
+             esc(K('planilla_nombre', tipo, pl.nombre)) + '</span>' +
+             '<span class="val">-' + Q0(costo) + ' ' + T('al mes') + '</span></div>';
+      h += '<p class="sutil">' + esc(K('planilla_nota', tipo, pl.nota)) + '</p>';
+      if (tipo === 'formal') {
+        h += '<p class="sutil">' +
+          T('Le pagas {0} de sueldo y te cuesta {1}: encima van el IGSS, el aguinaldo, el Bono 14 y las vacaciones.',
+            Q0(pl.sueldo), Q0(costo)) + '</p>';
+      }
+      if (faltaC) {
+        h += '<p class="aviso">' + esc(K('mejora_falta', faltaC.motivo, faltaC.razon)) + '</p>';
+      } else {
+        h += '<button class="btn-chico" data-contratar="' + neg.tipoId +
+             '" data-contrato="' + tipo + '">' + Ico('mas') + ' ' +
+             T('Contratar') + '</button>';
+      }
+      h += '</div>';
+    });
+
+    return h + '</div>';
+  }
+
+  /* Los negocios que puede abrir hoy.
+   *
+   * Se esconde todo lo que no está a su alcance por edad o por estudio, que
+   * es la regla del juego: lo que no has desbloqueado no existe. Lo único que
+   * SÍ se muestra sin poder comprarse es lo que solo le falta dinero, porque
+   * eso no es una traba, es una meta, y la barra la hace visible. */
+  function ofertasDeNegocio(imp) {
+    var abre = [];
+    var topado = false;
+    TIPOS_NEGOCIO.forEach(function (tn) {
+      var falta = Motor.faltaParaAbrir(tn.id);
+      if (!falta || falta.motivo === 'dinero') { abre.push([tn, falta]); return; }
+      if (falta.motivo === 'techo') topado = true;
+    });
+
+    if (topado && !abre.length) {
+      return '<div class="tarjeta"><p class="aviso">' +
+        T('Ya llevas los {0} negocios que puedes administrar. Para llevar más, hay que estudiar más.',
+          imp.techoNegocios) + '</p></div>';
+    }
+    if (!abre.length) return '';
+
+    var h = '<h3>' + T('Abrir un negocio') + '</h3>';
+    abre.forEach(function (par) {
+      var tn = par[0], falta = par[1];
+      // Lo que dejaría con una sola persona adentro, que es como va a empezar
+      var mes = tn.ventaPorJornada * CONFIG.jornadasPorMes;
+      var queda = Math.round(mes * tn.margen - tn.costoMensual);
+      var meses = queda > 0 ? Math.ceil(tn.costoApertura / queda) : 0;
+
+      h += '<div class="cadena oferta">';
+      h += '<div class="cadena-alto">';
+      h += '<span class="cadena-ic">' + Ico(tn.icono) + '</span>';
+      h += '<span class="cadena-nom">' + esc(D(tn, 'nombre')) +
+           '<small>' + esc(D(tn, 'descripcion')) + '</small></span>';
+      h += '</div>';
+      h += pastillas([
+        pastilla('tendencia', T('vende {0} al mes', Q0(mes))),
+        pastilla('moneda', T('le quedan {0}', Q0(queda)), queda > 0 ? 'ok' : 'mal'),
+        pastilla('balanza', T('margen del {0}%', Math.round(tn.margen * 100))),
+        pastilla('personas', tn.plazas === 1 ? T('cabe una persona')
+                                             : T('caben {0}', tn.plazas)),
+        meses ? pastilla('calendario', meses === 1 ? T('se paga en un mes')
+                                                   : T('se paga en {0} meses', meses)) : null
+      ].filter(Boolean));
+      h += '<p class="sutil">' + T('Esas cifras son con una sola persona adentro: tú.') + '</p>';
+      h += barraDeMeta(tn.costoApertura);
+      if (falta) {
+        h += '<p class="aviso">' + esc(K('mejora_falta', falta.motivo, falta.razon)) + '</p>';
+        h += '<button class="btn-primario" disabled>' +
+             T('Abrir por {0}', Q0(tn.costoApertura)) + '</button>';
+      } else {
+        h += '<button class="btn-primario" data-abrir-negocio="' + tn.id + '">' +
+             Ico('mas') + ' ' + T('Abrir por {0}', Q0(tn.costoApertura)) + '</button>';
+      }
+      h += '</div>';
+    });
+    return h;
+  }
+
+  /* La barra de cuánto le falta para juntar una cantidad.
+   *
+   * Es lo que convierte "no te alcanza" en una meta. En un tycoon el jugador
+   * tiene que poder VER que se está acercando; si solo lee que no le alcanza,
+   * cierra la pantalla. */
+  function barraDeMeta(costo) {
+    if (!costo) return '';
+    var tiene = Math.min(Motor.dineroDisponible(), costo);
+    var pc = Math.round((tiene / costo) * 100);
+    return '<div class="progreso mejora-barra"><div class="progreso-relleno" style="width:' +
+             pc + '%"></div></div>' +
+           '<div class="fila"><span class="etq sutil">' +
+             T('Llevas {0} de {1}', Q0(tiene), Q0(costo)) + '</span>' +
+             '<span class="val sutil">' + pc + '%</span></div>';
   }
 
   /* Una cadena de mejoras: el nivel que lleva y lo que sigue. */
@@ -1308,20 +1620,7 @@ var UI = (function () {
     h += '<div class="titulo">' + Ico(sig.icono) + ' ' + esc(D(sig, 'nombre')) + '</div>';
     h += pastillas(pastillasDeMejora(sig));
     var falta = Motor.faltaParaMejora(sig.id);
-
-    /* La barra de cuánto le falta para poder comprarla.
-     *
-     * Es lo que convierte "no te alcanza" en una meta. En un tycoon el jugador
-     * tiene que poder ver que se está acercando, si no cierra la pantalla. */
-    if (!falta || falta.motivo === 'dinero') {
-      var tiene = Math.min(Motor.dineroDisponible(), sig.costo);
-      var pct2 = Math.round((tiene / sig.costo) * 100);
-      h += '<div class="progreso mejora-barra"><div class="progreso-relleno" style="width:' +
-           pct2 + '%"></div></div>';
-      h += '<div class="fila"><span class="etq sutil">' +
-           T('Llevas {0} de {1}', Q0(tiene), Q0(sig.costo)) + '</span>' +
-           '<span class="val sutil">' + pct2 + '%</span></div>';
-    }
+    if (!falta || falta.motivo === 'dinero') h += barraDeMeta(sig.costo);
 
     if (falta) {
       h += '<p class="aviso">' + esc(K('mejora_falta', falta.motivo, falta.razon)) + '</p>';
@@ -1353,7 +1652,7 @@ var UI = (function () {
     // Con menos de dos meses de historia la gráfica no dice nada
     if (conNegocio.length < 2) return '';
     return '<div class="tarjeta grafica-caja">' +
-      '<h3 style="margin-top:0">' + T('Lo que ha producido tu negocio') + '</h3>' +
+      '<h3 style="margin-top:0">' + T('Lo que han dejado tus negocios') + '</h3>' +
       '<canvas id="grafica-negocio" height="150"></canvas></div>';
   }
 
@@ -1376,7 +1675,7 @@ var UI = (function () {
         data: {
           labels: meses.map(function (m) { return String(m.mes || '').slice(0, 3); }),
           datasets: [{
-            label: T('Tu negocio'),
+            label: T('Tus negocios'),
             data: meses.map(function (m) { return Math.round(m.negocio || 0); }),
             backgroundColor: colorDePaleta('--verde', '#1f7a5a'),
             borderRadius: 5,
@@ -1413,9 +1712,6 @@ var UI = (function () {
   function pastillasDeMejora(m) {
     var ef = m.efecto || {};
     var lista = [];
-    if (ef.ingresoPasivo) {
-      lista.push(pastilla('piggy-bank', T('+{0} al mes', Q0(ef.ingresoPasivo)), 'ok'));
-    }
     if (ef.bonoJornada) {
       lista.push(pastilla('maletin', T('+{0} por jornada', Q0(ef.bonoJornada)), 'ok'));
     }
@@ -1441,7 +1737,7 @@ var UI = (function () {
    * mejora produce dinero: las de energía y de estudio pagan en tiempo. */
   function mesesEnPagarse(m) {
     var ef = m.efecto || {};
-    var alMes = (ef.ingresoPasivo || 0) - (ef.costoMensual || 0);
+    var alMes = -(ef.costoMensual || 0);
     // Una herramienta paga por jornada: se cuenta un mes de trabajo completo
     if (ef.bonoJornada) alMes += ef.bonoJornada * CONFIG.jornadasPorMes;
     if (alMes <= 0) return 0;
@@ -1487,9 +1783,13 @@ var UI = (function () {
   var PESTANAS_DEF = {
     casa:    { ic: 'calendario', tx: 'Mes' },
     trabajo: { ic: 'maletin', tx: 'Trabajo' },
-    // 'trending-up' viene del respaldo de Lucide: dice crecimiento, que es de
-    // lo que trata esta pestaña, y no se confunde con ningún otro del juego.
-    mejoras: { ic: 'trending-up', tx: 'Mejoras' },
+    /* La llave sigue llamándose 'mejoras' porque es la que usa
+     * datos/progreso.js y la que ya tienen guardada las partidas viejas.
+     * Lo que cambió es lo que hay dentro: ahora es el imperio.
+     *
+     * 'trending-up' viene del respaldo de Lucide: dice crecimiento, que es de
+     * lo que trata esta pestaña, y no se confunde con ningún otro del juego. */
+    mejoras: { ic: 'trending-up', tx: 'Imperio' },
     estudio: { ic: 'birrete', tx: 'Estudio' },
     banco:   { ic: 'banco', tx: 'Banco' },
     extra:   { ic: 'mando', tx: 'Extra' },
@@ -1578,7 +1878,7 @@ var UI = (function () {
                : pestana === 'estudio' ? vistaEstudio()
                : pestana === 'banco' ? vistaBanco()
                : pestana === 'noticias' ? vistaNoticias()
-               : pestana === 'mejoras' ? vistaMejoras()
+               : pestana === 'mejoras' ? vistaImperio()
                : vistaExtra();
     var clase = 'vista' + (sentido ? ' vista-entra ' + (sentido > 0 ? 'desde-der' : 'desde-izq') : '');
     app.innerHTML = barra() + '<main class="' + clase + '">' + cuerpo + '</main>' + pestanas();
@@ -2347,6 +2647,8 @@ var UI = (function () {
         '[data-mover],[data-mudar],[data-inscribir],[data-jugar],[data-abonar],[data-abrir-menu],' +
         '[data-casa],[data-envio],[data-canal],[data-porque],[data-detalle],[data-no-estudiar],' +
         '[data-ver-perfil],[data-mejora],' +
+        '[data-abrir-negocio],[data-subir-negocio],[data-contratar],[data-despedir],' +
+        '[data-traspasar],' +
         '#cerrar-turno,#adelantar,#renunciar,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
         '#pedir-tarjeta,#pedir-informal,#gastar-tarjeta,#pagar-tarjeta,#alternar-minimo,' +
         '#abrir-pension,#cambiar-pension,#retirar-pension,#migrar,#regresar,' +
@@ -2404,6 +2706,90 @@ var UI = (function () {
               esc(D(c, 'nombre')), d.jornada === 'pm' ? T('tarde') : T('mañana'));
         return tarjetaEducativa('estudio' + c.id, 'birrete', T('Te inscribiste'), cuerpo,
           T('El costo real de estudiar en Guatemala no es la colegiatura: la pública es gratis. Es el sueldo que dejas de ganar mientras estudias.'));
+      }
+
+      /* ---------- el imperio ---------- */
+
+      if (d.abrirNegocio) {
+        var rn = Motor.abrirNegocio(d.abrirNegocio);
+        if (!rn.ok) return aviso(T('Todavía no'), rn.razon);
+        Sonido.tono('logro');
+        latirBarra = true;
+        escenaCrecio = true;
+        render();
+        return tarjetaEducativa('negocio' + rn.tipo.id, rn.tipo.icono,
+          T('Abriste: {0}', esc(D(rn.tipo, 'nombre'))),
+          '<div class="sello-nivel">' + Ico('sparkles') + ' ' +
+            T('Ya tienes {0} negocio(s)', Motor.negociosAbiertos().length) + '</div>' +
+          T('Ponle jornadas en la pestaña del mes para que produzca. Un negocio al que nadie atiende rinde {0}% menos.',
+            Math.round((1 - RENDIMIENTO_SIN_DUENO) * 100)),
+          K('negocio_leccion', rn.tipo.id, rn.tipo.leccion));
+      }
+
+      if (d.subirNegocio) {
+        var rs = Motor.subirNivelNegocio(d.subirNegocio);
+        if (!rs.ok) return aviso(T('Todavía no'), rs.razon);
+        Sonido.tono('logro');
+        latirBarra = true;
+        escenaCrecio = true;
+        render();
+        var tns = Motor.tipoDeNegocio(d.subirNegocio);
+        return tarjetaEducativa('subir' + d.subirNegocio + rs.nivel, tns.icono,
+          T('{0}: {1}', esc(D(tns, 'nombre')), esc(K('nivel_negocio', rs.escalon.nombre, rs.escalon.nombre))),
+          '<div class="sello-nivel">' +
+            Ico(rs.nivel === NIVELES_NEGOCIO.length ? 'crown' : 'sparkles') + ' ' +
+            T('Nivel {0} de {1}', rs.nivel, NIVELES_NEGOCIO.length) + '</div>' +
+          T('Te costó {0}. Ahora vende más y caben {1} personas más adentro.',
+            Q0(rs.costo), rs.escalon.plazasExtra),
+          T('Subir un negocio no sirve de nada si no tienes con qué llenar las plazas nuevas. Primero la gente, después el tamaño.'));
+      }
+
+      if (d.contratar) {
+        var rc = Motor.contratar(d.contratar, d.contrato);
+        if (!rc.ok) return aviso(T('Todavía no'), rc.razon);
+        Sonido.tono('toque');
+        escenaCrecio = true;
+        render();
+        var plc = PLANILLA[d.contrato];
+        return tarjetaEducativa('contrato' + d.contrato, 'personas',
+          T('Contrataste a alguien'),
+          d.contrato === 'formal'
+            ? T('Le vas a pagar {0} de sueldo, y a ti te va a costar {1} cada mes.',
+                Q0(plc.sueldo), Q0(rc.costo))
+            : T('Te va a costar {0} cada mes, y es lo único que va a recibir.',
+                Q0(rc.costo)),
+          d.contrato === 'formal'
+            ? T('El sueldo NUNCA es lo que cuesta un empleado. Encima van el IGSS, el IRTRA, el INTECAP, el aguinaldo, el Bono 14 y las vacaciones: un 42% más. Quien no cuenta eso quiebra su negocio sin entender por qué.')
+            : T('Sin contrato es más barato hoy. A cambio esa persona se va a ir más pronto, no cotiza para su pensión, y si cae inspección la multa son tres sueldos.'));
+      }
+
+      if (d.despedir) {
+        var rd = Motor.despedir(d.despedir, parseInt(d.emp, 10));
+        if (!rd.ok) return aviso(T('No se puede'), rd.razon);
+        render();
+        if (rd.indemnizacion > 0) {
+          return tarjetaEducativa('indemnizacion', 'balanza',
+            T('Le pagaste la indemnización'),
+            T('Te costó {0} sacarlo.', Q0(rd.indemnizacion)),
+            T('Un sueldo por cada año trabajado. Es el otro lado del contrato: lo mismo que protege al trabajador es lo que le cuesta al patrón deshacerse de él. Por eso hay que contratar pensando, no de prisa.'));
+        }
+        return;
+      }
+
+      if (d.traspasar) {
+        var tt = Motor.tipoDeNegocio(d.traspasar);
+        var vale = Motor.valorDeTraspaso(d.traspasar);
+        var puesto = Motor.invertidoEn(Motor.negocioDe(d.traspasar));
+        return confirmar(
+          vale >= 0 ? T('¿Traspasar {0}?', esc(D(tt, 'nombre')))
+                    : T('¿Cerrar {0}?', esc(D(tt, 'nombre'))),
+          T('Llevas {0} invertidos y recuperas {1}. Lo que ya pusiste no vuelve completo.',
+            Q0(puesto), Q0(vale)),
+          function () {
+            var rt = Motor.cerrarNegocio(d.traspasar);
+            if (!rt.ok) return aviso(T('No se puede'), rt.razon);
+            render();
+          });
       }
 
       if (d.mejora) {
@@ -2971,6 +3357,10 @@ var UI = (function () {
       h += '<div class="paso"><span class="paso-ic">' + Ico('calendario') + '</span><span class="tx"><b>' +
            T('Cada mes reparte ocho jornadas') + '</b>' +
            T('Cuatro semanas de mañana y tarde. El colegio te toma una jornada; la otra la decides tú: trabajar, descansar o buscarte algo extra.') +
+           '</span></div>';
+      h += '<div class="paso"><span class="paso-ic">' + Ico('trending-up') + '</span><span class="tx"><b>' +
+           T('Montas tu propio negocio') + '</b>' +
+           T('Empiezas con un puesto de dulces de Q450 y llegas a tener varios, con gente trabajando para ti. Cada uno se ve crecer en tu calle.') +
            '</span></div>';
       h += '<div class="paso"><span class="paso-ic">' + Ico('banco') + '</span><span class="tx"><b>' +
            T('Usas productos bancarios de verdad') + '</b>' +

@@ -12,7 +12,7 @@ const RAIZ = path.resolve(__dirname, '..') + '/';
 const ARCHIVOS = [
   'datos/config.js', 'datos/trabajos.js', 'datos/carreras.js', 'datos/creditos.js',
   'datos/eventos.js', 'datos/largoplazo.js', 'datos/origenes.js', 'datos/migracion.js',
-  'datos/glosario.js', 'datos/decisiones.js', 'datos/mejoras.js',
+  'datos/glosario.js', 'datos/decisiones.js', 'datos/mejoras.js', 'datos/negocios.js',
   'datos/progreso.js',
   'datos/textos.en.js', 'datos/textos.en.v2.js',
   'vendor/lucide.js', 'vendor/chart.js',

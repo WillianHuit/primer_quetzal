@@ -82,8 +82,13 @@ var Motor = (function () {
       // Quetzales extra por jornada trabajada: se compran con las tarjetas de
       // decision (una bicicleta, un celular) y no se pierden nunca.
       bonoJornada: 0,
-      // Las mejoras compradas: { canasta: true, utiles: true, ... }
+      // Las mejoras compradas: { herramienta: true, utiles: true, ... }
       mejoras: {},
+      /* El imperio. Cada negocio abierto es
+       *   { tipoId, nivel, empleados: [{ tipo, meses }], mesesAbierto,
+       *     ventaUltimoMes, gananciaUltimoMes }
+       * Vacio al empezar: a los trece nadie tiene un negocio. */
+      negocios: [],
       decisionesVistas: [],
       mesesSinDecision: 0,
       vistos: {},
@@ -326,17 +331,6 @@ var Motor = (function () {
     return estado.efectivo + (estado.monetaria || 0) + (estado.ahorro || 0);
   }
 
-  /* Baja un escalón la cadena del negocio y devuelve lo que se perdió.
-   * Se pierde la inversión, no se devuelve: eso es quebrar. */
-  function bajarUnNivelDeNegocio() {
-    var lista = mejorasDeCadena('negocio');
-    var n = nivelDeCadena('negocio');
-    if (n <= 0) return null;
-    var perdida = lista[n - 1];
-    delete estado.mejoras[perdida.id];
-    return perdida;
-  }
-
   function comprarMejora(id) {
     var falta = faltaParaMejora(id);
     if (falta) return { ok: false, razon: falta.razon, motivo: falta.motivo };
@@ -355,7 +349,7 @@ var Motor = (function () {
 
   /* La suma de todo lo que dan las mejoras compradas. */
   function efectosDeMejoras() {
-    var t = { bonoJornada: 0, avanceEstudio: 0, ingresoPasivo: 0,
+    var t = { bonoJornada: 0, avanceEstudio: 0,
               costoMensual: 0, energiaExtra: 0 };
     if (!estado || !estado.mejoras) return t;
     for (var i = 0; i < MEJORAS.length; i++) {
@@ -373,6 +367,364 @@ var Motor = (function () {
   function bonoPorJornada() {
     return redondear((estado ? (estado.bonoJornada || 0) : 0) +
                      efectosDeMejoras().bonoJornada);
+  }
+
+  // ---------- el imperio: los negocios del jugador ----------
+
+  /* Esta es la capa de tycoon del juego, y la parte donde el jugador deja de
+   * vender su tiempo y empieza a comprar el de otros.
+   *
+   * Un negocio abierto vive en estado.negocios como
+   *
+   *   { tipoId, nivel, empleados: [{ tipo, meses }], mesesAbierto,
+   *     ventaUltimoMes, gananciaUltimoMes }
+   *
+   * `nivel` empieza en 1 y es un indice sobre NIVELES_NEGOCIO. `empleados` es
+   * una lista y no un contador porque cada uno tiene su propia forma de
+   * contrato, y despedir a uno formal cuesta indemnizacion.
+   *
+   * Igual que en el resto del motor: aqui NO se prohibe por progresion. Lo que
+   * si se comprueba son las reglas de verdad —la edad, el nivel educativo, los
+   * dos techos, las plazas y el dinero— porque esas SON el juego.
+   */
+
+  function tipoDeNegocio(id) { return buscarPorId(TIPOS_NEGOCIO, id); }
+
+  function negociosAbiertos() {
+    return (estado && Array.isArray(estado.negocios)) ? estado.negocios : [];
+  }
+
+  function negocioDe(tipoId) {
+    var l = negociosAbiertos();
+    for (var i = 0; i < l.length; i++) if (l[i].tipoId === tipoId) return l[i];
+    return null;
+  }
+
+  /* Los dos techos que hacen que estudiar valga la pena.
+   *
+   * Un nivel educativo que no este en la tabla cae al de primaria y nunca a
+   * cero: quedarse sin poder abrir nada por un id mal escrito seria un fallo
+   * mudo, y de esos no se sale. */
+  function techoNegocios() {
+    var t = TECHO_NEGOCIOS[estado ? estado.educacion : 'primaria'];
+    return t === undefined ? TECHO_NEGOCIOS.primaria : t;
+  }
+  function techoEmpleados() {
+    var t = TECHO_EMPLEADOS[estado ? estado.educacion : 'primaria'];
+    return t === undefined ? TECHO_EMPLEADOS.primaria : t;
+  }
+  function empleadosTotales() {
+    var l = negociosAbiertos(), n = 0;
+    for (var i = 0; i < l.length; i++) n += l[i].empleados.length;
+    return n;
+  }
+
+  /* El escalon en el que esta un negocio, y lo que ese escalon le da. */
+  function nivelDeNegocio(neg) {
+    var i = Math.min(Math.max(neg.nivel || 1, 1), NIVELES_NEGOCIO.length) - 1;
+    return NIVELES_NEGOCIO[i];
+  }
+
+  /* Cuanta gente cabe adentro: lo que trae el tipo mas lo que le hayan
+   * agregado los niveles. Una de esas plazas es la del dueno. */
+  function plazasDe(neg) {
+    var t = tipoDeNegocio(neg.tipoId);
+    if (!t) return 0;
+    var extra = 0;
+    for (var i = 0; i < (neg.nivel || 1) && i < NIVELES_NEGOCIO.length; i++) {
+      extra += NIVELES_NEGOCIO[i].plazasExtra;
+    }
+    return t.plazas + extra;
+  }
+
+  /* Las jornadas que el jugador le puso a ESTE negocio este mes. */
+  function jornadasDelDueno(tipoId) { return espaciosUsados('negocio:' + tipoId); }
+
+  /* Lo que costaria subir un negocio al siguiente nivel, o 0 si ya esta
+   * arriba. Es un multiplo del costo de apertura, asi que sube solo cuando
+   * alguien agrega un tipo nuevo y no hay que calibrar nada a mano. */
+  function costoDeSubirNivel(tipoId) {
+    var neg = negocioDe(tipoId);
+    var t = tipoDeNegocio(tipoId);
+    if (!neg || !t || (neg.nivel || 1) >= NIVELES_NEGOCIO.length) return 0;
+    return Math.round(t.costoApertura * NIVELES_NEGOCIO[neg.nivel].costoRelativo);
+  }
+
+  /* Lo que cuesta al mes una persona contratada, CON TODO INCLUIDO.
+   *
+   * Es la cifra mas util de todo el juego para quien algun dia tenga un
+   * negocio: el formal cuesta el sueldo por 1.42 mas el bono de ley, no el
+   * sueldo. Ver los dos numeros juntos es la leccion. */
+  function costoDeEmpleado(tipo) {
+    var p = PLANILLA[tipo] || PLANILLA.informal;
+    return Math.round(p.sueldo * p.factorPrestaciones + p.bonoLey);
+  }
+
+  function planillaDe(neg) {
+    var s = 0;
+    for (var i = 0; i < neg.empleados.length; i++) {
+      s += costoDeEmpleado(neg.empleados[i].tipo);
+    }
+    return s;
+  }
+
+  /* Lo que este negocio haria en un mes normal, desglosado.
+   *
+   * `jornadasDueno` se puede pasar a mano para proyectar sin cambiar nada
+   * ("y si le pongo dos jornadas?"), que es lo que usa la pantalla para
+   * ensenar la decision antes de tomarla. */
+  function proyeccionDeNegocio(neg, jornadasDueno) {
+    var vacia = { venta: 0, margen: 0, costoMensual: 0, planilla: 0, neto: 0,
+                  jornadas: 0, plazas: 0, sinDueno: false, llena: false };
+    var t = tipoDeNegocio(neg.tipoId);
+    if (!t) return vacia;
+    var propias = jornadasDueno === undefined ? jornadasDelDueno(neg.tipoId)
+                                              : jornadasDueno;
+    var deEmpleados = neg.empleados.length * JORNADAS_POR_EMPLEADO;
+    var plazas = plazasDe(neg);
+    /* No caben mas jornadas que plazas por mes: un local tiene el tamano que
+     * tiene, y por eso el negocio chico no crece aunque le sobre dinero. */
+    var cupo = plazas * CONFIG.jornadasPorMes;
+    var jornadas = Math.min(propias + deEmpleados, cupo);
+    var venta = jornadas * t.ventaPorJornada * nivelDeNegocio(neg).multiplicador;
+    // El dueno que no aparece pierde plata, pero no todo: delegar SI funciona
+    var sinDueno = propias === 0 && jornadas > 0;
+    if (sinDueno) venta = venta * RENDIMIENTO_SIN_DUENO;
+    var planilla = planillaDe(neg);
+    return {
+      venta: Math.round(venta),
+      margen: Math.round(venta * t.margen),
+      costoMensual: t.costoMensual,
+      planilla: planilla,
+      neto: Math.round(venta * t.margen - t.costoMensual - planilla),
+      jornadas: jornadas,
+      plazas: plazas,
+      sinDueno: sinDueno,
+      llena: jornadas >= cupo
+    };
+  }
+
+  /* El resumen del imperio entero. Es el marcador del tycoon. */
+  function imperio() {
+    var l = negociosAbiertos();
+    var t = { negocios: l.length, techoNegocios: techoNegocios(),
+              empleados: empleadosTotales(), techoEmpleados: techoEmpleados(),
+              venta: 0, margen: 0, costos: 0, planilla: 0, neto: 0 };
+    for (var i = 0; i < l.length; i++) {
+      var p = proyeccionDeNegocio(l[i]);
+      t.venta += p.venta;
+      t.margen += p.margen;
+      t.costos += p.costoMensual;
+      t.planilla += p.planilla;
+      t.neto += p.neto;
+    }
+    return t;
+  }
+
+  /* Por que NO se puede abrir un negocio. null si si se puede.
+   * La interfaz usa el motivo para decirlo en una linea. */
+  function faltaParaAbrir(tipoId) {
+    var t = tipoDeNegocio(tipoId);
+    if (!t) return { motivo: 'noexiste', razon: 'Ese negocio no existe.' };
+    if (negocioDe(tipoId)) return { motivo: 'repetido', razon: 'Ya tienes uno.' };
+    /* La edad y el nivel van ANTES del techo, y el orden importa: la interfaz
+     * esconde lo que no está al alcance por edad o por estudio, pero SÍ le
+     * dice al jugador cuando lo único que le pasa es que ya va lleno. Si el
+     * techo se comprobara primero, un negocio que además le queda grande
+     * saldría diciendo "vas lleno", que es mentira. */
+    if (t.edadMinima && estado.edad < t.edadMinima) {
+      return { motivo: 'edad', razon: 'Hasta los ' + t.edadMinima + '.' };
+    }
+    if (t.requiereNivel && nivelIndice(estado.educacion) < nivelIndice(t.requiereNivel)) {
+      return { motivo: 'nivel', razon: 'Necesitas ' + t.requiereNivel + ' terminado.' };
+    }
+    if (negociosAbiertos().length >= techoNegocios()) {
+      return { motivo: 'techo', razon: 'Ya llevas los ' + techoNegocios() +
+               ' que puedes administrar. Traspasa uno o sigue estudiando.' };
+    }
+    if (dineroDisponible() < t.costoApertura) {
+      return { motivo: 'dinero', razon: 'Te faltan Q' +
+               Math.ceil(t.costoApertura - dineroDisponible()) + '.' };
+    }
+    return null;
+  }
+
+  function abrirNegocio(tipoId) {
+    var falta = faltaParaAbrir(tipoId);
+    if (falta) return { ok: false, razon: falta.razon, motivo: falta.motivo };
+    var t = tipoDeNegocio(tipoId);
+    var resto = cobrarDeCuentas(t.costoApertura);
+    if (resto > 0.01) {
+      estado.deudaHogar = redondear(estado.deudaHogar + resto);
+      return { ok: false, razon: 'No alcanzó.' };
+    }
+    if (!Array.isArray(estado.negocios)) estado.negocios = [];
+    estado.negocios.push({
+      tipoId: tipoId, nivel: 1, empleados: [], mesesAbierto: 0,
+      ventaUltimoMes: 0, gananciaUltimoMes: 0
+    });
+    guardar();
+    return { ok: true, tipo: t };
+  }
+
+  function faltaParaSubirNivel(tipoId) {
+    var neg = negocioDe(tipoId);
+    if (!neg) return { motivo: 'noexiste', razon: 'No tienes ese negocio.' };
+    if ((neg.nivel || 1) >= NIVELES_NEGOCIO.length) {
+      return { motivo: 'maximo', razon: 'Ya está en el nivel más alto.' };
+    }
+    var costo = costoDeSubirNivel(tipoId);
+    if (dineroDisponible() < costo) {
+      return { motivo: 'dinero', razon: 'Te faltan Q' +
+               Math.ceil(costo - dineroDisponible()) + '.' };
+    }
+    return null;
+  }
+
+  function subirNivelNegocio(tipoId) {
+    var falta = faltaParaSubirNivel(tipoId);
+    if (falta) return { ok: false, razon: falta.razon, motivo: falta.motivo };
+    var costo = costoDeSubirNivel(tipoId);
+    var neg = negocioDe(tipoId);
+    var resto = cobrarDeCuentas(costo);
+    if (resto > 0.01) {
+      estado.deudaHogar = redondear(estado.deudaHogar + resto);
+      return { ok: false, razon: 'No alcanzó.' };
+    }
+    neg.nivel = (neg.nivel || 1) + 1;
+    guardar();
+    return { ok: true, nivel: neg.nivel, escalon: nivelDeNegocio(neg), costo: costo };
+  }
+
+  function faltaParaContratar(tipoId, tipoEmpleado) {
+    var neg = negocioDe(tipoId);
+    if (!neg) return { motivo: 'noexiste', razon: 'No tienes ese negocio.' };
+    if (!PLANILLA[tipoEmpleado]) {
+      return { motivo: 'noexiste', razon: 'Ese contrato no existe.' };
+    }
+    /* Una de las plazas es la del dueno, asi que solo se contrata para las
+     * demas. Un puesto de dulces con una sola plaza no admite a nadie: es la
+     * forma honesta de decir que ese negocio no crece. */
+    if (neg.empleados.length >= plazasDe(neg) - 1) {
+      return { motivo: 'plazas', razon: 'Ya no cabe nadie más aquí.' };
+    }
+    if (empleadosTotales() >= techoEmpleados()) {
+      return { motivo: 'techo', razon: 'Con lo que llevas estudiado puedes administrar ' +
+               techoEmpleados() + '.' };
+    }
+    /* Y hay que poder pagarle el primer mes. Contratar sin tener con que
+     * pagar la planilla es la forma mas rapida de cerrar un negocio, y el
+     * juego no va a dejar que pase sin avisar. */
+    var costo = costoDeEmpleado(tipoEmpleado);
+    if (dineroDisponible() < costo) {
+      return { motivo: 'dinero',
+               razon: 'No te alcanza para el primer mes: son Q' + costo + '.' };
+    }
+    return null;
+  }
+
+  function contratar(tipoId, tipoEmpleado) {
+    var falta = faltaParaContratar(tipoId, tipoEmpleado);
+    if (falta) return { ok: false, razon: falta.razon, motivo: falta.motivo };
+    var neg = negocioDe(tipoId);
+    neg.empleados.push({ tipo: tipoEmpleado, meses: 0 });
+    guardar();
+    return { ok: true, costo: costoDeEmpleado(tipoEmpleado), tipo: tipoEmpleado };
+  }
+
+  /* Lo que cuesta despedir a alguien.
+   *
+   * Al informal, nada. Al formal hay que indemnizarlo, y ese es el otro lado
+   * de la leccion: el contrato que protege al trabajador es el mismo que le
+   * cuesta al patron deshacerse de el. Un sueldo por ano trabajado, con un
+   * ano de piso. */
+  function indemnizacionDe(emp) {
+    if (!emp || emp.tipo !== 'formal') return 0;
+    var p = PLANILLA.formal;
+    var anios = Math.max(1, Math.round((emp.meses || 0) / 12));
+    return Math.round(p.sueldo * anios);
+  }
+
+  function despedir(tipoId, indice) {
+    var neg = negocioDe(tipoId);
+    if (!neg || !neg.empleados[indice]) return { ok: false, razon: 'No está.' };
+    var emp = neg.empleados[indice];
+    var indem = indemnizacionDe(emp);
+    if (indem > 0) {
+      if (dineroDisponible() < indem) {
+        return { ok: false, motivo: 'dinero',
+                 razon: 'La indemnización son Q' + indem + ' y no los tienes.' };
+      }
+      var resto = cobrarDeCuentas(indem);
+      if (resto > 0.01) estado.deudaHogar = redondear(estado.deudaHogar + resto);
+    }
+    neg.empleados.splice(indice, 1);
+    guardar();
+    return { ok: true, indemnizacion: indem, tipo: emp.tipo };
+  }
+
+  /* Lo que se ha invertido en un negocio: la apertura mas cada nivel. */
+  function invertidoEn(neg) {
+    var t = tipoDeNegocio(neg.tipoId);
+    if (!t) return 0;
+    var total = t.costoApertura;
+    for (var i = 1; i < (neg.nivel || 1) && i < NIVELES_NEGOCIO.length; i++) {
+      total += Math.round(t.costoApertura * NIVELES_NEGOCIO[i].costoRelativo);
+    }
+    return total;
+  }
+
+  /* Lo que le quedaria de traspasar un negocio, ya descontadas las
+   * indemnizaciones. Puede salir negativo, y ver ese numero antes de aceptar
+   * es justo la leccion: salirse de un negocio tambien cuesta. */
+  function valorDeTraspaso(tipoId) {
+    var neg = negocioDe(tipoId);
+    if (!neg) return 0;
+    var indem = 0;
+    for (var i = 0; i < neg.empleados.length; i++) {
+      indem += indemnizacionDe(neg.empleados[i]);
+    }
+    return Math.round(invertidoEn(neg) * TRASPASO_RECUPERA) - indem;
+  }
+
+  function cerrarNegocio(tipoId) {
+    var neg = negocioDe(tipoId);
+    if (!neg) return { ok: false, razon: 'No tienes ese negocio.' };
+    var vale = valorDeTraspaso(tipoId);
+    if (vale < 0 && dineroDisponible() < -vale) {
+      return { ok: false, motivo: 'dinero',
+               razon: 'Cerrarlo cuesta Q' + (-vale) + ' de indemnizaciones y no los tienes.' };
+    }
+    if (vale >= 0) {
+      if (estado.monetaria !== null) estado.monetaria = redondear(estado.monetaria + vale);
+      else estado.efectivo = redondear(estado.efectivo + vale);
+    } else {
+      var resto = cobrarDeCuentas(-vale);
+      if (resto > 0.01) estado.deudaHogar = redondear(estado.deudaHogar + resto);
+    }
+    // Y se le sueltan las jornadas que tuviera puestas
+    for (var i = 0; i < estado.espacios.length; i++) {
+      if (negocioDeEspacio(estado.espacios[i]) === tipoId) estado.espacios[i] = '';
+    }
+    var fuera = buscarPorId(TIPOS_NEGOCIO, tipoId);
+    estado.negocios = negociosAbiertos().filter(function (n) { return n.tipoId !== tipoId; });
+    guardar();
+    return { ok: true, recupera: vale, tipo: fuera };
+  }
+
+  /* Quebrar. Si tiene niveles se cae uno; si estaba en el primero, se cierra
+   * y no se recupera nada. Eso es quebrar y no traspasar. */
+  function quebrarNegocio(neg) {
+    var t = tipoDeNegocio(neg.tipoId);
+    if ((neg.nivel || 1) > 1) {
+      neg.nivel--;
+      return { tipo: t, cerro: false, escalon: nivelDeNegocio(neg) };
+    }
+    for (var i = 0; i < estado.espacios.length; i++) {
+      if (negocioDeEspacio(estado.espacios[i]) === neg.tipoId) estado.espacios[i] = '';
+    }
+    estado.negocios = negociosAbiertos().filter(function (n) { return n !== neg; });
+    return { tipo: t, cerro: true };
   }
 
   // ---------- consultas ----------
@@ -487,9 +839,34 @@ var Motor = (function () {
     return CONFIG.pagoPorJornadasTrabajadas[jornadas] || 0;
   }
 
+  /* Que clase de jornada es esta casilla.
+   *
+   * Una casilla puede decir 'trabajo', 'estudio', 'descanso', 'minijuego' o
+   * 'negocio:dulces'. Las de negocio llevan pegado a que negocio van, porque
+   * el jugador puede tener varios y repartirse entre ellos. Esta funcion es la
+   * unica parte del motor que sabe de ese dos puntos. */
+  function tipoDeEspacio(v) {
+    if (!v) return '';
+    var c = String(v).indexOf(':');
+    return c === -1 ? String(v) : String(v).slice(0, c);
+  }
+  function negocioDeEspacio(v) {
+    var c = String(v || '').indexOf(':');
+    return c === -1 ? null : String(v).slice(c + 1);
+  }
+
+  /* Cuantas casillas de un tipo.
+   *
+   * Sin dos puntos cuenta por clase: espaciosUsados('negocio') son todas las
+   * jornadas de negocio, de cualquiera. Con dos puntos cuenta exacto:
+   * espaciosUsados('negocio:dulces') son solo las de ese. */
   function espaciosUsados(tipo) {
+    var exacto = String(tipo).indexOf(':') !== -1;
     var n = 0;
-    for (var i = 0; i < estado.espacios.length; i++) if (estado.espacios[i] === tipo) n++;
+    for (var i = 0; i < estado.espacios.length; i++) {
+      var v = estado.espacios[i];
+      if (exacto ? v === tipo : tipoDeEspacio(v) === tipo) n++;
+    }
     return n;
   }
   function espaciosLibres() { return espaciosUsados(''); }
@@ -978,11 +1355,17 @@ var Motor = (function () {
 
   function resolverMes(m) {
     var enfermedadMes = 0;
+    // Lo que los negocios cobran este mes: renta, luz, planilla y multas. Se
+    // junta aqui y se paga abajo con todo lo demas, para que si no alcanza
+    // caiga en el mismo sitio que el resto de los gastos.
+    var costoDeNegocios = 0;
 
     // --- energia ---
     var mej = efectosDeMejoras();
     for (var i = 0; i < estado.espacios.length; i++) {
-      var tipo = estado.espacios[i];
+      // 'negocio:dulces' gasta lo mismo que 'trabajo': atender tu propio
+      // negocio cansa igual que atender el de otro
+      var tipo = tipoDeEspacio(estado.espacios[i]);
       if (tipo && CONFIG.energia.porEspacio[tipo] !== undefined) {
         estado.energia += CONFIG.energia.porEspacio[tipo];
         // Una cama de verdad hace que el descanso rinda más
@@ -1030,33 +1413,90 @@ var Motor = (function () {
       }
     }
 
-    /* --- el negocio produce, aunque no le des jornadas ---
+    /* --- los negocios producen ---
      *
-     * Es la única entrada del juego que no cuesta tiempo, y por eso es la que
-     * más enseña: a partir de cierto punto, lo que trabaja es el capital y no
-     * la persona. Con su variación, porque un negocio tiene meses malos. */
-    if (mej.ingresoPasivo > 0) {
-      var vende = 1 + azar(-NEGOCIO_VARIANZA, NEGOCIO_VARIANZA);
-      var producido = redondear(mej.ingresoPasivo * vende);
-      m.negocio = (m.negocio || 0) + producido;
-      if (estado.monetaria !== null) estado.monetaria += producido;
-      else estado.efectivo += producido;
-      estado.totales.ingresos += producido;
+     * Aquí es donde el juego deja de ser un simulador de sueldo. Un negocio
+     * produce con las jornadas que tenga adentro, y las de la gente contratada
+     * cuentan igual que las del jugador: a partir de cierto punto lo que
+     * trabaja es el negocio y no la persona.
+     *
+     * Se recorre al revés porque un negocio puede quebrar y salirse de la
+     * lista en medio del recorrido.
+     */
+    var negs = negociosAbiertos();
+    for (var ni = negs.length - 1; ni >= 0; ni--) {
+      var neg = negs[ni];
+      var tn = tipoDeNegocio(neg.tipoId);
+      if (!tn) continue;
 
-      /* Y puede quebrar. Sin esto, un ingreso pasivo compuesto cuarenta años
-       * se vuelve una máquina de dinero y el juego deja de parecerse a la
-       * vida. Se evita con colchón: un negocio con tres meses de venta
-       * guardados aguanta los meses malos, que es justo la lección que un
-       * negocio propio tiene que enseñar. */
-      var colchon = (estado.ahorro || 0) + (estado.monetaria || 0);
-      var protegido = colchon >= mej.ingresoPasivo * NEGOCIO_MESES_DE_COLCHON;
-      if (!enGracia() && !protegido && Math.random() < NEGOCIO_RIESGO_QUIEBRA) {
-        var caido = bajarUnNivelDeNegocio();
-        if (caido) {
-          m.quebro = caido.id;
-          m.eventos.push('Se te cayó el negocio: perdiste ' + caido.nombre +
-            '. No tenías con qué aguantar un mes malo.');
+      neg.mesesAbierto = (neg.mesesAbierto || 0) + 1;
+      for (var ei = 0; ei < neg.empleados.length; ei++) {
+        neg.empleados[ei].meses = (neg.empleados[ei].meses || 0) + 1;
+      }
+
+      var pr = proyeccionDeNegocio(neg);
+
+      /* El mes bueno y el mes malo: la venta varía, los costos NO. Ver eso
+       * mes a mes es la lección de por qué un ingreso variable no sirve para
+       * comprometer un gasto fijo. */
+      var vende = 1 + azar(-NEGOCIO_VARIANZA, NEGOCIO_VARIANZA);
+      var venta = redondear(pr.venta * vende);
+      var bruto = redondear(venta * tn.margen);
+
+      neg.ventaUltimoMes = venta;
+      neg.gananciaUltimoMes = redondear(bruto - pr.costoMensual - pr.planilla);
+
+      /* Se anota en bruto y los costos aparte, a propósito: el jugador tiene
+       * que VER la planilla y la renta como renglones de gasto, no recibir un
+       * neto ya digerido. Es la diferencia entre saber que ganó poco y saber
+       * en qué se le fue. */
+      m.negocioVenta = redondear((m.negocioVenta || 0) + venta);
+      m.negocio = redondear((m.negocio || 0) + bruto);
+      m.planilla = redondear((m.planilla || 0) + pr.planilla);
+      m.mantenimiento = redondear((m.mantenimiento || 0) + pr.costoMensual);
+      costoDeNegocios = redondear(costoDeNegocios + pr.costoMensual + pr.planilla);
+
+      if (bruto > 0) {
+        if (estado.monetaria !== null) estado.monetaria += bruto;
+        else estado.efectivo += bruto;
+        estado.totales.ingresos += bruto;
+      }
+
+      /* La gente se va, y sin contrato se va más seguido. */
+      for (var ev = neg.empleados.length - 1; ev >= 0; ev--) {
+        var pl = PLANILLA[neg.empleados[ev].tipo] || PLANILLA.informal;
+        if (!enGracia() && Math.random() < pl.riesgoSeVa) {
+          neg.empleados.splice(ev, 1);
+          m.eventos.push('Se te fue una persona de ' + tn.nombre + '.');
         }
+      }
+
+      /* Y puede caer inspección sobre los que no tienen contrato. Es el
+       * argumento honesto a favor de formalizar: la multa son tres sueldos. */
+      for (var ins = 0; ins < neg.empleados.length; ins++) {
+        var pi = PLANILLA[neg.empleados[ins].tipo] || PLANILLA.informal;
+        if (!enGracia() && pi.riesgoInspeccion && Math.random() < pi.riesgoInspeccion) {
+          var multa = pi.sueldo * pi.multaEnSueldos;
+          m.imprevistos += multa;
+          costoDeNegocios = redondear(costoDeNegocios + multa);
+          m.eventos.push('Cayó inspección en ' + tn.nombre +
+            ': Q' + multa + ' de multa por tener gente sin contrato.');
+          break;
+        }
+      }
+
+      /* Y el negocio puede quebrar. Sin esto, cualquier ganancia compuesta
+       * cuarenta años se vuelve infinita y el juego deja de parecerse a la
+       * vida. Se evita con colchón: tres meses de sus propios costos
+       * guardados lo protegen, que es justo la lección. */
+      var colchon = (estado.ahorro || 0) + (estado.monetaria || 0);
+      var necesita = (pr.costoMensual + pr.planilla) * NEGOCIO_MESES_DE_COLCHON;
+      if (!enGracia() && colchon < necesita && Math.random() < NEGOCIO_RIESGO_QUIEBRA) {
+        var caida = quebrarNegocio(neg);
+        m.quebro = neg.tipoId;
+        m.eventos.push(caida.cerro
+          ? 'Se te cayó ' + tn.nombre + '. No tenías con qué aguantar un mes malo.'
+          : 'Se te cayó un nivel de ' + tn.nombre + '. No tenías colchón.');
       }
     }
 
@@ -1281,7 +1721,7 @@ var Motor = (function () {
     var manteni = mej.costoMensual;
     m.mantenimiento = (m.mantenimiento || 0) + manteni;
     var porPagar = gastoVivienda + costoMensualEstudio() + estado.deudaHogar +
-                   manejo + manteni;
+                   manejo + manteni + costoDeNegocios;
     if (m.enfermedadPendiente) { porPagar += m.enfermedadPendiente; m.enfermedadPendiente = 0; }
     estado.deudaHogar = 0;
     var resto = cobrarDeCuentas(porPagar);
@@ -1550,7 +1990,7 @@ var Motor = (function () {
       mes: MESES[estado.mes], anio: estado.anio, edad: estado.edad,
       etapa: etapaActual().turno, mesesCubiertos: mesesDelTurno(),
       salario: 0, bono: 0, remesa: 0, comisionRemesa: 0, extras: 0, mesada: 0,
-      manejo: 0, negocio: 0, mantenimiento: 0,
+      manejo: 0, negocio: 0, negocioVenta: 0, planilla: 0, mantenimiento: 0,
       vivienda: 0, colegiatura: 0, fuga: 0, intereses: 0, isr: 0,
       enfermedad: 0, perdidaEfectivo: 0, imprevistos: 0,
       cuotasPagadas: 0, interesesPagados: 0, pagoTarjeta: 0,
@@ -1686,6 +2126,7 @@ var Motor = (function () {
       if (!estado.decisionesVistas) estado.decisionesVistas = [];
       if (estado.mesesSinDecision === undefined) estado.mesesSinDecision = 0;
       if (!estado.mejoras) estado.mejoras = {};
+      if (!Array.isArray(estado.negocios)) estado.negocios = [];
       if (estado.mesada === undefined) {
         var og = buscarPorId(ORIGENES, estado.origen);
         estado.mesada = og && og.mesada ? og.mesada : 0;
@@ -1795,6 +2236,20 @@ var Motor = (function () {
     mejorasDeCadena: mejorasDeCadena, tieneMejora: tieneMejora,
     efectosDeMejoras: efectosDeMejoras, bonoPorJornada: bonoPorJornada,
     dineroDisponible: dineroDisponible,
+
+    tipoDeNegocio: tipoDeNegocio, negociosAbiertos: negociosAbiertos,
+    negocioDe: negocioDe, nivelDeNegocio: nivelDeNegocio, plazasDe: plazasDe,
+    techoNegocios: techoNegocios, techoEmpleados: techoEmpleados,
+    empleadosTotales: empleadosTotales, jornadasDelDueno: jornadasDelDueno,
+    costoDeSubirNivel: costoDeSubirNivel, costoDeEmpleado: costoDeEmpleado,
+    planillaDe: planillaDe, proyeccionDeNegocio: proyeccionDeNegocio,
+    imperio: imperio, faltaParaAbrir: faltaParaAbrir, abrirNegocio: abrirNegocio,
+    faltaParaSubirNivel: faltaParaSubirNivel, subirNivelNegocio: subirNivelNegocio,
+    faltaParaContratar: faltaParaContratar, contratar: contratar,
+    indemnizacionDe: indemnizacionDe, despedir: despedir,
+    invertidoEn: invertidoEn, valorDeTraspaso: valorDeTraspaso,
+    cerrarNegocio: cerrarNegocio, quebrarNegocio: quebrarNegocio,
+    tipoDeEspacio: tipoDeEspacio, negocioDeEspacio: negocioDeEspacio,
     espaciosUsados: espaciosUsados, espaciosLibres: espaciosLibres,
     tramoPuntaje: tramoPuntaje, tieneFiador: tieneFiador,
     requisitoPrestamo: requisitoPrestamo, montoMaximoPersonal: montoMaximoPersonal,
