@@ -186,6 +186,96 @@ var UI = (function () {
    *
    * Las casillas del colegio salen marcadas y no se pueden tocar: eso no es
    * una limitación de la interfaz, es la regla. */
+  /* La calle, que es la pantalla principal del juego.
+   *
+   * Se dibuja en dos sitios y con la MISMA función a propósito: arriba del mes,
+   * donde se toca para repartir las jornadas, y arriba del imperio, donde solo
+   * se mira porque las acciones están en las tarjetas de abajo. Que sea una
+   * sola función es lo que evita que las dos se separen: un negocio nuevo, un
+   * nivel nuevo o una ilustración nueva salen en las dos el mismo día.
+   *
+   * `viva` es la diferencia: con ella cada local es un botón que mete una
+   * jornada tuya adentro, y el lote vacío lleva a abrir un negocio.
+   */
+  function calle(viva) {
+    var e = Motor.get();
+    var t = Motor.trabajoActual();
+    var negs = Motor.negociosAbiertos();
+    var cabe = negs.length < Motor.techoNegocios();
+
+    var h = '<div class="escena-caja' + (escenaCrecio ? ' crecio' : '') +
+            (viva ? ' viva' : '') + '">';
+    escenaCrecio = false;
+    h += Escena.dibujar({
+      tocable: !!viva,
+      // El lote solo se ofrece si el imperio ya está abierto: la ruta se
+      // enseña no dibujando lo que todavía no toca, no prohibiéndolo.
+      cabeOtro: cabe && Motor.desbloqueado('mejoras'),
+      textoLote: T('Abrir un negocio'),
+      negocios: negs.map(function (n) {
+        var tn = Motor.tipoDeNegocio(n.tipoId);
+        return {
+          tipo: n.tipoId,
+          nombre: tn ? esc(D(tn, 'nombre')) : '',
+          icono: tn ? tn.icono : 'tienda',
+          nivel: n.nivel,
+          empleados: n.empleados.length,
+          // Las jornadas TUYAS de este mes, que es lo que la calle no decía
+          tuyas: Motor.espaciosUsados('negocio:' + n.tipoId),
+          produce: (n.gananciaUltimoMes || 0) > 0
+        };
+      }),
+      oficio: Motor.nivelDeCadena('oficio'),
+      escuela: Motor.nivelDeCadena('escuela'),
+      casa: Motor.nivelDeCadena('casa'),
+      trabajo: t ? t.id : null,
+      estudia: !!e.estudio,
+      graduado: e.carrerasTerminadas.length > 0 && !e.estudio
+    });
+    return h + '</div>';
+  }
+
+  /* La franja de debajo de la calle: en qué se te está yendo el mes.
+   *
+   * Son las mismas ocho jornadas de la rejilla, contadas por destino en vez de
+   * dibujadas una por una. Existe porque la calle contesta "¿qué tengo?" pero
+   * no "¿cuánto me queda por repartir?", y esa es la pregunta que el jugador
+   * se hace justo después de tocar un local. */
+  function barraDeCalle(e, t) {
+    var libres = 0;
+    for (var i = 0; i < e.espacios.length; i++) if (!e.espacios[i]) libres++;
+
+    var h = '<div class="calle-barra">';
+    if (libres) {
+      h += '<span class="quedan">' + Ico('mas') + ' ' +
+           T('Te quedan {0} jornadas', libres) + '</span>';
+    } else {
+      h += '<span class="listo">' + Ico('visto') + ' ' + T('Mes repartido') + '</span>';
+    }
+    // Y el atajo a lo que el jugador va a querer hacer después de mirar la calle
+    if (!t && !e.migracion) {
+      h += '<button class="btn-chico" data-pestana="trabajo">' + Ico('maletin') + ' ' +
+           T('Buscar trabajo') + '</button>';
+    } else if (Motor.desbloqueado('mejoras')) {
+      h += '<button class="btn-chico" data-pestana="mejoras">' + Ico('trending-up') + ' ' +
+           T('Ver el imperio') + '</button>';
+    }
+    return h + '</div>';
+  }
+
+  /* La primera jornada libre que se puede usar, o null si no queda ninguna.
+   *
+   * Salta las del colegio: están bloqueadas y asignarlas no hace nada, así que
+   * sin este salto tocar un negocio con la primera casilla ocupada por clases
+   * se sentiría como que el juego no responde. */
+  function primeraLibre() {
+    var e = Motor.get();
+    for (var i = 0; i < e.espacios.length; i++) {
+      if (!e.espacios[i] && !Motor.espacioBloqueado(i)) return i;
+    }
+    return null;
+  }
+
   function rejillaJornadas(e) {
     var iconos = { trabajo: 'maletin', estudio: 'birrete', minijuego: 'mando',
                    'minijuego-usado': 'visto', descanso: 'luna', '': 'mas' };
@@ -321,7 +411,21 @@ var UI = (function () {
         '</button></div>';
     }
 
+    /* LA CALLE VA PRIMERO, y esa es la decisión de diseño más grande de esta
+     * pantalla. Antes lo primero que se veía al abrir el juego era una rejilla
+     * de ocho casillas vacías: un formulario. Ahora es lo que tienes —tu casa,
+     * tu escuela, tus negocios— y un lote vacío al lado invitando a llenarlo.
+     *
+     * Y no está de adorno: cada local es un botón que mete una jornada tuya
+     * adentro. El reparto del mes se hace señalando tus cosas, no eligiendo de
+     * una lista. La rejilla se queda debajo, que es donde le toca: ya no es
+     * donde se juega, es donde se comprueba en qué se fue el mes. */
     h += '<h2>' + T('Tu {0}', turnoNombre()) + '</h2>';
+
+    h += '<div class="tarjeta escenario mando">';
+    h += calle(true);
+    h += barraDeCalle(e, t);
+    h += '</div>';
 
     if (Motor.enGracia()) {
       h += '<div class="aprendizaje">' +
@@ -1279,29 +1383,9 @@ var UI = (function () {
     var negs = Motor.negociosAbiertos();
     var h = '<h2>' + T('Tu imperio') + '</h2>';
 
-    // --- 1. la calle ---
+    // --- 1. la calle, la misma que la del mes pero quieta ---
     h += '<div class="tarjeta escenario">';
-    h += '<div class="escena-caja' + (escenaCrecio ? ' crecio' : '') + '">';
-    escenaCrecio = false;
-    h += Escena.dibujar({
-      negocios: negs.map(function (n) {
-        var tn = Motor.tipoDeNegocio(n.tipoId);
-        return {
-          tipo: n.tipoId,
-          icono: tn ? tn.icono : 'tienda',
-          nivel: n.nivel,
-          empleados: n.empleados.length,
-          produce: (n.gananciaUltimoMes || 0) > 0
-        };
-      }),
-      oficio: Motor.nivelDeCadena('oficio'),
-      escuela: Motor.nivelDeCadena('escuela'),
-      casa: Motor.nivelDeCadena('casa'),
-      trabajo: t ? t.id : null,
-      estudia: !!e.estudio,
-      graduado: e.carrerasTerminadas.length > 0 && !e.estudio
-    });
-    h += '</div>';
+    h += calle(false);
 
     // --- 2. el marcador ---
     var sale = imp.planilla + imp.costos;
@@ -1886,6 +1970,7 @@ var UI = (function () {
     sentido = 0;
     pintarGuia();
     pintarGraficaNegocio();
+    colocarCalle();
     // La barra de dinero late cuando el saldo cambio, para que el jugador vea
     // que algo paso sin tener que comparar cifras de memoria.
     if (latirBarra) {
@@ -1893,6 +1978,33 @@ var UI = (function () {
       var c = app.querySelector('.barra .cifras');
       if (c) c.classList.add('late');
     }
+  }
+
+  /* Dónde queda parada la calle cuando se vuelve a pintar.
+   *
+   * Sin esto la calle es inservible como tablero. La escena empieza con la
+   * casa, la escuela y el oficio —126 unidades de las 300 que mide con dos
+   * negocios— así que en un teléfono de 390 px lo que se ve al abrir el juego
+   * es una lámpara, unos libros y un rótulo, y **los negocios quedan fuera de
+   * pantalla**. Justo lo contrario de lo que esta pantalla tiene que decir.
+   *
+   * Así que arranca pegada a la DERECHA, donde están los negocios y el lote
+   * vacío. Y se recuerda dónde la dejó el jugador, porque si no, cada vez que
+   * toca un local la pantalla se vuelve a pintar y la calle le salta de sitio
+   * debajo del dedo.
+   *
+   * `scrollCalle` es por pestaña: la del mes y la del imperio se miran de
+   * forma distinta y cada una recuerda la suya. */
+  var scrollCalle = {};
+
+  function colocarCalle() {
+    var caja = app.querySelector('.escena-caja');
+    if (!caja || !caja.scrollWidth) return;
+    var sobra = caja.scrollWidth - caja.clientWidth;
+    if (sobra <= 0) return;
+    var guardado = scrollCalle[pestana];
+    caja.scrollLeft = (typeof guardado === 'number') ? Math.min(guardado, sobra) : sobra;
+    caja.addEventListener('scroll', function () { scrollCalle[pestana] = caja.scrollLeft; });
   }
 
   // =============== tarjetas superpuestas ===============
@@ -2644,7 +2756,7 @@ var UI = (function () {
 
   function conectar() {
     app.addEventListener('click', function (ev) {
-      var el = ev.target.closest('[data-pestana],[data-sub],[data-espacio],[data-poner],[data-tomar],[data-abrir],' +
+      var el = ev.target.closest('[data-pestana],[data-sub],[data-espacio],[data-poner],[data-lote],[data-tomar],[data-abrir],' +
         '[data-mover],[data-mudar],[data-inscribir],[data-jugar],[data-abonar],[data-abrir-menu],' +
         '[data-casa],[data-envio],[data-canal],[data-porque],[data-detalle],[data-no-estudiar],' +
         '[data-ver-perfil],[data-mejora],' +
@@ -2677,8 +2789,31 @@ var UI = (function () {
       }
       if (d.detalle) { verDetalle = !verDetalle; return render(); }
 
-      if (d.poner !== undefined && espacioSel !== null) {
-        Motor.asignarEspacio(espacioSel, d.poner);
+      /* El lote vacío de la calle: lo único de ahí que no gasta una jornada. */
+      if (d.lote !== undefined) { irAPestana('mejoras'); return render(); }
+
+      /* Poner una jornada en algo.
+       *
+       * Hay DOS formas de llegar aquí y las dos tienen que funcionar:
+       *
+       *   - desde la rejilla: se toca una casilla y luego la actividad. Es la
+       *     que enseña el tutorial y la que deja elegir CUÁL casilla.
+       *   - desde la calle: se toca el negocio y ya. Sin casilla elegida se
+       *     usa la primera libre, que es lo que el jugador espera cuando
+       *     señala su tortillería y espera meterse adentro.
+       *
+       * La segunda es la que hace que la calle sea el juego y no un cuadro, y
+       * no reemplaza a la primera: quien quiera poner el negocio en la tarde
+       * de la semana tres sigue pudiendo. */
+      if (d.poner !== undefined) {
+        var destino = espacioSel;
+        if (destino === null) destino = primeraLibre();
+        if (destino === null) {
+          Sonido.tono('error');
+          return aviso(T('El mes ya está repartido'),
+            T('Las ocho jornadas están ocupadas. Vacía una en la rejilla de abajo si quieres cambiar algo.'));
+        }
+        Motor.asignarEspacio(destino, d.poner);
         espacioSel = null; Motor.guardar(); Sonido.tono('toque');
         return render();
       }

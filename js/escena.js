@@ -141,23 +141,37 @@ var Escena = (function () {
    * Los trazos de ese archivo no traen color ni grosor —los pone el CSS
    * cuando van dentro de un <svg class="ic">— así que aquí hay que ponérselos
    * a mano en el grupo que los envuelve. */
-  function emblema(nombre, cx, cy, lado) {
+  function emblema(nombre, cx, cy, lado, color) {
     if (typeof Iconos === 'undefined') return '';
     var d = Iconos.trazo(nombre);
     if (!d) return '';
     var s = lado / 24;
+    // El color es opcional: sirve para el emblema que va sobre fondo oscuro,
+    // como el de la insignia de tus jornadas, donde la tinta no se ve.
     return '<g transform="translate(' + (cx - lado / 2) + ',' + (cy - lado / 2) +
-             ') scale(' + s.toFixed(3) + ')" fill="none" stroke="' + C.tinta +
+             ') scale(' + s.toFixed(3) + ')" fill="none" stroke="' + (color || C.tinta) +
              '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' +
-             ' opacity=".85">' + d + '</g>';
+             ' opacity="' + (color ? '1' : '.85') + '">' + d + '</g>';
   }
 
-  /* El terreno vacío. Sale cuando el jugador todavía no tiene ningún negocio,
-   * y sale con el contorno punteado para que se note que ahí falta algo. */
-  function terrenoVacio(x0) {
-    var x = x0 + (ANCHO_LOCAL - 32) / 2;
-    return '<rect x="' + x + '" y="' + (SUELO - 14) + '" width="32" height="14" rx="3"' +
-             ' fill="none" stroke="' + C.linea + '" stroke-width="2.4" stroke-dasharray="5 4"/>';
+  /* El terreno vacío: el hueco donde todavía no hay negocio.
+   *
+   * Sale con el contorno punteado para que se note que ahí FALTA algo, y desde
+   * que la calle es la pantalla principal sale siempre —no solo cuando no hay
+   * ningún negocio— mientras al jugador le quepa uno más. Es la invitación
+   * permanente del juego: un lote vacío al lado de lo que ya tienes.
+   *
+   * El signo de más va dentro porque el rectángulo punteado solo no se lee
+   * como "aquí puedes construir": se lee como un error de dibujo. */
+  function terrenoVacio(x0, conMas) {
+    var an = 34, al = 17;
+    var x = x0 + (ANCHO_LOCAL - an) / 2;
+    var y = SUELO - al;
+    var h = '<rect class="lote-marco' + (conMas ? ' late' : '') + '"' +
+              ' x="' + x + '" y="' + y + '" width="' + an + '" height="' + al + '" rx="3"' +
+              ' fill="none" stroke="' + C.linea + '" stroke-width="2.4" stroke-dasharray="5 4"/>';
+    if (conMas) h += emblema('mas', x + an / 2, y + al / 2, 11);
+    return h;
   }
 
   /* Lo que mide un local según su nivel, en unidades de la escena.
@@ -283,6 +297,35 @@ var Escena = (function () {
              (cuantos - caben) + '</text>';
     }
     return h;
+  }
+
+  /* Las jornadas TUYAS que están puestas en ese negocio este mes.
+   *
+   * Es la mitad que le faltaba a la calle. La fila de siluetas de `gente()`
+   * dice a quién le pagas; esta dice dónde estás TÚ, que es la decisión que el
+   * juego pide cada mes y la única que no se puede comprar con dinero. Un
+   * negocio sin ninguna jornada tuya rinde un 30% menos, y hasta ahora eso
+   * solo se veía leyendo un número en otra pestaña.
+   *
+   * La primera versión eran cuadritos verdes en fila sobre el toldo, y no
+   * funcionó: a este tamaño tres cuadros oscuros encima de un techo se leen
+   * como paneles solares, y encima chocaban con las monedas. Ahora es una
+   * INSIGNIA con la silueta y el número, en la esquina de arriba a la derecha
+   * del local. Esa esquina está libre justo porque los locales por tipo ya no
+   * llevan sello, y es donde los juegos de este tipo ponen siempre la cuenta
+   * de quién está trabajando ahí. */
+  function tuyas(x0, cuantas, alto) {
+    if (!cuantas) return '';
+    var an = cuantas > 9 ? 25 : 21, al = 14;
+    var x = x0 + ANCHO_LOCAL - an - 1;
+    var y = SUELO - (alto || 34) * 0.78 - al / 2;
+    return '<g class="tuyas">' +
+      '<rect x="' + x + '" y="' + y + '" width="' + an + '" height="' + al + '" rx="7"' +
+        ' fill="' + C.verde + '" stroke="' + C.tinta + '" stroke-width="1.1"/>' +
+      emblema('persona', x + 6.5, y + al / 2, 9, '#fff') +
+      '<text x="' + (x + an - 6) + '" y="' + (y + al / 2 + 3.4) +
+        '" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff">' +
+        cuantas + '</text></g>';
   }
 
   /* Las monedas que suben de un local que produjo.
@@ -456,28 +499,78 @@ var Escena = (function () {
    * línea es lo que hace que la tarjeta le ponga barra de arrastre en vez de
    * encoger todo hasta que no se vea. Con un negocio no hay barra.
    */
+  /* Un local envuelto para que se pueda TOCAR.
+   *
+   * La zona sensible es un rectángulo transparente que cubre el hueco entero,
+   * del suelo al cielo, y no el dibujo: con la silueta del dibujo el jugador
+   * falla el toque entre el toldo y la puerta, y en un teléfono eso se siente
+   * como que el juego no responde. Va DELANTE de todo lo del local por el
+   * mismo motivo.
+   *
+   * El `data-poner` es el mismo valor que ya usaban los botones de la pestaña
+   * del mes —'negocio:dulces'— así que el manejador que lo recibe no cambia y
+   * las dos formas de repartir el mes conviven. */
+  function tocable(x0, dato, etiqueta, marcado) {
+    return '<g class="calle-toque' + (marcado ? ' puesto' : '') + '" role="button" tabindex="0"' +
+           ' data-poner="' + dato + '"><title>' + etiqueta + '</title>' +
+           '<rect class="toque" x="' + x0 + '" y="6" width="' + ANCHO_LOCAL +
+             '" height="' + (SUELO + 16 - 6) + '" rx="8" fill="transparent"/></g>';
+  }
+
+  /* La calle.
+   *
+   * `op.tocable` la convierte de cuadro en tablero: cada local pasa a ser un
+   * botón que pone una jornada tuya adentro, y el lote vacío lleva a abrir un
+   * negocio. Sin esa opción se dibuja igual pero no responde, que es como la
+   * quiere la pestaña del imperio, donde las acciones están en las tarjetas.
+   *
+   * `aria-hidden` solo cuando NO es tocable: un adorno se le esconde al lector
+   * de pantalla, pero unos botones no. */
   function dibujar(op) {
     var o = op || {};
     var negs = o.negocios || [];
-    var w = anchoDe(negs.length);
-    var h = '<svg class="escena" viewBox="0 0 ' + w + ' 116" preserveAspectRatio="xMinYMid meet"' +
+    var toca = !!o.tocable;
+    // Con un lote libre se dibuja un hueco de más, que es la invitación
+    var lote = toca && o.cabeOtro && negs.length ? 1 : 0;
+    var w = anchoDe(negs.length + lote);
+    var h = '<svg class="escena' + (toca ? ' viva' : '') + '" viewBox="0 0 ' + w + ' 116"' +
+            ' preserveAspectRatio="xMinYMid meet"' +
             ' style="min-width:' + Math.round(w * 1.5) + 'px"' +
-            ' aria-hidden="true" focusable="false">';
+            (toca ? '' : ' aria-hidden="true"') + ' focusable="false">';
     h += sol(w);
     h += suelo(w);
     h += piezaDe('escuela', ESCUELA, o.escuela);
     h += piezaDe('casa', CASA, o.casa);
     h += piezaDe('oficio', OFICIO, o.oficio);
 
-    if (!negs.length) {
-      h += terrenoVacio(X_CALLE);
-    } else {
-      for (var i = 0; i < negs.length; i++) {
-        var n = negs[i] || {};
-        var x0 = X_CALLE + i * ANCHO_LOCAL;
-        h += local(x0, n.nivel, n.icono, i, n.tipo);
-        h += gente(x0, n.empleados || 0);
-        if (n.produce) h += monedas(x0, (n.nivel || 1), LADO_POR_NIVEL[Math.max(0, Math.min((n.nivel || 1) - 1, 3))]);
+    for (var i = 0; i < negs.length; i++) {
+      var n = negs[i] || {};
+      var x0 = X_CALLE + i * ANCHO_LOCAL;
+      var alto = LADO_POR_NIVEL[Math.max(0, Math.min((n.nivel || 1) - 1, 3))];
+      h += local(x0, n.nivel, n.icono, i, n.tipo);
+      h += gente(x0, n.empleados || 0);
+      h += tuyas(x0, n.tuyas || 0, alto);
+      if (n.produce) h += monedas(x0, (n.nivel || 1), alto);
+      if (toca && n.tipo) {
+        h += tocable(x0, 'negocio:' + n.tipo, n.nombre || '', (n.tuyas || 0) > 0);
+      }
+    }
+
+    // El lote vacío: el único de la calle que no pone una jornada sino que
+    // lleva a abrir un negocio, así que sale con su propio dato.
+    if (!negs.length || lote) {
+      var xl = X_CALLE + negs.length * ANCHO_LOCAL;
+      if (toca) {
+        /* El terreno va DENTRO del grupo que se toca. Fuera, el resaltado del
+         * dedo era una columna de cielo de cien unidades de alto al lado del
+         * último local, y se leía como un panel suelto en vez de como un lote. */
+        h += '<g class="calle-toque lote" role="button" tabindex="0" data-lote="1">' +
+             '<title>' + (o.textoLote || '') + '</title>' +
+             '<rect class="toque" x="' + xl + '" y="' + (SUELO - 34) + '" width="' + ANCHO_LOCAL +
+               '" height="' + (34 + 16) + '" rx="8" fill="transparent"/>' +
+             terrenoVacio(xl, true) + '</g>';
+      } else {
+        h += terrenoVacio(xl, false);
       }
     }
 

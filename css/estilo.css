@@ -826,11 +826,55 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
 }
 .tarjeta.sigue .titulo { color: var(--ambar-hondo); }
 
-/* ---------- el escenario que crece ----------
-   Es lo primero que se ve al entrar a Mejoras, y lo unico del juego que se
-   mueve sin que el jugador toque nada. */
+/* ---------- la calle ----------
+   Es lo primero que se ve al abrir el juego, y en la pantalla del mes no es un
+   cuadro: es el tablero. Cada local es un boton que mete una jornada tuya
+   adentro. Por eso la version `.mando` va mas alta y con mas presencia que la
+   del imperio, donde la calle solo se mira. */
 
 .tarjeta.escenario { padding: 10px 11px 12px; }
+
+/* La calle como tablero: mas alta, y pegada arriba de la pantalla */
+.tarjeta.escenario.mando { padding: 8px 9px 9px; margin-bottom: 12px; }
+.tarjeta.escenario.mando .escena { min-height: 196px; margin-bottom: 0; }
+.escena-caja.viva { padding-bottom: 2px; }
+
+/* Las zonas que se tocan. El rectangulo es transparente y cubre el hueco
+   entero del local, del suelo al cielo: con la silueta del dibujo se falla el
+   toque entre el toldo y la puerta, y en un telefono eso se siente como que el
+   juego no responde. */
+.calle-toque { cursor: pointer; }
+.calle-toque .toque { transition: fill .12s ease; }
+.calle-toque:hover .toque { fill: rgba(31, 122, 90, .10); }
+.calle-toque:active .toque { fill: rgba(31, 122, 90, .20); }
+.calle-toque:focus-visible { outline: none; }
+.calle-toque:focus-visible .toque {
+  fill: rgba(31, 122, 90, .12);
+  stroke: var(--verde); stroke-width: 2; stroke-dasharray: 4 3;
+}
+/* El lote vacio late despacio: es la invitacion permanente del juego. El
+   latido va en el rectangulo punteado y no en la zona de toque, que es alta
+   y transparente y se leia como un panel suelto. */
+.lote-marco.late { animation: lote-late 2.8s ease-in-out infinite; }
+@keyframes lote-late {
+  0%, 100% { stroke: var(--linea); fill: rgba(31, 122, 90, 0); }
+  50%      { stroke: var(--verde); fill: rgba(31, 122, 90, .10); }
+}
+
+/* La franja de debajo de la calle: cuanto mes te queda por repartir */
+.calle-barra {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 8px; flex-wrap: wrap;
+}
+.calle-barra .quedan, .calle-barra .listo {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-weight: 700; font-size: 12.5px; line-height: 1.25;
+  flex: 1 1 90px; min-width: 0;
+}
+.calle-barra .quedan { color: var(--ambar-hondo); }
+.calle-barra .listo { color: var(--verde); }
+.calle-barra .quedan svg, .calle-barra .listo svg { width: 16px; height: 16px; }
+.calle-barra .btn-chico { flex: 0 0 auto; }
 .escena {
   display: block; width: 100%; height: auto;
   border-radius: 14px;
@@ -1306,6 +1350,7 @@ nav.pestanas button.senala { color: var(--ambar-hondo); }
   main.vista-entra { transform: none; }
   .esc-moneda { animation: none; opacity: 1; }
   .escena-caja.crecio .escena { animation: none; }
+  .lote-marco.late { animation: none; stroke: var(--verde); }
   .foco { animation: none; }
   .foco-flecha.arriba { animation: none; }
   .foco-flecha.abajo { animation: none; transform: rotate(180deg); }

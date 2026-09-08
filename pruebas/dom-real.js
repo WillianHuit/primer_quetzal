@@ -344,6 +344,58 @@ ok(w.document.querySelectorAll('[data-tomar][data-formal="1"]').length === 0,
 ok(w.document.querySelector('main').textContent.indexOf('Mercado laboral') < 0,
    'y el mercado laboral ya no está en trabajo');
 
+// ---------- la calle es el tablero, no un cuadro ----------
+
+/* Esta es la pantalla principal del juego, así que lo que se comprueba aquí
+ * no es que se dibuje: es que se pueda JUGAR con ella. Un local que se ve pero
+ * no se toca deja el reparto del mes en la rejilla y la calle en adorno, que
+ * es exactamente de lo que se venía. */
+w.Motor.get().efectivo += 40000;
+w.Motor.abrirNegocio('refrescos');
+w.Motor.guardar();
+clic(w, w.document.querySelector('[data-pestana="casa"]'));
+
+const calleViva = w.document.querySelector('.escena.viva');
+ok(!!calleViva, 'la pantalla del mes abre con la calle, y la calle está viva');
+ok(w.document.querySelector('main').innerHTML.indexOf('escena') <
+   w.document.querySelector('main').innerHTML.indexOf('jornadas'),
+   'y va ANTES de la rejilla de jornadas: primero lo que tienes, luego el reparto');
+
+const localToca = w.document.querySelector('[data-poner="negocio:refrescos"].calle-toque');
+ok(!!localToca, 'el local de la calle es un botón que pone una jornada adentro');
+
+/* Un toque en el local, SIN elegir casilla antes. Ese es el atajo que hace que
+ * la calle sea el tablero: señalas tu negocio y te metes adentro. */
+const antesEnNeg = w.Motor.espaciosUsados('negocio:refrescos');
+clic(w, localToca);
+const despuesEnNeg = w.Motor.espaciosUsados('negocio:refrescos');
+ok(despuesEnNeg === antesEnNeg + 1,
+   `tocar el local mete una jornada tuya adentro sin elegir casilla (${antesEnNeg} -> ${despuesEnNeg})`);
+ok(!!w.document.querySelector('.tuyas'),
+   'y la calle lo muestra: salen tus jornadas encima del local');
+
+/* Y la forma vieja sigue viva, porque es la que enseña el tutorial y la única
+ * que deja elegir en QUÉ casilla va. */
+const libre = jornadasLibres(w)[0];
+clic(w, libre);
+ok(!!w.document.querySelector('.jornada.sel'), 'tocar una casilla sigue seleccionándola');
+clic(w, w.document.querySelector('[data-poner="descanso"]'));
+ok(w.Motor.espaciosUsados('descanso') >= 1,
+   'y con una casilla elegida, la actividad va a ESA casilla');
+
+/* El lote vacío no gasta jornada: lleva a abrir un negocio. */
+const lote = w.document.querySelector('[data-lote]');
+ok(!!lote, 'al lado de tus negocios hay un lote vacío, mientras te quepa otro');
+clic(w, lote);
+ok(w.document.querySelector('.pestanas .activa').dataset.pestana === 'mejoras',
+   'y tocarlo lleva a la pantalla donde se abre uno');
+
+// El imperio dibuja la MISMA calle, pero quieta: ahí las acciones son tarjetas
+ok(!!w.document.querySelector('.escena') && !w.document.querySelector('.escena.viva'),
+   'el imperio dibuja la misma calle, pero sin zonas que se toquen');
+
+clic(w, w.document.querySelector('[data-pestana="casa"]'));
+
 // ---------- el mercado laboral vive en noticias ----------
 clic(w, w.document.querySelector('[data-pestana="noticias"]'));
 const noticias = w.document.querySelector('main').textContent;

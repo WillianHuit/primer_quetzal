@@ -702,6 +702,15 @@
   ui['Tus negocios'] = 'Your businesses';
   ui['Mejoras para ti'] = 'Upgrades for you';
   ui['Abrir un negocio'] = 'Open a business';
+
+  /* La calle como tablero: se toca un local y se mete una jornada adentro. */
+  ui['Te quedan {0} jornadas'] = '{0} half-days left';
+  ui['Mes repartido'] = 'Month spent';
+  ui['Ver el imperio'] = 'See your empire';
+  ui['Buscar trabajo'] = 'Look for work';
+  ui['El mes ya está repartido'] = 'The month is already spent';
+  ui['Las ocho jornadas están ocupadas. Vacía una en la rejilla de abajo si quieres cambiar algo.'] =
+    'All eight half-days are taken. Empty one in the grid below if you want to change something.';
   ui['Venden'] = 'They sell';
   ui['Vende'] = 'Sells';
   ui['Le sale'] = 'Costs it';

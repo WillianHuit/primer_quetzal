@@ -7,6 +7,27 @@ aporta al juego, no por lo que es más fácil.
 
 ## 0. Lo que se cerró hoy
 
+### La calle dejó de ser una pestaña y pasó a ser la pantalla
+
+La reforma del imperio había metido los negocios, la planilla y los techos **en la cuarta
+pestaña de siete**, y lo primero que veías al abrir el juego seguía siendo una rejilla de
+ocho casillas vacías. Eso no es un tycoon; es una hoja de cálculo con una calle de adorno en
+otra pantalla. Corregido:
+
+- **La calle abre la pantalla del mes**, con el lote vacío latiendo al lado mientras te quepa
+  otro negocio. La rejilla de jornadas se queda debajo: ya no es donde se juega, es donde se
+  comprueba en qué se fue el mes.
+- **Cada local es un botón** que mete una jornada tuya adentro, sin elegir casilla. La forma
+  vieja sigue viva porque es la que enseña el tutorial y la única que deja elegir en cuál.
+- **Cada negocio lleva una insignia** con la silueta y el número de jornadas tuyas de este
+  mes. Cierra el lazo: las siluetas de abajo dicen a quién le pagas, la insignia dice dónde
+  estás tú, y un negocio sin dueño adentro rinde un 30% menos.
+- **La calle arranca pegada a la derecha** y recuerda dónde la dejaste. Sin lo primero, en un
+  teléfono de 390 px se veía una lámpara y unos libros con los negocios fuera de pantalla;
+  sin lo segundo, saltaba de sitio debajo del dedo en cada toque.
+- **Una sola función dibuja las dos calles**, la del mes y la del imperio, y solo cambia si
+  responde al dedo.
+
 ### Los 36 locales por tipo, conectados
 
 Llegaron en la rama `assets` como respuesta a la prioridad 1 de

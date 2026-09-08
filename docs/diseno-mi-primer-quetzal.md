@@ -754,6 +754,42 @@ Las dos cosas que la prueba exige son que **estudiar siga rindiendo más** (5 a 
 Y por el camino esa medición encontró cuatro cosas que ninguna prueba de "no lanza errores"
 habría visto. Están en §24 porque son el tipo de hallazgo que vale más que el código.
 
+### 14.6b La calle es la pantalla, no una pestaña
+
+Esta es la corrección más importante que le ha pasado al juego, y se hizo tarde. La reforma
+del imperio metió los negocios, la planilla y los techos, pero los metió **en una pestaña**:
+la cuarta de siete. Lo primero que veías al abrir el juego seguía siendo una rejilla de ocho
+casillas vacías. Un formulario. Y un tycoon en el que lo primero que ves es un formulario no
+es un tycoon: es una hoja de cálculo con una calle de adorno en otra pantalla.
+
+Así que la calle se movió al frente y dejó de ser un cuadro.
+
+**Lo que tienes va antes que lo que haces.** La pantalla de arranque abre con la calle —tu
+casa, tu escuela, tu oficio, tus negocios— y un lote vacío latiendo al lado, mientras te
+quepa uno más. La rejilla de jornadas se queda debajo, que es donde le toca: ya no es donde
+se juega, es donde se comprueba en qué se fue el mes.
+
+**Y se toca.** Cada local es un botón que mete una jornada tuya adentro. La forma vieja
+—tocar una casilla, luego la actividad— sigue viva y no es redundante: es la que enseña el
+tutorial y la única que deja elegir en QUÉ casilla va. Pero la que hace que esto se sienta un
+tycoon es la otra: señalas tu tortillería y te metes adentro, de un toque.
+
+**Y contesta.** Cada negocio lleva en la esquina una insignia verde con la silueta y el
+número de jornadas TUYAS que tiene puestas este mes. Eso era lo que faltaba para cerrar el
+lazo: la fila de siluetas de abajo dice a quién le pagas, y la insignia dice dónde estás tú
+—que es la decisión que el juego pide cada mes y la única que no se puede comprar con
+dinero, porque un negocio sin dueño adentro rinde un 30% menos.
+
+**Dos detalles que sin ellos no funciona.** El primero: la calle arranca pegada a la
+DERECHA. Las 126 unidades de la izquierda son la casa, la escuela y el oficio, así que en un
+teléfono de 390 px lo que se veía al abrir era una lámpara y unos libros, con los negocios
+fuera de pantalla. El segundo: se recuerda dónde la dejó el jugador, porque cada toque
+vuelve a pintar la pantalla y sin eso la calle le saltaba de sitio debajo del dedo.
+
+**Una sola función dibuja las dos calles**, la del mes y la del imperio, y solo cambia si
+responde al dedo. Es lo que evita que se separen: un negocio nuevo, un nivel nuevo o una
+ilustración nueva salen en las dos el mismo día.
+
 ### 14.7 Ilustraciones, y el dibujo que se queda detrás
 
 El juego se dibujaba entero con SVG propio: iconos de trazo, un muñeco por piezas y una
