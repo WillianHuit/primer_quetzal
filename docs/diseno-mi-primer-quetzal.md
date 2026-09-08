@@ -757,7 +757,7 @@ habría visto. Están en §24 porque son el tipo de hallazgo que vale más que e
 ### 14.7 Ilustraciones, y el dibujo que se queda detrás
 
 El juego se dibujaba entero con SVG propio: iconos de trazo, un muñeco por piezas y una
-escena hecha de formas. Eso sigue ahí. Encima entraron **37 ilustraciones** —el mismo chico
+escena hecha de formas. Eso sigue ahí. Encima entraron **73 ilustraciones** —el mismo chico
 en 23 estados, los cuatro niveles de un local, las ocho piezas de las cadenas de mejoras y
 la moneda— y ahora el juego usa las dos cosas.
 
@@ -767,9 +767,9 @@ agregar un empleo a `datos/trabajos.js` y verlo funcionar el mismo día, con su 
 sin esperar a que alguien lo ilustre. Con ilustración se ve mejor; sin ilustración se ve.
 
 **Dos carpetas, y la diferencia importa.** `assets/visuales/` son los PNG maestros tal como
-se entregaron: 37 archivos, 90 MB, a 1024×1536 y 1254×1254. El navegador no los carga
+se entregaron: 73 archivos, 125 MB, a 1024×1536, 1254×1254 y 768×768. El navegador no los carga
 nunca. `assets/juego/` son las copias que el juego usa: WebP, al tamaño en que se ven,
-**603 KB entre todas**. Cargar 2 MB para pintar un chico de 80 px rompería la promesa de
+**1.1 MB entre todas**. Cargar 2 MB para pintar un chico de 80 px rompería la promesa de
 que el juego abre con doble clic y funciona sin internet, y esa promesa vale más que la
 resolución.
 
@@ -788,6 +788,36 @@ elegir uno, y gana lo que está haciendo ahora. Y la escena se recalibró entera
 números estaban ajustados a un muñeco que ocupaba menos de su lienzo: con la escala vieja el
 chico quedaba cinco unidades y media enterrado en la plataforma y le pasaba la cabeza a una
 tienda con puerta.
+
+**Los locales van en tres peldaños, y los tres están vivos.** Esta es la parte que se
+diseñó dos veces. La primera entrega trajo cuatro dibujos de local —canasta, carreta, puesto,
+tienda— y los nueve tipos de negocio los compartían: una tortillería y un taller de motos se
+veían idénticos, y lo único que los distinguía era un **sello** redondo de catorce unidades
+con el emblema del tipo. Funcionaba, pero era un parche, y estaba anotado como tal. La
+segunda entrega trajo los 36 que faltaban, uno por cada tipo y nivel.
+
+Lo que no se hizo fue tirar el parche. Un negocio se busca su dibujo en este orden:
+
+1. **El local de su tipo.** `negocio/tortilleria/n3` es una tortillería con nombre: comal,
+   canastos, mazorcas colgando. Es lo que se ve normalmente.
+2. **El local genérico, con el sello encima.** Es lo que ve un tipo de negocio que todavía
+   no tiene dibujo: un puesto cualquiera con el rótulo de una tortillería.
+3. **El local dibujado en SVG** por `js/escena.js`, si no hay ninguna ilustración.
+
+Ese orden es lo que permite **entregar los dibujos por lotes**, y sin él el proyecto se
+queda quieto esperando al ilustrador. Los seis tipos de negocio que faltan pueden entrar a
+`datos/negocios.js` hoy y a las ilustraciones el mes que viene, y en el medio el juego se
+ve entero: el jugador abre una panadería y ve un puesto con un pan en el rótulo, no un
+hueco. El sello es la pieza que se mueve entre peldaños y va donde hace falta: sobre el
+puesto genérico es la única pista del tipo de negocio, y sobre la tortillería ilustrada
+sería una calcomanía tapando el comal. `pruebas/arte.js` comprueba las dos mitades de esa
+regla, porque es la que se rompe sola al entregar dibujos nuevos.
+
+**Y la calle se ensanchó para que cupieran.** Un local con sucursal mide ahora 58 unidades y
+antes 48: los dibujos por tipo traen detalle —una moto, un comal, cuatro monitores— y a 48
+no se veía. Eso obligó a subir el hueco de cada negocio de 46 a 56, así que con ocho
+negocios la escena mide 580 unidades y no cabe en la tarjeta. Es el precio, y es un precio
+que este juego quiere pagar: que no te quepa lo que tienes es la mitad del premio.
 
 **Lo que protege esto es una suite.** `pruebas/arte.js` cruza el inventario declarado en
 `js/arte.js`, los archivos del disco y lo que los datos piden, y comprueba además que
@@ -872,8 +902,8 @@ localmente que publicado, y alguien de negocio puede corregir una tasa sin saber
     lucide.js       iconos de respaldo, recortados (ISC)
     chart.js        Chart.js 4, bundle UMD (MIT)
   assets/
-    visuales/       los 37 PNG maestros, 90 MB. El navegador NO los carga
-    juego/          las copias WebP que si carga, 603 KB entre todas
+    visuales/       los 73 PNG maestros, 125 MB. El navegador NO los carga
+    juego/          las copias WebP que si carga, 1.1 MB entre todas
   herramientas/
     traer-librerias.js   regenera vendor/. No hace falta para jugar
     preparar-imagenes.py escribe assets/juego/ desde los maestros

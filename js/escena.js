@@ -15,15 +15,26 @@
  * ---------------------------------------------------------------------------
  * Un local nuevo no necesita que nadie lo dibuje
  * ---------------------------------------------------------------------------
- * Esto es lo importante del archivo. El local NO está dibujado por tipo de
- * negocio: está dibujado una sola vez, de forma genérica, y crece con el nivel
- * (caja, toldo, rótulo, segundo piso). Lo único que distingue una tortillería
- * de un taller es el **emblema** de su fachada, y ese emblema sale de
- * `js/iconos.js` usando el campo `icono` que el tipo de negocio ya tiene.
+ * Esto es lo importante del archivo, y sigue siendo verdad ahora que los nueve
+ * tipos tienen local propio. Un negocio se ve en tres escalones y los tres
+ * están vivos:
+ *
+ *   1. **Su local ilustrado.** `negocio/tortilleria/n3` es una tortillería con
+ *      nombre. Es lo que se ve normalmente.
+ *   2. **El local genérico ilustrado**, con un SELLO redondo encima que lleva
+ *      el emblema del tipo. Es lo que ve un tipo de negocio que todavía no
+ *      tiene dibujo: un puesto cualquiera con el rótulo de una tortillería.
+ *   3. **El local dibujado aquí**, en SVG, si no hay ninguna ilustración.
  *
  * O sea: quien agregue un negocio a datos/negocios.js no tiene que dibujar
- * nada. Antes sí, y era una trampa: se agregaba un nivel, el jugador lo
- * compraba y la pantalla se veía igual.
+ * nada, y aun así se le va a ver crecer. Antes sí hacía falta, y era una
+ * trampa: se agregaba un nivel, el jugador lo compraba y la pantalla se veía
+ * igual.
+ *
+ * El sello es el que se mueve entre escalones, y a propósito. Sobre un puesto
+ * genérico es la única cosa que distingue una tortillería de un taller, así
+ * que va. Sobre la tortillería ilustrada no dice nada que el dibujo no diga ya,
+ * y le tapa el comal, así que no va.
  *
  * ---------------------------------------------------------------------------
  * Cómo está dibujado
@@ -44,8 +55,8 @@
  * este reparto del eje horizontal. La primera versión no lo tenía y el rótulo
  * del oficio le quedó cruzado en la cara al personaje.
  *
- *   x: 2    22        70        96      126                    126+46n
- *      |CASA| PERSONA | ESCUELA | OFICIO |  LA CALLE, 46 por local  |
+ *   x: 2    22        70        96      126                    126+56n
+ *      |CASA| PERSONA | ESCUELA | OFICIO |  LA CALLE, 56 por local  |
  *
  * El suelo está en y = 96 y todo se para encima. El rótulo colgado del oficio
  * es la única pieza que sale de su zona, y lo hace hacia arriba (y < 42),
@@ -71,7 +82,14 @@ var Escena = (function () {
                          '" stroke-linejoin="round" stroke-linecap="round"'; }
 
   var X_CALLE = 126;      // donde empieza la calle
-  var ANCHO_LOCAL = 46;   // lo que ocupa cada negocio
+  /* Lo que ocupa cada negocio en la calle.
+   *
+   * Subió de 46 a 56 cuando entraron los locales por tipo: el nivel 4 mide 58
+   * de lado y en un hueco de 46 los locales se pisaban unos a otros. Alargar
+   * la calle es el precio, y es un precio que este juego quiere pagar: con
+   * ocho negocios la escena mide 580 unidades y hay que arrastrarla para verla
+   * toda, que es justo lo que se siente al tener ocho negocios. */
+  var ANCHO_LOCAL = 56;
   var SUELO = 96;         // la línea donde todo se para
 
   /* Cuatro colores que se van repartiendo entre los locales, para que dos
@@ -137,43 +155,38 @@ var Escena = (function () {
   /* El terreno vacío. Sale cuando el jugador todavía no tiene ningún negocio,
    * y sale con el contorno punteado para que se note que ahí falta algo. */
   function terrenoVacio(x0) {
-    var x = x0 + 7;
+    var x = x0 + (ANCHO_LOCAL - 32) / 2;
     return '<rect x="' + x + '" y="' + (SUELO - 14) + '" width="32" height="14" rx="3"' +
              ' fill="none" stroke="' + C.linea + '" stroke-width="2.4" stroke-dasharray="5 4"/>';
   }
 
-  /* Un local: la ilustración si hay una para ese nivel, y si no el dibujo.
+  /* Lo que mide un local según su nivel, en unidades de la escena.
    *
-   * Las cuatro ilustraciones se hicieron para la cadena vieja de mejoras
-   * —canasta, carreta, puesto, local— que ya no existe. Encajan igual, y
-   * mejor: son exactamente los cuatro niveles que puede tener CUALQUIER
-   * negocio, y puestas en fila cuentan el crecimiento sin una palabra. Una
-   * canasta es un negocio recién abierto; un local con puerta es uno con
-   * sucursal.
-   *
-   * El lado crece con el nivel además de lo que ya cuenta el dibujo, porque en
-   * una calle de cinco locales el tamaño es lo que se lee de lejos.
-   *
-   * Y encima va el SELLO con el emblema del tipo de negocio, que es lo único
-   * que distingue una tortillería de un taller: las cuatro ilustraciones son
-   * las mismas para los nueve tipos. */
-  /* Lo que mide un local segun su nivel, en unidades de la escena. El tope,
-   * 48, esta elegido contra el personaje: mide 50, asi que una tienda con
-   * puerta le llega al hombro y una canasta a la rodilla. */
-  var LADO_POR_NIVEL = [30, 36, 42, 48];
+   * El tope está elegido contra el personaje, que mide 50: una tienda con
+   * sucursal le pasa la cabeza —como una tienda de verdad— y un puesto recién
+   * abierto le llega a la cintura. Esos dos números son los que cuentan el
+   * crecimiento de lejos, cuando la calle tiene cinco locales y ya no se
+   * distingue el detalle del dibujo. */
+  var LADO_POR_NIVEL = [32, 41, 50, 58];
 
-  function local(x0, nivel, icono, color) {
+  /* Un local: el de su tipo, si no el genérico, si no el dibujo.
+   *
+   * Los tres escalones están explicados en el encabezado. Lo único que hay que
+   * saber aquí es por qué el sello depende de `propio`: sobre un puesto
+   * genérico el emblema es la única pista del tipo de negocio, y sobre la
+   * tortillería ilustrada sería una calcomanía encima del comal. */
+  function local(x0, nivel, icono, color, tipo) {
     var n = Math.max(1, Math.min(nivel || 1, LADO_POR_NIVEL.length));
-    var img = (typeof Arte !== 'undefined') ? Arte.local(n) : null;
-    if (!img) return localDibujado(x0, nivel, icono, color);
+    var img = (typeof Arte !== 'undefined') ? Arte.local(n, tipo) : null;
+    if (!img || !img.ruta) return localDibujado(x0, nivel, icono, color);
 
     var lado = LADO_POR_NIVEL[n - 1];
     var x = x0 + (ANCHO_LOCAL - lado) / 2;
     var y = SUELO + 1 - lado;
-    return '<image href="' + img + '" x="' + x + '" y="' + y +
+    return '<image href="' + img.ruta + '" x="' + x + '" y="' + y +
              '" width="' + lado + '" height="' + lado +
              '" preserveAspectRatio="xMidYMax meet"/>' +
-           sello(icono, x0 + ANCHO_LOCAL - 8, y + 5);
+           (img.propio ? '' : sello(icono, x0 + ANCHO_LOCAL - 8, y + 5));
   }
 
   /* El sello redondo con el emblema del negocio, arriba a la derecha del
@@ -192,7 +205,7 @@ var Escena = (function () {
   function localDibujado(x0, nivel, icono, color) {
     var n = Math.max(1, Math.min(nivel || 1, ALTO_POR_NIVEL.length));
     var alto = altoDe(n);
-    var x = x0 + 7;
+    var x = x0 + (ANCHO_LOCAL - 32) / 2;
     var y = SUELO - alto;
     var techo = TECHOS[color % TECHOS.length];
     var h = '';
@@ -275,13 +288,22 @@ var Escena = (function () {
   /* Las monedas que suben de un local que produjo.
    * Es lo único que se mueve sin que el jugador toque nada. */
   /* Las monedas suben DESDE EL TECHO del local, no desde una altura fija.
-   * Con una altura fija, las de una canasta de treinta unidades salían a medio
-   * cielo y no se entendía de dónde venían. */
+   * Con una altura fija, las de un puesto de treinta unidades salían a medio
+   * cielo y no se entendía de dónde venían.
+   *
+   * El 0.78 es el que hace que sigan pegadas al techo ahora que los locales
+   * son ilustraciones. La caja del `<image>` es cuadrada y el local viene más
+   * ancho que alto, así que con `meet` el dibujo llena el ancho y deja una
+   * banda vacía ARRIBA: el techo de verdad está más abajo que el borde de la
+   * caja. Sin este factor, las monedas de un puesto recién abierto salían
+   * flotando siete unidades por encima del toldo. */
   function monedas(x0, cuantas, alto) {
     var img = (typeof Arte !== 'undefined') ? Arte.moneda() : null;
     var h = '';
-    var techo = SUELO - (alto || 34);
-    var sitios = [[x0 + 11, techo - 8], [x0 + 23, techo - 18], [x0 + 34, techo - 6]];
+    var techo = SUELO - (alto || 34) * 0.78;
+    var a = ANCHO_LOCAL;
+    var sitios = [[x0 + a * 0.24, techo - 5], [x0 + a * 0.50, techo - 13],
+                  [x0 + a * 0.74, techo - 3]];
     for (var i = 0; i < Math.min(cuantas, 3); i++) {
       var cx = sitios[i][0], cy = sitios[i][1];
       h += '<g class="esc-moneda esc-moneda-' + (i + 1) + '">';
@@ -453,7 +475,7 @@ var Escena = (function () {
       for (var i = 0; i < negs.length; i++) {
         var n = negs[i] || {};
         var x0 = X_CALLE + i * ANCHO_LOCAL;
-        h += local(x0, n.nivel, n.icono, i);
+        h += local(x0, n.nivel, n.icono, i, n.tipo);
         h += gente(x0, n.empleados || 0);
         if (n.produce) h += monedas(x0, (n.nivel || 1), LADO_POR_NIVEL[Math.max(0, Math.min((n.nivel || 1) - 1, 3))]);
       }

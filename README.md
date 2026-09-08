@@ -231,13 +231,13 @@ atasca y la prueba dice en qué paso. Ya atrapó cuatro veces un tutorial roto.
 **Nada que instalar, nada que descargar, sin internet.** `vendor/` trae dentro del
 repositorio las dos librerías que el juego usa —los iconos de **Lucide** recortados y
 **Chart.js**— como archivos normales que se cargan con `<script src>`, y `assets/juego/`
-trae las 37 ilustraciones ya optimizadas. Quien juega no descarga nada y el doble clic
+trae las 73 ilustraciones ya optimizadas. Quien juega no descarga nada y el doble clic
 sigue funcionando sin conexión.
 
 Las ilustraciones tienen dos carpetas y la diferencia importa: `assets/visuales/` son los
-**maestros** tal como se entregaron (90 MB, a 1024×1536) y el navegador **no los carga
-nunca**; `assets/juego/` son las copias WebP al tamaño en que se ven, y pesan **603 KB
-entre todas**. `herramientas/preparar-imagenes.py` escribe la segunda a partir de la
+**maestros** tal como se entregaron (125 MB, a 1024×1536, 1254×1254 y 768×768) y el
+navegador **no los carga nunca**; `assets/juego/` son las copias WebP al tamaño en que se
+ven, y pesan **1.1 MB entre todas**. `herramientas/preparar-imagenes.py` escribe la segunda a partir de la
 primera. Los detalles están en `RECURSOS_VISUALES.md`.
 
 Si algún día hay que actualizarlas o agregar un icono, `herramientas/traer-librerias.js`
@@ -290,8 +290,11 @@ pruebas/vista.html?mj=presupuesto   un minijuego abierto
   y algo en la mano). Un empleo sin entrada sale en ropa de calle.
 - **Un negocio**: copia un bloque de `TIPOS_NEGOCIO` en `datos/negocios.js` y cambia lo
   que cuesta abrirlo, lo que vende una jornada adentro, su margen, su renta y cuánta gente
-  cabe. **No hay que dibujar nada**: el local se dibuja solo y su fachada usa el icono que
-  le pongas. El número que de verdad hay que pensar es `ventaPorJornada × 8 × margen −
+  cabe. **No hay que dibujar nada**: los nueve tipos que ya existen tienen sus cuatro
+  locales ilustrados, y uno nuevo sale con el local genérico y un sello con el icono que le
+  pongas, hasta que alguien lo ilustre. Si luego se ilustra, van cuatro PNG a
+  `assets/visuales/negocio/<id>/n1..n4.png`, el `<id>` a `TIPOS_CON_LOCAL` en `js/arte.js`
+  y una pasada de `preparar-imagenes.py`; el sello desaparece solo. El número que de verdad hay que pensar es `ventaPorJornada × 8 × margen −
   costoMensual`, que es lo que deja al mes con una sola persona adentro, y la pantalla lo
   imprime.
 - **Una pieza al escenario**: agrega una función a la lista de su cadena en `js/escena.js`.

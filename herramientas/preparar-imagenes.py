@@ -18,10 +18,11 @@ proyecto que pide Python, y por eso es una herramienta y no parte del juego.
 Por que hay que reescribirlas y no usar los maestros directamente
 ---------------------------------------------------------------------------
 
-1. PESO. Los 37 maestros suman 90 MB: entre 2 y 3.6 MB cada uno. El personaje
-   se ve en pantalla a unos 80 px de ancho y el local a unos 64. Cargar 2 MB
-   para pintar 64 px rompe la promesa de que el juego abre con doble clic y
-   funciona sin internet. Las copias suman menos de 1 MB entre todas.
+1. PESO. Los 73 maestros suman 126 MB: entre 0.7 y 3.6 MB cada uno. El personaje
+   se ve en pantalla a unos 80 px de ancho y el local a unos 90. Cargar 2 MB
+   para pintar 90 px rompe la promesa de que el juego abre con doble clic y
+   funciona sin internet. Las copias suman poco mas de 1 MB entre todas, y
+   `pruebas/arte.js` falla si se pasan del tope.
 
 2. EL CUADRICULADO HORNEADO. El generador que hizo las imagenes dejo pintado
    el patron de cuadros gris y blanco que los editores usan para SENALAR
@@ -41,6 +42,11 @@ Por que hay que reescribirlas y no usar los maestros directamente
    mismo peso. Pero se recorta con una caja COMUN a los 23 personajes, no con
    la de cada uno: si cada profesion se recortara a su medida, el mismo chico
    cambiaria de tamano y de sitio al cambiar de trabajo.
+
+   Los locales van al contrario: cada uno con SU caja. Un local no es la misma
+   cosa retratada dos veces, es otra cosa, y el margen que le sobra abajo va de
+   0 px (distribuidora n2) a 122 (lavado n4). Con caja comun, el lavado con
+   sucursal saldria flotando un 15% por encima de la calle.
 """
 
 import os
@@ -157,7 +163,10 @@ def guardar(im, ruta):
 #   personaje  en la escena se ve a ~80 px de ancho, y en el perfil a ~120.
 #              A 2x de densidad de pantalla eso son 240: 256x384 sobra, y
 #              mantiene la relacion 2:3 que piden las notas de las imagenes.
-#   negocio    el local se ve a ~64 px. 256 sobra.
+#   negocio    el local mas grande de la calle se ve a ~90 px, o 180 a 2x.
+#              192 sobra, y a ese tamano los 36 locales por tipo caben en el
+#              presupuesto de peso; a 256 no cabian. Los cuatro genericos se
+#              quedan en 256 porque son cuatro y ya estaban escritos asi.
 #   mejoras    las piezas del margen se ven a ~40 px. 192 sobra.
 #   plataforma cruza la escena entera, ~440 px, o 880 a 2x.
 #   moneda     ~22 px.
@@ -165,6 +174,13 @@ def guardar(im, ruta):
 PERSONAJE = (256, 384)
 CUADRO = (256, 256)
 PIEZA = (192, 192)
+LOCAL = (192, 192)
+
+# Los nueve tipos de negocio de datos/negocios.js que tienen local ilustrado.
+# Es una lista y no un glob para que un directorio a medio entregar no entre
+# al juego a medias: si falta un nivel, el script lo dice y no escribe nada.
+TIPOS_CON_LOCAL = ['cafeinternet', 'comedor', 'distribuidora', 'dulces',
+                   'lavado', 'papeleria', 'refrescos', 'taller', 'tortilleria']
 
 # 'clave del juego' -> ruta del maestro
 def plan():
@@ -174,10 +190,19 @@ def plan():
     for f in sorted(glob.glob(os.path.join(MAESTROS, 'personaje', 'profesiones', '*.png'))):
         p['personaje/' + os.path.basename(f)[:-4]] = (f, PERSONAJE, 'personaje')
 
+    # Los cuatro locales GENERICOS. No sobran aunque ya haya uno por tipo: son
+    # lo que se ve si manana alguien agrega un decimo tipo de negocio a
+    # datos/negocios.js y nadie lo ha ilustrado todavia.
     negocios = {'nivel-1-canasta': 'negocio/n1', 'nivel-2-carreta': 'negocio/n2',
                 'nivel-3-puesto': 'negocio/n3', 'nivel-4-local': 'negocio/n4'}
     for base, clave in negocios.items():
         p[clave] = (os.path.join(MAESTROS, 'negocio', base + '.png'), CUADRO, 'suelto')
+
+    # Y los 36 de los nueve tipos, cuatro niveles cada uno.
+    for t in TIPOS_CON_LOCAL:
+        for n in range(1, 5):
+            p['negocio/%s/n%d' % (t, n)] = (
+                os.path.join(MAESTROS, 'negocio', t, 'n%d.png' % n), LOCAL, 'suelto')
 
     mejoras = {
         'oficio/caja-herramientas': 'mejoras/oficio-1',
@@ -237,7 +262,7 @@ def main():
         print(f'  {clave + ".webp":38} {tam[0]:>4}x{tam[1]:<4} {bytes_/1024:7.1f} KB')
 
     print(f'\n{len(tareas)} imagenes, {total/1024:.0f} KB en total '
-          f'(los maestros pesan 90 MB).')
+          f'(los maestros pesan 126 MB).')
 
     # El indice de tamanos, para que la interfaz pueda poner width y height y
     # la pagina no salte mientras cargan.

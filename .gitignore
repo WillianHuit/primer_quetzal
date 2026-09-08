@@ -5,10 +5,10 @@ node_modules/
 package-lock.json
 
 # Y assets/ TAMBIEN se sube, las dos carpetas, aunque pesen:
-#   assets/visuales/  los 37 PNG maestros, 90 MB. El navegador no los carga,
+#   assets/visuales/  los 73 PNG maestros, 125 MB. El navegador no los carga,
 #                     pero son el original: sin ellos no se puede volver a
 #                     generar nada con otro tamano ni arreglar una imagen.
-#   assets/juego/     las copias WebP que el juego SI carga, 603 KB entre todas.
+#   assets/juego/     las copias WebP que el juego SI carga, 1.1 MB entre todas.
 #                     Las escribe herramientas/preparar-imagenes.py, y van al
 #                     repositorio por el mismo motivo que vendor/: para que el
 #                     juego abra con doble clic sin que nadie prepare nada.

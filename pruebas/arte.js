@@ -2,7 +2,7 @@
  *
  * El fallo que esta suite existe para atrapar no lanza ningún error y no se ve
  * en ninguna consola: **una imagen que falta deja un hueco vacío**. El juego
- * sigue funcionando, las otras once suites siguen pasando, y en la pantalla no
+ * sigue funcionando, las otras doce suites siguen pasando, y en la pantalla no
  * hay nada donde debería estar el chico.
  *
  * Así que lo que se comprueba aquí es la correspondencia entre tres cosas que
@@ -10,12 +10,12 @@
  *
  *   1. el inventario declarado en `js/arte.js`
  *   2. los archivos que hay en `assets/juego/`
- *   3. lo que los datos del juego piden: los oficios de `ROPA`, los niveles de
- *      un negocio y los escalones de cada cadena de mejoras
+ *   3. lo que los datos del juego piden: los oficios de `ROPA`, los tipos y
+ *      niveles de negocio y los escalones de cada cadena de mejoras
  *
  * Y una cuarta cosa, que es la que de verdad protege la promesa del proyecto:
  * que las imágenes que el navegador carga **sigan pesando poco**. Los maestros
- * de `assets/visuales/` pesan 90 MB. Si alguien conecta esos por error, el
+ * de `assets/visuales/` pesan 126 MB. Si alguien conecta esos por error, el
  * juego deja de abrirse con doble clic en un teléfono y nadie se entera hasta
  * que lo prueba con datos móviles.
  */
@@ -29,7 +29,8 @@ const JUEGO = path.join(RAIZ, 'assets', 'juego');
 const MAESTROS = path.join(RAIZ, 'assets', 'visuales');
 
 const sb = cargar('es');
-const { Arte, Personaje, TRABAJOS, MIGRACION, CADENAS, MEJORAS, NIVELES_NEGOCIO } = sb;
+const { Arte, Escena, Personaje, TRABAJOS, MIGRACION, CADENAS, MEJORAS,
+        NIVELES_NEGOCIO, TIPOS_NEGOCIO } = sb;
 const M = new Marcador();
 const ok = M.ok.bind(M);
 
@@ -54,6 +55,12 @@ for (let n = 1; n <= Arte.NIVELES_LOCAL; n++) {
   const r = base + 'negocio/n' + n + '.webp';
   if (!enDisco(r)) faltanArchivos.push(r);
 }
+Arte.TIPOS_CON_LOCAL.forEach(function (t) {
+  for (let n = 1; n <= Arte.NIVELES_LOCAL; n++) {
+    const r = base + 'negocio/' + t + '/n' + n + '.webp';
+    if (!enDisco(r)) faltanArchivos.push(r);
+  }
+});
 Object.keys(Arte.MEJORAS).forEach(function (cadena) {
   for (let n = 1; n <= Arte.MEJORAS[cadena]; n++) {
     const r = base + 'mejoras/' + cadena + '-' + n + '.webp';
@@ -62,7 +69,8 @@ Object.keys(Arte.MEJORAS).forEach(function (cadena) {
 });
 if (!enDisco(base + 'escena/moneda.webp')) faltanArchivos.push(base + 'escena/moneda.webp');
 
-const declaradas = Arte.PERSONAJE.length + Arte.NIVELES_LOCAL +
+const declaradas = Arte.PERSONAJE.length +
+  Arte.NIVELES_LOCAL * (1 + Arte.TIPOS_CON_LOCAL.length) +
   Object.keys(Arte.MEJORAS).reduce((a, c) => a + Arte.MEJORAS[c], 0) + 1;
 
 ok(faltanArchivos.length === 0,
@@ -84,12 +92,17 @@ function listar(dir, prefijo) {
 const enElDisco = [].concat(
   listar('personaje', 'personaje/'),
   listar('negocio', 'negocio/'),
+  // los locales por tipo viven un nivel mas abajo: negocio/tortilleria/n3
+  Arte.TIPOS_CON_LOCAL.flatMap(t =>
+    listar(path.join('negocio', t), 'negocio/' + t + '/')),
   listar('mejoras', 'mejoras/'),
   listar('escena', 'escena/'));
 
 const declaradasSet = new Set(
   Arte.PERSONAJE.map(c => 'personaje/' + c)
     .concat(Array.from({ length: Arte.NIVELES_LOCAL }, (_, i) => 'negocio/n' + (i + 1)))
+    .concat(Arte.TIPOS_CON_LOCAL.flatMap(t =>
+      Array.from({ length: Arte.NIVELES_LOCAL }, (_, i) => 'negocio/' + t + '/n' + (i + 1))))
     .concat(Object.keys(Arte.MEJORAS).flatMap(c =>
       Array.from({ length: Arte.MEJORAS[c] }, (_, i) => 'mejoras/' + c + '-' + (i + 1))))
     .concat(['escena/moneda', 'escena/plataforma']));
@@ -128,6 +141,41 @@ ok(huerfanas.length === 0,
 ok(Arte.NIVELES_LOCAL === NIVELES_NEGOCIO.length,
    `hay una ilustración por cada uno de los ${NIVELES_NEGOCIO.length} niveles de un negocio`);
 
+/* Y cada carpeta de local tiene que llamarse igual que un tipo de negocio de
+ * verdad. Este es el fallo silencioso más fácil de cometer en todo el asunto:
+ * `negocio/tortilleria/` con una letra de más no rompe nada, no avisa de nada,
+ * y el jugador ve un puesto genérico donde tendría que ver su tortillería. */
+const idsNegocio = TIPOS_NEGOCIO.map(t => t.id);
+const inventados = Arte.TIPOS_CON_LOCAL.filter(t => idsNegocio.indexOf(t) < 0);
+ok(inventados.length === 0,
+   inventados.length === 0
+     ? `los ${Arte.TIPOS_CON_LOCAL.length} tipos con local ilustrado existen en datos/negocios.js`
+     : 'carpetas de local que no son ningún tipo de negocio: ' + inventados.join(', '));
+
+/* Un tipo SIN local ilustrado no es un fallo: se ve con el local genérico y el
+ * sello de su emblema, y eso es lo que permite entregar los dibujos por lotes.
+ * Pero se cuenta, porque si mañana entran los seis tipos que propone
+ * RECURSOS_TYCOON.md §7 conviene saber cuántos van con el puesto de repuesto. */
+const sinLocal = idsNegocio.filter(t => !Arte.tieneLocal(t));
+ok(sinLocal.length === 0,
+   sinLocal.length === 0
+     ? `y los ${idsNegocio.length} tipos de negocio tienen local propio`
+     : `${sinLocal.length} usan el local genérico con sello: ${sinLocal.join(', ')}`);
+
+/* El sello va donde hace falta y no donde estorba. Es la regla que se rompe
+ * sola al entregar dibujos nuevos: se ilustra un tipo, se olvida el sello
+ * encima, y queda una calcomanía tapando el comal de la tortillería. */
+const conDibujo = Escena.dibujar({
+  negocios: [{ tipo: idsNegocio[0], icono: 'tienda', nivel: 3 }] });
+const sinDibujo = Escena.dibujar({
+  negocios: [{ tipo: 'un-tipo-que-no-existe', icono: 'tienda', nivel: 3 }] });
+const SELLO = /stroke-width="0\.9"/;
+ok(!SELLO.test(conDibujo) && SELLO.test(sinDibujo),
+   'el sello del emblema sale sobre el local genérico y no sobre el ilustrado');
+
+ok(/negocio\/n3\.webp/.test(sinDibujo),
+   'y un tipo de negocio sin ilustración cae al local genérico, no a un hueco');
+
 const cadenasCortas = CADENAS.filter(function (c) {
   const escalones = MEJORAS.filter(m => m.cadena === c.id).length;
   return (Arte.MEJORAS[c.id] || 0) < escalones;
@@ -141,9 +189,16 @@ ok(cadenasCortas.length === 0,
 // ---------- 5. y siguen pesando poco ----------
 
 /* La promesa del proyecto es que el juego abre con doble clic y funciona sin
- * internet. Los maestros pesan 90 MB; estas son las que el navegador carga. */
+ * internet. Los maestros pesan 126 MB; estas son las que el navegador carga. */
 const TOPE_UNA = 90;        // KB
 const TOPE_TODAS = 1500;    // KB
+
+/* El tope de 1500 no es redondo por gusto. Los 36 locales por tipo entraron a
+ * 192 px y no a 256 justamente por él: a 256 pesaban unos 830 KB y el total se
+ * iba a 1.5 MB, o sea al borde. En pantalla el local más grande se ve a unos
+ * 90 px, así que 192 sobra y la decisión no costó nada. Si algún día hace
+ * falta subir el tope, que sea sabiendo que lo que protege es que el juego
+ * abra en un teléfono con datos móviles. */
 
 let total = 0;
 const gordas = [];
@@ -199,6 +254,6 @@ ok(conArte.indexOf('js/arte.js') > 0 &&
 const maestros = fs.existsSync(MAESTROS)
   ? fs.readdirSync(MAESTROS, { recursive: true }).filter(f => String(f).endsWith('.png')).length
   : 0;
-ok(maestros >= 37, `los ${maestros} PNG maestros siguen en assets/visuales/`);
+ok(maestros >= 73, `los ${maestros} PNG maestros siguen en assets/visuales/`);
 
 M.imprimir('las ilustraciones y su peso');

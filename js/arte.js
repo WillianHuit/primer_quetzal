@@ -5,9 +5,10 @@
  *   1. **Dibujo propio en SVG.** `js/iconos.js`, `js/personaje.js` y
  *      `js/escena.js` saben pintar todo con trazos y formas. Toma los colores
  *      de la paleta, pesa nada y no hay archivo que se pueda perder.
- *   2. **Ilustraciones.** `assets/juego/` trae 37 imágenes: el mismo chico en
- *      23 estados, los cuatro niveles de un local, las ocho piezas de las
- *      cadenas de mejoras y la moneda.
+ *   2. **Ilustraciones.** `assets/juego/` trae 73 imágenes: el mismo chico en
+ *      23 estados, los cuatro niveles de local de cada uno de los nueve tipos
+ *      de negocio, cuatro niveles genéricos de respaldo, las ocho piezas de
+ *      las cadenas de mejoras y la moneda.
  *
  * Este archivo es lo único que sabe qué ilustraciones hay. Todo lo demás
  * pregunta, y **si la respuesta es que no hay, dibuja**. Eso no es un adorno
@@ -18,11 +19,12 @@
  * ---------------------------------------------------------------------------
  * Los maestros no son estos archivos
  * ---------------------------------------------------------------------------
- * `assets/visuales/` son los PNG maestros que se entregaron: 90 MB, entre 2 y
- * 3.6 MB cada uno, a 1024×1536 y 1254×1254. El navegador **no** carga esos.
- * `herramientas/preparar-imagenes.py` escribe `assets/juego/` a partir de
- * ellos: WebP, al tamaño en que se ven, con el cuadriculado horneado quitado.
- * Las 37 juntas pesan 604 KB, y por eso el juego sigue abriendo con doble clic.
+ * `assets/visuales/` son los PNG maestros que se entregaron: 126 MB, entre
+ * 0.7 y 3.6 MB cada uno, a 1024×1536, 1254×1254 y 768×768. El navegador **no**
+ * carga esos. `herramientas/preparar-imagenes.py` escribe `assets/juego/` a
+ * partir de ellos: WebP, al tamaño en que se ven, con el cuadriculado horneado
+ * quitado. Las 73 juntas pesan poco más de 1 MB, y por eso el juego sigue
+ * abriendo con doble clic.
  *
  * ---------------------------------------------------------------------------
  * La ruta
@@ -56,14 +58,27 @@ var Arte = (function () {
     'construccion_us', 'restaurante_us', 'limpieza_us', 'tecnico_us'
   ];
 
-  /* Cuántos niveles de local hay ilustrados.
+  /* Los locales van en tres escalones, y los tres importan.
    *
-   * Las cuatro imágenes se dibujaron para la cadena vieja de mejoras —canasta,
-   * carreta, puesto, local— que ya no existe. Encajan igual, y mejor: son
-   * exactamente los cuatro niveles que puede tener CUALQUIER negocio, y leídas
-   * en fila cuentan el crecimiento sin una palabra. Una canasta es un negocio
-   * recién abierto; un local con puerta es uno con sucursal. */
+   *   1. **El local del tipo.** `negocio/tortilleria/n3` es una tortillería
+   *      con nombre: comal, canastos, mazorcas colgando. Nueve tipos por
+   *      cuatro niveles, 36 imágenes.
+   *   2. **El local genérico.** Los cuatro de `negocio/n1..n4` —canasta,
+   *      carreta, puesto, local— que se dibujaron para la cadena vieja de
+   *      mejoras. Ya no son lo que se ve normalmente, y no sobran: son lo que
+   *      sale si mañana alguien agrega un décimo tipo a `datos/negocios.js` y
+   *      nadie lo ha ilustrado. Un negocio sin su dibujo se ve como un puesto
+   *      cualquiera, no como un hueco.
+   *   3. **El dibujo de `js/escena.js`.** Si no hay ni una ni otra.
+   *
+   * Ese orden es lo que permite entregar los locales por lotes. Los seis tipos
+   * que propone `RECURSOS_TYCOON.md` §7 pueden entrar a los datos hoy y a las
+   * ilustraciones el mes que viene, y en el medio el juego se ve entero. */
   var NIVELES_LOCAL = 4;
+
+  var TIPOS_CON_LOCAL = ['cafeinternet', 'comedor', 'distribuidora', 'dulces',
+                         'lavado', 'papeleria', 'refrescos', 'taller',
+                         'tortilleria'];
 
   /* Y las piezas de las tres cadenas que mejoran a la persona. */
   var MEJORAS = { oficio: 3, escuela: 3, casa: 2 };
@@ -94,10 +109,22 @@ var Arte = (function () {
 
   function tiene(clave) { return PERSONAJE.indexOf(clave) >= 0; }
 
-  function local(nivel) {
+  /* El local de un negocio: el de su tipo, y si no el genérico.
+   *
+   * Devuelve también `propio`, porque la escena necesita saberlo: sobre un
+   * local genérico hay que poner el sello con el emblema del tipo, que es lo
+   * único que distingue una tortillería de un taller; sobre el de la
+   * tortillería, el sello tapa dibujo y no dice nada nuevo. */
+  function local(nivel, tipo) {
+    if (!NIVELES_LOCAL) return null;
     var n = Math.max(1, Math.min(nivel || 1, NIVELES_LOCAL));
-    return NIVELES_LOCAL ? ruta('negocio/n' + n) : null;
+    if (tipo && TIPOS_CON_LOCAL.indexOf(tipo) >= 0) {
+      return { ruta: ruta('negocio/' + tipo + '/n' + n), propio: true };
+    }
+    return { ruta: ruta('negocio/n' + n), propio: false };
   }
+
+  function tieneLocal(tipo) { return TIPOS_CON_LOCAL.indexOf(tipo) >= 0; }
 
   function mejora(cadena, nivel) {
     if (!nivel || !MEJORAS[cadena]) return null;
@@ -112,11 +139,13 @@ var Arte = (function () {
     personaje: personaje,
     tienePersonaje: tiene,
     local: local,
+    tieneLocal: tieneLocal,
     mejora: mejora,
     moneda: moneda,
     // Lo que las pruebas cruzan contra el disco
     PERSONAJE: PERSONAJE,
     NIVELES_LOCAL: NIVELES_LOCAL,
+    TIPOS_CON_LOCAL: TIPOS_CON_LOCAL,
     MEJORAS: MEJORAS,
     base: function () { return BASE; }
   };

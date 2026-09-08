@@ -1,6 +1,6 @@
 # Recursos visuales
 
-Estado al 8 de septiembre de 2026. **Los 37 recursos ya están conectados al juego.**
+Estado al 8 de septiembre de 2026. **Los 73 recursos ya están conectados al juego.**
 
 Este documento tenía una primera parte escrita cuando las imágenes se crearon y
 todavía no se habían colocado. Esa parte sigue abajo, en §5, porque describe qué
@@ -15,8 +15,8 @@ Hay dos carpetas y hacen cosas distintas. La diferencia importa.
 
 | Carpeta | Qué es | La carga el navegador |
 |---|---|---|
-| `assets/visuales/` | los 37 PNG **maestros** tal como se entregaron: 90 MB, a 1024×1536 y 1254×1254 | **no** |
-| `assets/juego/` | las copias que el juego usa: WebP, al tamaño en que se ven, limpias. 603 KB entre todas | **sí** |
+| `assets/visuales/` | los 73 PNG **maestros** tal como se entregaron: 125 MB, a 1024×1536, 1254×1254 y 768×768 | **no** |
+| `assets/juego/` | las copias que el juego usa: WebP, al tamaño en que se ven, limpias. 1.1 MB entre todas | **sí** |
 
 `herramientas/preparar-imagenes.py` escribe la segunda a partir de la primera.
 No hace falta para jugar ni para programar —`assets/juego/` va dentro del
@@ -50,23 +50,35 @@ vacío.**
 | `escena/moneda` | las monedas que suben de un local que produjo | |
 | `escena/plataforma` | **no se usa**, y es a propósito: ver §3 | |
 
-## 2. Las cuatro imágenes del negocio encajaron, pero no donde se pensó
+## 2. Los locales: tres peldaños, y los tres siguen vivos
 
-Se dibujaron para la cadena de mejoras `negocio` —canasta → carreta → puesto →
-local— y esa cadena **ya no existe**: se reemplazó por el imperio, donde el
-jugador abre hasta ocho negocios de nueve tipos distintos y cada uno sube por
-cuatro niveles genéricos.
+Los cuatro primeros dibujos de local —canasta → carreta → puesto → local— se
+hicieron para la cadena de mejoras `negocio`, que **ya no existe**: la reemplazó
+el imperio, donde el jugador abre hasta ocho negocios de nueve tipos distintos.
+Se reusaron como los cuatro niveles de **cualquier** negocio, y lo que quedó
+pendiente fue que los nueve tipos los compartían: una tortillería y un taller se
+veían idénticos, y lo único que los separaba era un **sello** redondo con el
+emblema del tipo. La segunda entrega (§6) trajo los 36 que faltaban.
 
-Encajan igual, y mejor de lo que encajaban antes: son exactamente los cuatro
-niveles que puede tener **cualquier** negocio, y puestas en fila cuentan el
-crecimiento sin una palabra. Una canasta es un negocio recién abierto; un local
-con puerta es uno con sucursal.
+Los cuatro genéricos no se tiraron. Un negocio busca su dibujo en este orden:
 
-Lo que eso deja pendiente es que los nueve tipos comparten las cuatro
-ilustraciones, así que una tortillería y un taller se ven igual. Se resolvió con
-un **sello** redondo en la esquina del local, con el emblema del tipo tomado de
-`js/iconos.js`. No es lo ideal —lo ideal serían nueve juegos de cuatro— pero es
-legible y no hace falta dibujar nada al agregar un tipo nuevo.
+| | Qué se ve | Cuándo |
+|---|---|---|
+| 1 | `negocio/tortilleria/n3`, la tortillería de verdad | el tipo tiene sus cuatro dibujos |
+| 2 | `negocio/n3`, un puesto cualquiera **con el sello** del tipo encima | el tipo todavía no tiene dibujo |
+| 3 | el local dibujado en SVG por `js/escena.js` | no hay ninguna ilustración |
+
+Ese orden es lo que permite entregar los dibujos **por lotes**, y sin él el
+proyecto se queda esperando al ilustrador. Los seis tipos de negocio que faltan
+pueden entrar a `datos/negocios.js` hoy y a las ilustraciones el mes que viene:
+en el medio, quien abre una panadería ve un puesto con un pan en el rótulo, no
+un hueco.
+
+El sello es la pieza que se mueve entre peldaños, y va donde hace falta. Sobre
+el puesto genérico es la única pista del tipo de negocio; sobre la tortillería
+ilustrada sería una calcomanía tapando el comal. `pruebas/arte.js` comprueba
+las dos mitades de esa regla, porque es la que se rompe sola cuando llega un
+lote nuevo: se ilustra un tipo, se olvida quitar el sello, y nadie lo nota.
 
 ## 3. Por qué la plataforma no se usa
 
@@ -191,8 +203,8 @@ de **1672 × 941 px**.
 
 El 8 de septiembre de 2026 se completó la **prioridad 1** solicitada en
 `RECURSOS_TYCOON.md`: 36 PNG maestros, uno por cada combinación de los nueve
-tipos de negocio y sus cuatro niveles. No están conectados al juego; esta
-entrega es solamente para que otra IA pueda integrarlos después.
+tipos de negocio y sus cuatro niveles. **Ya están conectados**; lo que hubo que
+resolver para conectarlos está en §6.1.
 
 | Tipo | Archivos entregados |
 |---|---|
@@ -215,6 +227,39 @@ Quedan sin producir las prioridades 2 a 5 de `RECURSOS_TYCOON.md`: calle por
 tramos, gente contratada, edades del protagonista y efectos ambientales. Los
 iconos de interfaz continúan fuera del alcance y deben seguir siendo SVG.
 
+### 6.1 Lo que hubo que resolver para conectarlos
+
+Cuatro cosas, y ninguna se veía abriendo los PNG en un visor.
+
+1. **El cuadriculado horneado, otra vez.** La segunda entrega trae el mismo
+   patrón de cuadros opaco dentro de los huecos cerrados que la primera: detrás
+   del comal de la tortillería, bajo el toldo del lavado, tras los monitores del
+   café internet. La tortillería con equipo tenía el **7.7% de su superficie**
+   así. El limpiador de `herramientas/preparar-imagenes.py` lo quitó sin tocar
+   nada más, y ahora se ve el fondo por dentro de los locales, que es lo que el
+   archivo del dibujante pedía. **Es la regla 1 de `RECURSOS_TYCOON.md` §1 y se
+   volvió a incumplir**: conviene decirlo antes del siguiente lote.
+
+2. **Los locales se recortan con SU caja, no con una común.** Los personajes van
+   al contrario a propósito —el mismo chico no puede cambiar de tamaño al
+   cambiar de trabajo— pero un local no es la misma cosa retratada dos veces. El
+   margen vacío que traen debajo va de 0 px (distribuidora con equipo) a 122
+   (lavado con sucursal): con caja común, el lavado saldría flotando un 15% por
+   encima de la calle.
+
+3. **192 px y no 256.** A 256 los 36 pesaban unos 830 KB y el total se iba a 1.5
+   MB, o sea al borde del tope que protege `pruebas/arte.js`. En pantalla el
+   local más grande se ve a unos 90 px, así que 192 sobra y la decisión no costó
+   nada. El total quedó en **1.1 MB entre las 73**.
+
+4. **La calle se ensanchó, y las monedas se recolocaron.** Los dibujos por tipo
+   traen detalle —una moto, un comal, cuatro monitores— y a 48 unidades no se
+   veía, así que el nivel 4 subió a 58 y el hueco de cada negocio de 46 a 56.
+   Y las monedas que suben de un local que produjo salían flotando siete
+   unidades por encima del toldo: la caja del `<image>` es cuadrada, el local
+   viene más ancho que alto, y el techo de verdad queda más abajo que el borde
+   de la caja.
+
 ## 7. Lo que sigue pendiente
 
 - **Los iconos de interfaz no se convirtieron a PNG, y no deben convertirse.**
@@ -227,8 +272,10 @@ iconos de interfaz continúan fuera del alcance y deben seguir siendo SVG.
   las imágenes tomaron por el juego, no al revés: antes el muñeco dibujado era
   genérico. Si importa, hacen falta tres edades por estado, o al menos una del
   personaje mayor para el reporte de jubilación.
-- **Los nueve tipos de negocio ya tienen cuatro ilustraciones propias**, pero
-  todavía falta conectarlas al inventario y a la escena del juego.
+- **Seis tipos de negocio más, si se quieren.** Con maestría el jugador puede
+  llevar ocho negocios y veinte personas, y solo hay nueve tipos con que
+  llenarlos. Está encargado en `RECURSOS_TYCOON.md` §7, y ahora el orden de tres
+  peldaños (§2) permite que los datos entren antes que los dibujos.
 - **La paleta de las ilustraciones es más saturada que la de la interfaz.** Se
   nota al ponerlas al lado de una tarjeta: el dibujo tiene amarillos y naranjas
   que la interfaz no usa. No molesta, pero si algún día se regeneran, conviene

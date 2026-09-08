@@ -39,6 +39,86 @@
   192,
   192
  ],
+ "negocio/cafeinternet/n1": [
+  192,
+  192
+ ],
+ "negocio/cafeinternet/n2": [
+  192,
+  192
+ ],
+ "negocio/cafeinternet/n3": [
+  192,
+  192
+ ],
+ "negocio/cafeinternet/n4": [
+  192,
+  192
+ ],
+ "negocio/comedor/n1": [
+  192,
+  192
+ ],
+ "negocio/comedor/n2": [
+  192,
+  192
+ ],
+ "negocio/comedor/n3": [
+  192,
+  192
+ ],
+ "negocio/comedor/n4": [
+  192,
+  192
+ ],
+ "negocio/distribuidora/n1": [
+  192,
+  192
+ ],
+ "negocio/distribuidora/n2": [
+  192,
+  192
+ ],
+ "negocio/distribuidora/n3": [
+  192,
+  192
+ ],
+ "negocio/distribuidora/n4": [
+  192,
+  192
+ ],
+ "negocio/dulces/n1": [
+  192,
+  192
+ ],
+ "negocio/dulces/n2": [
+  192,
+  192
+ ],
+ "negocio/dulces/n3": [
+  192,
+  192
+ ],
+ "negocio/dulces/n4": [
+  192,
+  192
+ ],
+ "negocio/lavado/n1": [
+  192,
+  192
+ ],
+ "negocio/lavado/n2": [
+  192,
+  192
+ ],
+ "negocio/lavado/n3": [
+  192,
+  192
+ ],
+ "negocio/lavado/n4": [
+  192,
+  192
+ ],
  "negocio/n1": [
   256,
   256
@@ -54,6 +134,70 @@
  "negocio/n4": [
   256,
   256
+ ],
+ "negocio/papeleria/n1": [
+  192,
+  192
+ ],
+ "negocio/papeleria/n2": [
+  192,
+  192
+ ],
+ "negocio/papeleria/n3": [
+  192,
+  192
+ ],
+ "negocio/papeleria/n4": [
+  192,
+  192
+ ],
+ "negocio/refrescos/n1": [
+  192,
+  192
+ ],
+ "negocio/refrescos/n2": [
+  192,
+  192
+ ],
+ "negocio/refrescos/n3": [
+  192,
+  192
+ ],
+ "negocio/refrescos/n4": [
+  192,
+  192
+ ],
+ "negocio/taller/n1": [
+  192,
+  192
+ ],
+ "negocio/taller/n2": [
+  192,
+  192
+ ],
+ "negocio/taller/n3": [
+  192,
+  192
+ ],
+ "negocio/taller/n4": [
+  192,
+  192
+ ],
+ "negocio/tortilleria/n1": [
+  192,
+  192
+ ],
+ "negocio/tortilleria/n2": [
+  192,
+  192
+ ],
+ "negocio/tortilleria/n3": [
+  192,
+  192
+ ],
+ "negocio/tortilleria/n4": [
+  192,
+  192
  ],
  "personaje/auxcontable": [
   256,

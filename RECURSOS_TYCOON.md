@@ -4,6 +4,12 @@ Escrito el 8 de septiembre de 2026, después de conectar las 37 primeras
 ilustraciones. Este documento es un **encargo**: dice qué imágenes hacen falta,
 con qué medidas, con qué nombre exacto y qué se desbloquea con cada una.
 
+> **La prioridad 1 ya está entregada y conectada** (los 36 locales, el mismo día).
+> Lo que sigue vivo es de la **prioridad 2 en adelante**. Lo que se aprendió al
+> conectar P1 está al final de la §2 y cambia dos cosas del encargo: el
+> cuadriculado horneado volvió a venir en la entrega, y las copias de local van
+> a 192 px y no a 256.
+
 `RECURSOS_VISUALES.md` cuenta lo que ya existe y cómo está conectado. Este
 cuenta lo que falta. Los dos hay que leerlos: la §1 de aquí abajo son reglas que
 salieron de romperse la cara con la primera entrega, y no cumplirlas cuesta un
@@ -89,10 +95,11 @@ Sin acentos, sin espacios, sin mayúsculas. `tortilleria`, no `Tortillería`.
 
 ### 1.7 El peso: **maestros a 768 px, no a 1254**
 
-Aquí hay una recomendación concreta que cambia mucho. Los 37 maestros de la
-primera entrega pesan **90 MB** y el repositorio ya va en 92 MB. Si el encargo
-completo de este documento llega a la misma resolución, el repositorio pasa de
-**300 MB** y clonarlo se vuelve una molestia diaria.
+Aquí hay una recomendación concreta que cambia mucho, y **P1 ya la confirmó**:
+los 36 locales llegaron a 768 px, pesan 36 MB entre todos y se ven perfectos.
+Frente a los 90 MB de los 37 primeros maestros, eso es la diferencia entre un
+repositorio que se clona y uno que no. Con los dos lotes va en 125 MB; si el
+resto del encargo llega a 1254 px, pasa de **300 MB**.
 
 Y no hace falta. Las copias que el navegador carga son de 256 px, y de un maestro
 de 768 px se sacan con holgura de sobra:
@@ -118,11 +125,16 @@ dos sentidos.
 
 ## 2. Prioridad 1: los 36 locales. Nueve tipos × cuatro niveles
 
-**Es el hueco más grande que tiene el juego ahora mismo.** Los nueve tipos de
-negocio comparten las cuatro ilustraciones de local, así que **una tortillería y
-un taller de motos se ven exactamente igual**, y sólo se distinguen por un sello
+> **ENTREGADA Y CONECTADA el 8 de septiembre de 2026.** Se deja escrita entera
+> porque es el modelo de cómo pedir y cómo entregar un lote, y porque los seis
+> tipos de la §7 se piden exactamente igual. Lo que hubo que resolver al
+> conectarla está al final de esta sección y en `RECURSOS_VISUALES.md` §6.1.
+
+**Era el hueco más grande que tenía el juego.** Los nueve tipos de negocio
+compartían las cuatro ilustraciones de local, así que **una tortillería y un
+taller de motos se veían exactamente igual**, y sólo se distinguían por un sello
 redondo de catorce píxeles en la esquina. En un tycoon, lo que tienes se
-reconoce de un golpe de vista. Hoy no.
+reconoce de un golpe de vista.
 
 ### Los nueve tipos, con lo que son
 
@@ -162,17 +174,17 @@ assets/visuales/negocio/<id>/n4.png
 
 36 archivos. Maestro **768 × 768**, transparente, sujeto apoyado abajo.
 
-### Escala: el jugador mide 50 y el local grande 48
+### Escala: el jugador mide 50 y el local grande 58
 
 Esto es lo que más se nota si se dibuja mal. En la escena, un local ocupa un
 cuadrado que **crece con el nivel**, y el protagonista mide 50 unidades:
 
 | Nivel | Lado en unidades | ≈ píxeles en un teléfono de 520 px | Comparado con el jugador (50) |
 |---|---|---|---|
-| 1 | 30 | 58 | le llega a la cintura |
-| 2 | 36 | 70 | al pecho |
-| 3 | 42 | 82 | al hombro |
-| 4 | 48 | 93 | un poco más alto que él |
+| 1 | 32 | 62 | le llega a la cintura |
+| 2 | 41 | 79 | al pecho |
+| 3 | 50 | 96 | su misma altura |
+| 4 | 58 | 112 | le pasa la cabeza |
 
 Así que **el objeto del nivel 1 tiene que ser algo bajo** —una caja, un cubo, una
 mesita— y el del nivel 4 algo que a esa altura se lea como local. Un puesto de
@@ -191,12 +203,44 @@ rótulo. Serían 4 + 27 = 31 archivos y el resultado se ve más repetido.
 enteros son menos trabajo que 27 piezas que tienen que encajar al píxel con
 cuatro cascos, y el resultado es incomparablemente mejor.
 
+*(Se entregaron los 36 completos. Fue la decisión correcta: los nueve tipos se
+distinguen de un golpe de vista y la progresión de mesa a edificio se lee sin una
+palabra.)*
+
+### Lo que hubo que resolver al conectarla, y qué cambia para el siguiente lote
+
+Cuatro cosas. Las dos primeras son avisos para quien entregue P2 en adelante.
+
+1. **El cuadriculado horneado volvió a venir.** Es la **regla 1** de la §1 de este
+   documento y se ha incumplido las dos veces: el patrón de cuadros gris y blanco
+   llegó pintado y OPACO dentro de los huecos cerrados —detrás del comal de la
+   tortillería, bajo el toldo del lavado, tras los monitores del café internet—,
+   y la tortillería con equipo traía el **7.7% de su superficie** así. El
+   canalizador lo quita solo, así que no bloqueó nada, pero es media hora de
+   comprobar que no se comió nada de dibujo por el camino. **La transparencia se
+   guarda en el canal alfa, no se pinta.**
+
+2. **Las copias de local van a 192 px, no a 256.** Está explicado en la §9. Si el
+   lote nuevo trae objetos, ese es el tamaño de la copia.
+
+3. **Cada local se recorta con SU caja, no con una común.** El margen vacío que
+   traían debajo iba de 0 px (distribuidora con equipo) a 122 (lavado con
+   sucursal). Los personajes van al contrario a propósito —el mismo chico no
+   puede cambiar de tamaño al cambiar de trabajo— y **P3 y P4 son personas**, así
+   que ahí sí hace falta el encuadre común de la regla 4.
+
+4. **La calle se ensanchó y el nivel 4 subió de 48 a 58 unidades**, porque el
+   detalle que traen los dibujos nuevos no se veía a 48. Eso mueve las medidas de
+   la tabla de escala de esta sección: el hueco de cada negocio es ahora **56
+   unidades** y no 46. **Importa para P2**: la tira de calle tiene que repetirse
+   sin costura sobre un paso de 56, y con ocho negocios cubrir 580 unidades.
+
 ---
 
 ## 3. Prioridad 2: la calle tiene que parecer una calle
 
 Hoy el suelo es un rectángulo redondeado dibujado a mano y el fondo es un
-degradado. Con ocho negocios abiertos el escenario mide **500 unidades de ancho**
+degradado. Con ocho negocios abiertos el escenario mide **580 unidades de ancho**
 —hay que arrastrar para verlo— y sigue siendo un rectángulo verde claro.
 
 `escena/plataforma.png` de la primera entrega **no se pudo usar**: es un óvalo
@@ -371,27 +415,29 @@ pide la §1.7:
 
 | Lote | Archivos | Maestros | Copias que carga el juego |
 |---|---|---|---|
-| P1 · los 36 locales | 36 | ~36 MB | ~900 KB |
+| P1 · los 36 locales | 36 | **35.7 MB** (medido) | **543 KB** (medido) |
 | P2 · la calle y el mobiliario | 8 | ~10 MB | ~200 KB |
 | P3 · la gente | 7 | ~6 MB | ~120 KB |
 | P4 · las edades | 13 | ~11 MB | ~210 KB |
 | P5 · el jugo | 4 | ~4 MB | ~40 KB |
-| **Total nuevo** | **68** | **~67 MB** | **~1.47 MB** |
-| Ya existe | 37 | 90 MB | 603 KB |
+| **Ya está** | **73** | **125 MB** | **1.1 MB** |
+| **Falta** | **32** | **~31 MB** | **~570 KB** |
 
-Dos avisos sobre eso:
+El aviso de peso de la primera versión de este documento decía que las copias
+sumarían 2.07 MB contra un tope de 1.5 MB. **P1 se resolvió bajando las copias de
+local de 256 a 192 px**, que a 90 px de pantalla sobra: quedaron en 543 KB en vez
+de 900, y el total del juego en 1.1 MB. Con eso, lo que falta cabe **justo**:
+1.1 + 0.57 = 1.67 MB, por encima del tope de 1.5.
 
-1. **Las copias sumarían 2.07 MB y el tope de `pruebas/arte.js` está en 1.5 MB.**
-   Ese tope está puesto a propósito y no hay que subirlo sin pensar: es lo que
-   protege la promesa de que el juego abre en un teléfono con datos móviles. Al
-   entrar P1 hay que decidir una de dos cosas: bajar las copias de local de 256 a
-   192 px (que a 93 px de pantalla sigue sobrando), o subir el tope a 2.5 MB
-   sabiendo lo que se hace.
+Así que la decisión sigue pendiente y ahora es más pequeña: al entrar P4 —las
+trece edades del protagonista, que son las que más pesan— hay que subir el tope a
+2 MB, o bajar las copias de personaje de 256×384. Que sea sabiendo qué protege
+ese tope: que el juego abra en un teléfono con datos móviles.
 
-2. **Los maestros llevarían el repositorio a unos 250 MB.** Si eso molesta —y con
-   el tiempo molesta— la salida es dejar los maestros en la rama `assets` y **no**
-   traerlos a `main`, que sólo necesita `assets/juego/`. Hoy están en las dos
-   porque son 90 MB y todavía se aguanta.
+Y el otro aviso sigue en pie. **Los maestros van ya en 125 MB** y con el encargo
+completo pasarían de 150. Si eso molesta —y con el tiempo molesta— la salida es
+dejarlos en la rama `assets` y **no** traerlos a `main`, que sólo necesita
+`assets/juego/`. Hoy están en las dos ramas.
 
 ---
 

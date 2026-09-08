@@ -1287,6 +1287,7 @@ var UI = (function () {
       negocios: negs.map(function (n) {
         var tn = Motor.tipoDeNegocio(n.tipoId);
         return {
+          tipo: n.tipoId,
           icono: tn ? tn.icono : 'tienda',
           nivel: n.nivel,
           empleados: n.empleados.length,

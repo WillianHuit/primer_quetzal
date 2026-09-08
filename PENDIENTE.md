@@ -1,21 +1,51 @@
 # Pendiente
 
-Estado al 7 de septiembre de 2026. Lo que sigue está ordenado por lo que más
+Estado al 8 de septiembre de 2026. Lo que sigue está ordenado por lo que más
 aporta al juego, no por lo que es más fácil.
 
 ---
 
 ## 0. Lo que se cerró hoy
 
-### Las 37 ilustraciones, conectadas
+### Los 36 locales por tipo, conectados
+
+Llegaron en la rama `assets` como respuesta a la prioridad 1 de
+`RECURSOS_TYCOON.md`: cuatro niveles para cada uno de los nueve tipos de negocio.
+Ya se ven, y **una tortillería ya no se ve igual que un taller de motos**, que era
+el hueco más grande que tenía el juego después de la reforma del imperio.
+
+- **Los cuatro locales genéricos no se tiraron, y no son código muerto.** Un
+  negocio busca su dibujo en tres peldaños: el de su tipo, si no el genérico con
+  el sello del emblema encima, si no el dibujo SVG. Eso es lo que permite
+  entregar los dibujos **por lotes**: los seis tipos que faltan pueden entrar a
+  `datos/negocios.js` hoy y a las ilustraciones el mes que viene, y en el medio
+  quien abre una panadería ve un puesto con un pan en el rótulo, no un hueco.
+- **El sello va donde hace falta y no donde estorba**, y `pruebas/arte.js`
+  comprueba las dos mitades. Es la regla que se rompe sola al llegar un lote
+  nuevo: se ilustra un tipo, se olvida quitar el sello, y queda una calcomanía
+  tapando el comal.
+- **El cuadriculado horneado volvió a venir en la entrega.** Es la regla 1 de
+  `RECURSOS_TYCOON.md` §1 y se incumplió las dos veces; la tortillería con equipo
+  traía el 7.7% de su superficie con el patrón opaco metido en los huecos
+  cerrados. El canalizador lo quita solo, así que no bloquea nada, pero conviene
+  repetirlo antes del siguiente lote.
+- **Entraron a 192 px y no a 256.** A 256 el total se iba a 1.5 MB, o sea al
+  borde del tope que protege `pruebas/arte.js`. En pantalla el local más grande
+  se ve a unos 90 px, así que la decisión no costó nada: **1.1 MB entre las 73**.
+- **La calle se ensanchó**: el nivel 4 pasó de 48 a 58 unidades y el hueco de
+  cada negocio de 46 a 56, porque a 48 no se veía el detalle que traen los
+  dibujos nuevos. Con ocho negocios la escena mide 580 unidades y hay que
+  arrastrarla, que es lo que se quiere.
+
+### Las 37 primeras ilustraciones, conectadas
 
 Llegaron en la rama `assets`: el mismo chico en 23 estados, los cuatro niveles de un
 local, las ocho piezas de las cadenas de mejoras y la moneda. Ya están puestas, y el
 detalle completo está en `RECURSOS_VISUALES.md`. Lo que conviene saber de aquí:
 
-- **Dos carpetas.** `assets/visuales/` son los maestros (90 MB) y el navegador **no los
-  carga**. `assets/juego/` son las copias WebP que sí carga: **603 KB entre las 37**. Las
-  escribe `herramientas/preparar-imagenes.py`.
+- **Dos carpetas.** `assets/visuales/` son los maestros (125 MB con los dos lotes) y el
+  navegador **no los carga**. `assets/juego/` son las copias WebP que sí carga: **1.1 MB
+  entre las 73**. Las escribe `herramientas/preparar-imagenes.py`.
 - **El dibujo SVG se queda detrás y no es código muerto**: un empleo nuevo funciona el
   mismo día con su uniforme, sin esperar a que nadie lo ilustre. Quien decide es
   `js/arte.js`.
@@ -434,10 +464,11 @@ han buscado todavía.
 - **La paleta de las ilustraciones es más saturada que la de la interfaz.** Se ve
   al ponerlas al lado de una tarjeta: el dibujo tiene amarillos y naranjas que la
   interfaz no usa. No molesta, pero si algún día se regeneran, conviene acercarlas.
-- **Los nueve tipos de negocio comparten las cuatro ilustraciones de local.** Una
-  tortillería y un taller se ven igual y se distinguen por un sello con su icono
-  en la esquina. Funciona y no hay que dibujar nada al agregar un tipo, pero lo
-  ideal serían nueve juegos de cuatro.
+- **Los nueve tipos de negocio tienen sus cuatro locales, pero no hay más que
+  nueve tipos.** Con maestría el jugador puede llevar ocho negocios y veinte
+  personas, y se le acaba el catálogo. Están propuestos con números en
+  `RECURSOS_TYCOON.md` §7, y esa parte no es solo dibujar: cambia el balance y
+  hay que volver a correr `node pruebas/imperio.js`.
 - **`herramientas/preparar-imagenes.py` es lo único del proyecto que pide Python**
   (Pillow y numpy). No hace falta para jugar ni para programar, igual que
   `traer-librerias.js` no hace falta salvo para regenerar `vendor/`. Si algún día
