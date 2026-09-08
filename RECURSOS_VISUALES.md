@@ -187,7 +187,35 @@ de **1672 × 941 px**.
 - Sin texto, números, logotipos, marcas de agua ni símbolos financieros
   dependientes del idioma.
 
-## 6. Lo que sigue pendiente
+## 6. Entrega Tycoon: locales específicos
+
+El 8 de septiembre de 2026 se completó la **prioridad 1** solicitada en
+`RECURSOS_TYCOON.md`: 36 PNG maestros, uno por cada combinación de los nueve
+tipos de negocio y sus cuatro niveles. No están conectados al juego; esta
+entrega es solamente para que otra IA pueda integrarlos después.
+
+| Tipo | Archivos entregados |
+|---|---|
+| Dulces | `assets/visuales/negocio/dulces/n1.png` a `n4.png` |
+| Refrescos | `assets/visuales/negocio/refrescos/n1.png` a `n4.png` |
+| Lavado | `assets/visuales/negocio/lavado/n1.png` a `n4.png` |
+| Tortillería | `assets/visuales/negocio/tortilleria/n1.png` a `n4.png` |
+| Papelería | `assets/visuales/negocio/papeleria/n1.png` a `n4.png` |
+| Comedor | `assets/visuales/negocio/comedor/n1.png` a `n4.png` |
+| Taller | `assets/visuales/negocio/taller/n1.png` a `n4.png` |
+| Café internet | `assets/visuales/negocio/cafeinternet/n1.png` a `n4.png` |
+| Distribuidora | `assets/visuales/negocio/distribuidora/n1.png` a `n4.png` |
+
+Todos miden **768 × 768 px**, tienen fondo transparente, un solo local aislado
+y una base visual alineada cerca del borde inferior. Mantienen la progresión
+`n1` inicio mínimo → `n2` equipado → `n3` puesto consolidado → `n4` sucursal,
+sin palabras, cifras, marcas ni logotipos. La entrega completa pesa 35.73 MB.
+
+Quedan sin producir las prioridades 2 a 5 de `RECURSOS_TYCOON.md`: calle por
+tramos, gente contratada, edades del protagonista y efectos ambientales. Los
+iconos de interfaz continúan fuera del alcance y deben seguir siendo SVG.
+
+## 7. Lo que sigue pendiente
 
 - **Los iconos de interfaz no se convirtieron a PNG, y no deben convertirse.**
   Son 78 controles que se muestran desde unos 16 px y cambian de color con
@@ -199,7 +227,8 @@ de **1672 × 941 px**.
   las imágenes tomaron por el juego, no al revés: antes el muñeco dibujado era
   genérico. Si importa, hacen falta tres edades por estado, o al menos una del
   personaje mayor para el reporte de jubilación.
-- **Los nueve tipos de negocio comparten cuatro ilustraciones** (§2).
+- **Los nueve tipos de negocio ya tienen cuatro ilustraciones propias**, pero
+  todavía falta conectarlas al inventario y a la escena del juego.
 - **La paleta de las ilustraciones es más saturada que la de la interfaz.** Se
   nota al ponerlas al lado de una tarjeta: el dibujo tiene amarillos y naranjas
   que la interfaz no usa. No molesta, pero si algún día se regeneran, conviene
