@@ -11,33 +11,62 @@ var CONFIG = {
 
   tipoCambio: 7.70, // quetzales por dolar
 
+  /* El juego empieza en el momento en que la decision todavia existe.
+   *
+   * Antes arrancaba a los 18 con el bachillerato ya en la mano, o sea con la
+   * decision mas importante de la vida financiera ya tomada por el juego. Ahora
+   * arranca a los 13, saliendo de primaria, y la primera pantalla es justo esa:
+   * estudias o no estudias. Todo lo demas se abre despues.
+   */
   inicio: {
-    edad: 18,
+    edad: 13,
     anioCalendario: 2026,
     mesCalendario: 0,        // 0 = enero
-    efectivo: 1200,          // ESTIMACION: regalo de graduacion
     energia: 100,
-    educacion: 'bachiller',
+    educacion: 'primaria',
     vivienda: 'familiar'
+  },
+
+  /* Ser menor de edad cambia el juego entero: en casa te cubren, no te pueden
+   * dar un contrato formal y el banco te pide un adulto para abrir la cuenta.
+   * Al cumplir esta edad se te cae encima el gasto completo de la casa, y ese
+   * golpe es a proposito. */
+  mayoriaDeEdad: 18,
+  menor: {
+    // Lo unico que gasta de su bolsa un chico que vive en su casa
+    gastoPersonal: 20,       // ESTIMACION: pasaje y refaccion
+    // Debajo de esta edad no le caen golpes de dinero: los absorbe la familia
+    edadPrimerosGolpes: 18
   },
 
   energia: {
     maxima: 100,
     umbralRiesgo: 20,        // debajo de esto puede enfermarse
     costoEnfermedad: 450,    // ESTIMACION
+    // Por JORNADA, o sea la mitad de lo que costaba una semana entera
     porEspacio: {
-      trabajo: -12,
-      estudio: -10,
-      minijuego: -12,
-      'minijuego-usado': -12,
-      descanso: 45
+      trabajo: -6,
+      estudio: -5,
+      minijuego: -6,
+      'minijuego-usado': -6,
+      descanso: 22
     }
   },
 
-  // Cuanto del salario cobras segun cuantas semanas trabajaste.
-  // Cuatro semanas es tiempo completo. Menos semanas es menos sueldo, y esa
-  // es la tension central del juego: estudiar y descansar cuestan dinero.
-  pagoPorSemanasTrabajadas: { 4: 1.00, 3: 0.70, 2: 0.45, 1: 0.20 },
+  /* Cuanto del salario cobras segun cuantas JORNADAS trabajaste.
+   *
+   * El mes tiene cuatro semanas y cada semana tiene dos jornadas, manana y
+   * tarde: ocho casillas. Se parte asi porque los colegios de Guatemala son de
+   * jornada, no de dia completo, y el chico que estudia por la manana puede
+   * trabajar por la tarde. Esa es la decision que antes el juego no dejaba
+   * tomar.
+   *
+   * Los numeros pares son los mismos de cuando esto se contaba por semanas
+   * (8 = 1.00, 6 = 0.70, 4 = 0.45, 2 = 0.20), asi que el balanceo no se movio.
+   */
+  pagoPorJornadasTrabajadas: {
+    8: 1.00, 7: 0.85, 6: 0.70, 5: 0.57, 4: 0.45, 3: 0.33, 2: 0.20, 1: 0.10
+  },
 
   // La vivienda es decision del jugador. Servicios, comida y gasto personal
   // son automaticos y escalan con la vivienda elegida.
@@ -88,13 +117,30 @@ var CONFIG = {
       nombre: 'Cuenta monetaria',
       tasaAnual: 0.0127,
       aperturaMinima: 200,
-      descripcion: 'Para operar: recibir tu salario, pagar y mover dinero. Casi no paga intereses.'
+      // Un menor abre cuenta con un adulto, y con mucho menos dinero. Los
+      // bancos guatemaltecos tienen cuentas infantiles desde Q25 o Q50.
+      aperturaMinimaMenor: 50,
+      /* Manejo de cuenta: lo que el banco cobra al mes por tenerla abierta.
+       *
+       * ESTIMACION dentro del rango real, que anda entre Q10 y Q15 segun el
+       * banco. Y el detalle que casi nadie sabe hasta que lo ve en el estado
+       * de cuenta: si tu sueldo lo deposita una EMPRESA, no te lo cobran; si
+       * la cuenta es tuya y nadie te acredita planilla, si.
+       *
+       * Es la unica forma honesta de que abrir un producto que todavia no
+       * necesitas tenga un costo, en vez de ser gratis y por lo tanto obvio. */
+      manejoMensual: 12,
+      manejoGratisConPlanilla: true,
+      descripcion: 'Para recibir tu sueldo de una empresa, pagar y mover dinero. Casi no paga intereses.'
     },
     ahorro: {
       nombre: 'Cuenta de ahorro',
       tasaAnual: 0.0265,
       aperturaMinima: 100,
-      descripcion: 'Para apartar dinero con proposito. Paga mas que la monetaria.'
+      aperturaMinimaMenor: 25,
+      // La de ahorro no cobra manejo: es la que un menor abre de verdad
+      manejoMensual: 0,
+      descripcion: 'Para apartar dinero con proposito. Paga mas que la monetaria y no cobra manejo.'
     },
     plazo: {
       nombre: 'Deposito a plazo',
@@ -159,16 +205,18 @@ var CONFIG = {
    */
   primaInformalidad: 0.05,
 
-  espaciosPorMes: 4,
+  // Cuatro semanas de dos jornadas cada una
+  jornadasPorMes: 8,
+  jornadasPorSemana: 2,
 
   /* Compresion temporal.
-   * De los 18 a los 65 hay 564 meses. En turnos mensuales serian mas de tres
+   * De los 13 a los 65 hay 624 meses. En turnos mensuales serian mas de tres
    * horas de juego en un celular y nadie llegaria al reporte de jubilacion.
    * Los años que definen todo se juegan mes a mes; los de ejecucion, no.
    */
   tiempo: {
     etapas: [
-      { hastaEdad: 30, mesesPorTurno: 1,  turno: 'mes',       plural: 'meses' },
+      { hastaEdad: 22, mesesPorTurno: 1,  turno: 'mes',       plural: 'meses' },
       { hastaEdad: 45, mesesPorTurno: 3,  turno: 'trimestre', plural: 'trimestres' },
       { hastaEdad: 999, mesesPorTurno: 12, turno: 'año',       plural: 'años' }
     ],

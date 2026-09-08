@@ -8,7 +8,11 @@ const SUITES = [
   ['vidas-completas.js',    'Vidas completas hasta los 65'],
   ['ciclo-credito.js',      'Ciclo de crédito'],
   ['largo-plazo.js',        'Hipoteca, pensión, orígenes y migración'],
-  ['minijuegos-valen.js',   'Los minijuegos valen la semana que cuestan'],
+  ['minijuegos-valen.js',   'Los minijuegos valen la jornada que cuestan'],
+  ['ruta.js',               'La ruta que se va abriendo'],
+  ['decisiones.js',         'Las tarjetas de decisión'],
+  ['mejoras.js',            'Las mejoras y la capa de tycoon'],
+  ['iconos.js',             'Iconos y transiciones de pestaña'],
   ['interfaz-bilingue.js',  'Interfaz en español e inglés'],
   ['dom-real.js',           'Interacción real en el navegador']
 ];

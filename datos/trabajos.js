@@ -2,18 +2,70 @@
  *
  * salarioBase: quetzales al mes en empleo formal, tiempo completo.
  * Todos ESTIMACION, calibrados sobre las medianas por nivel educativo:
- *   sin educacion Q2,400 | bachiller Q3,800 | licenciatura Q4,300 | maestria Q10,000
+ *   sin educacion Q2,400 | diversificado Q3,800 | licenciatura Q4,300 | maestria Q10,000
  *
  * varianza: 0 = sueldo fijo. 0.6 = el ingreso salta mucho mes a mes.
- * requisito: 'bachiller' | 'tecnico' | 'licenciatura' | 'maestria'
+ * requisito: 'primaria' | 'basicos' | 'diversificado' | 'tecnico' |
+ *            'licenciatura' | 'maestria'
+ * edadMinima: nadie te contrata antes de esa edad.
+ *
+ * ---------------------------------------------------------------------------
+ * Los tres primeros son trabajitos de nino
+ * ---------------------------------------------------------------------------
+ * El juego empieza a los 13 anios y a los 13 nadie te da un sueldo: te dan
+ * unos quetzales por vender algo en la calle. Por eso estos tres no tienen
+ * `salarioBase` sino `pagoPorJornada`: se cobra por jornada trabajada, unos
+ * pocos quetzales, y ese es todo el ingreso que existe al principio.
+ *
+ * Son a proposito ridiculos al lado de cualquier empleo de adulto. La primera
+ * leccion del juego es esa comparacion: lo que se gana sin estudios cabe en
+ * una mano.
+ * ---------------------------------------------------------------------------
  */
 
 var TRABAJOS = [
   {
+    id: 'limonada',
+    nombre: 'Vender limonada',
+    icono: 'limonada',
+    requisito: 'primaria',
+    edadMinima: 12,
+    pagoPorJornada: 5,
+    varianza: 0.30,
+    permiteInformal: true,
+    soloInformal: true,
+    descripcion: 'Una jarra, hielo y una mesa en la banqueta.'
+  },
+  {
+    id: 'periodicos',
+    nombre: 'Vender periódico',
+    icono: 'periodico',
+    requisito: 'primaria',
+    edadMinima: 12,
+    pagoPorJornada: 4,
+    varianza: 0.10,
+    permiteInformal: true,
+    soloInformal: true,
+    descripcion: 'Temprano en la esquina. Paga poquito y paga siempre.'
+  },
+  {
+    id: 'dulces',
+    nombre: 'Vender dulces',
+    icono: 'dulce',
+    requisito: 'primaria',
+    edadMinima: 12,
+    pagoPorJornada: 6,
+    varianza: 0.55,
+    permiteInformal: true,
+    soloInformal: true,
+    descripcion: 'En el bus o en la escuela. Un día vendes todo, otro nada.'
+  },
+  {
     id: 'repartidor',
     nombre: 'Repartidor en moto',
-    icono: '🛵',
-    requisito: 'bachiller',
+    icono: 'moto',
+    requisito: 'basicos',
+    edadMinima: 16,
     salarioBase: 2800,
     varianza: 0.10,
     permiteInformal: true,
@@ -22,8 +74,9 @@ var TRABAJOS = [
   {
     id: 'tienda',
     nombre: 'Dependiente de tienda',
-    icono: '🏪',
-    requisito: 'bachiller',
+    icono: 'tienda',
+    requisito: 'basicos',
+    edadMinima: 16,
     salarioBase: 3000,
     varianza: 0.05,
     permiteInformal: true,
@@ -32,8 +85,9 @@ var TRABAJOS = [
   {
     id: 'construccion',
     nombre: 'Ayudante de construccion',
-    icono: '🧱',
-    requisito: 'bachiller',
+    icono: 'ladrillo',
+    requisito: 'primaria',
+    edadMinima: 16,
     salarioBase: 2600,
     varianza: 0.25,
     permiteInformal: true,
@@ -42,8 +96,9 @@ var TRABAJOS = [
   {
     id: 'vendedor',
     nombre: 'Vendedor por comision',
-    icono: '💼',
-    requisito: 'bachiller',
+    icono: 'maletin',
+    requisito: 'primaria',
+    edadMinima: 16,
     salarioBase: 1800,
     varianza: 0.60,
     permiteInformal: true,
@@ -52,8 +107,9 @@ var TRABAJOS = [
   {
     id: 'callcenter',
     nombre: 'Agente de call center bilingue',
-    icono: '🎧',
-    requisito: 'bachiller',
+    icono: 'audifonos',
+    requisito: 'diversificado',
+    edadMinima: 18,
     salarioBase: 4500,
     varianza: 0.05,
     permiteInformal: false,
@@ -62,8 +118,9 @@ var TRABAJOS = [
   {
     id: 'tiendapropia',
     nombre: 'Tienda propia',
-    icono: '🛒',
-    requisito: 'bachiller',
+    icono: 'carrito',
+    requisito: 'basicos',
+    edadMinima: 18,
     capitalRequerido: 8000,
     salarioBase: 3400,
     varianza: 0.70,
@@ -73,8 +130,9 @@ var TRABAJOS = [
   {
     id: 'auxcontable',
     nombre: 'Auxiliar contable',
-    icono: '🧮',
+    icono: 'calculadora',
     requisito: 'tecnico',
+    edadMinima: 18,
     salarioBase: 4000,
     varianza: 0.05,
     permiteInformal: false,
@@ -83,8 +141,9 @@ var TRABAJOS = [
   {
     id: 'refrigeracion',
     nombre: 'Tecnico en refrigeracion',
-    icono: '❄️',
+    icono: 'copo',
     requisito: 'tecnico',
+    edadMinima: 18,
     salarioBase: 4800,
     varianza: 0.20,
     permiteInformal: true,
@@ -93,8 +152,9 @@ var TRABAJOS = [
   {
     id: 'soporte',
     nombre: 'Soporte de sistemas',
-    icono: '💻',
+    icono: 'computadora',
     requisito: 'tecnico',
+    edadMinima: 18,
     salarioBase: 5200,
     varianza: 0.05,
     permiteInformal: false,
@@ -103,8 +163,9 @@ var TRABAJOS = [
   {
     id: 'docente',
     nombre: 'Docente',
-    icono: '📚',
+    icono: 'libros',
     requisito: 'licenciatura',
+    edadMinima: 18,
     salarioBase: 4200,
     varianza: 0.02,
     permiteInformal: false,
@@ -113,8 +174,9 @@ var TRABAJOS = [
   {
     id: 'contador',
     nombre: 'Contador',
-    icono: '📊',
+    icono: 'barras',
     requisito: 'licenciatura',
+    edadMinima: 18,
     salarioBase: 6000,
     varianza: 0.15,
     permiteInformal: false,
@@ -123,8 +185,9 @@ var TRABAJOS = [
   {
     id: 'ingeniero',
     nombre: 'Ingeniero junior',
-    icono: '⚙️',
+    icono: 'engranaje',
     requisito: 'licenciatura',
+    edadMinima: 18,
     salarioBase: 7500,
     varianza: 0.10,
     permiteInformal: false,
@@ -133,8 +196,9 @@ var TRABAJOS = [
   {
     id: 'gerente',
     nombre: 'Gerente o especialista',
-    icono: '🏢',
+    icono: 'edificio',
     requisito: 'maestria',
+    edadMinima: 18,
     salarioBase: 12000,
     varianza: 0.15,
     permiteInformal: false,
@@ -145,4 +209,7 @@ var TRABAJOS = [
 // Cuanto vale cada año de experiencia dentro del mismo puesto
 var AUMENTO_POR_ANIO_EXPERIENCIA = 0.035; // ESTIMACION: 3.5% anual
 
-var NIVELES_EDUCATIVOS = ['bachiller', 'tecnico', 'licenciatura', 'maestria'];
+/* La escalera educativa, de menos a mas. El orden es lo que usa el juego
+ * para saber si alguien califica para un empleo o para una carrera. */
+var NIVELES_EDUCATIVOS = ['primaria', 'basicos', 'diversificado',
+                          'tecnico', 'licenciatura', 'maestria'];

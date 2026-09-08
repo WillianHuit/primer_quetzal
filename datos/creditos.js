@@ -26,7 +26,7 @@ var CREDITOS = {
   personal: {
     id: 'personal',
     nombre: 'Préstamo personal',
-    icono: '🏦',
+    icono: 'banco',
     tasaAnual: 0.1868,
     plazos: [12, 24, 36],
     montoMinimo: 1000,
@@ -43,7 +43,7 @@ var CREDITOS = {
   tarjeta: {
     id: 'tarjeta',
     nombre: 'Tarjeta de crédito',
-    icono: '💳',
+    icono: 'tarjeta',
     tasaAnual: 0.4584,
     pagoMinimoPorcentaje: 0.05,
     limitePorPuntaje: function (p, ingresoMensual) {
@@ -57,7 +57,7 @@ var CREDITOS = {
   informal: {
     id: 'informal',
     nombre: 'Prestamista del barrio',
-    icono: '🚩',
+    icono: 'bandera',
     // [V-sec] Plaza Publica 2022 y la PNC documentan 25% a 40% por ciclo (~mensual)
     // en el credito 'gota a gota'. El juego usa el extremo BAJO del rango real.
     // 25% mensual compuesto = ~1,355% anual. No lo exagera: lo suaviza.

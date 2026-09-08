@@ -76,6 +76,48 @@ function porTexto(w, texto, raiz) {
 
 function modalAbierto(w) { return w.document.querySelector('.velo .modal'); }
 
+/* La ventana que el jugador está viendo.
+ *
+ * Puede haber más de una encimada: abrir una cuenta saca su tarjeta educativa
+ * y, detrás, el anuncio de que la ruta abrió algo. La de arriba es la última
+ * que se agregó, no la primera. */
+function modalArriba(w) {
+  const todas = w.document.querySelectorAll('.velo .modal');
+  return todas.length ? todas[todas.length - 1] : null;
+}
+
+/* ¿Alguna de las ventanas abiertas dice esto? */
+function algunModalDice(w, texto) {
+  for (const m of w.document.querySelectorAll('.velo .modal')) {
+    if ((m.textContent || '').indexOf(texto) >= 0) return true;
+  }
+  return false;
+}
+
+function pestanasVisibles(w) {
+  return w.document.querySelectorAll('nav.pestanas [data-pestana]');
+}
+
+/* Las jornadas del mes que el jugador puede tocar.
+ *
+ * Las que tiene tomadas el colegio salen con la clase `bloqueado` y no se
+ * seleccionan: tocarlas solo saca el aviso de que esa jornada no se negocia. */
+function jornadasLibres(w) {
+  return w.document.querySelectorAll('.jornada:not(.bloqueado)');
+}
+
+/* Reparte las jornadas libres: las primeras a trabajar y las dos últimas a
+ * descansar, que es lo que haría un jugador que no quiere enfermarse. */
+function repartirJornadas(w) {
+  const libres = [...jornadasLibres(w)].map(j => j.getAttribute('data-espacio'));
+  libres.forEach(function (idx, n) {
+    clic(w, w.document.querySelector('[data-espacio="' + idx + '"]'));
+    const que = n < libres.length - 2 ? 'trabajo' : 'descanso';
+    clic(w, w.document.querySelector('[data-poner="' + que + '"]'));
+  });
+  return libres.length;
+}
+
 function cerrarModales(w) {
   let n = 0;
   while (modalAbierto(w) && n < 12) {
@@ -90,6 +132,15 @@ function cerrarModales(w) {
 // ============================================================
 console.log('abriendo el juego en un DOM real...');
 const { w, errores, errConsola, scripts } = abrirJuego('es');
+
+/* jsdom no calcula geometría: todos los rectángulos miden cero, y el foco del
+ * tutorial no se dibuja si el objetivo no tiene tamaño. Con un rectángulo de
+ * mentira el velo y la flecha sí se crean, y así la comprobación de que se
+ * apagan al terminar el tutorial mide algo de verdad. */
+w.Element.prototype.getBoundingClientRect = function () {
+  return { top: 300, left: 20, width: 160, height: 44, bottom: 344, right: 180,
+           x: 20, y: 300, toJSON: function () { return {}; } };
+};
 
 ok(scripts.length > 20, `index.html carga ${scripts.length} scripts`);
 ok(typeof w.UI === 'object' && typeof w.Motor === 'object',
@@ -107,62 +158,150 @@ ok(!!btnEmpezar, 'hay botón para empezar partida');
 clic(w, btnEmpezar);
 ok(!!modalAbierto(w), 'el flujo de nueva partida abre una ventana');
 
-// ---------- elegir origen (dentro del modal) ----------
-const opcionesOrigen = w.document.querySelectorAll('.velo [data-o]');
-ok(opcionesOrigen.length === 3, `se ofrecen los tres orígenes (hay ${opcionesOrigen.length})`);
-clic(w, opcionesOrigen[1]);   // el de remesas
-
-const opcionesDif = w.document.querySelectorAll('.velo [data-d]');
-ok(opcionesDif.length === 2, 'se ofrecen las dos Guatemalas');
-clic(w, opcionesDif[0]);      // formal urbano
+// ---------- elegir nivel (dentro del modal) ----------
+/* Eran dos preguntas seguidas con cinco tarjetas largas. Ahora es una: tres
+ * niveles de dificultad, y cada uno empareja un origen con una economía. */
+const niveles = w.document.querySelectorAll('.velo [data-nivel]');
+ok(niveles.length === 3, `se ofrecen los tres niveles (hay ${niveles.length})`);
+ok(!!w.document.querySelector('.velo [data-elegir-yo]'),
+   'y un enlace para elegir la combinación a mano');
+clic(w, niveles[1]);          // el nivel medio
 
 cerrarModales(w);   // tarjeta de bienvenida
 ok(w.Motor.get() !== null, 'la partida quedó creada');
-ok(w.Motor.get().origen === 'remesas', 'el origen elegido se aplicó');
+ok(w.Motor.get().origen === 'remesas', 'el nivel medio aplica el origen de remesas');
+ok(w.Motor.get().dificultad === 'normal', 'y su economía');
 ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego');
 
-// ---------- navegar por las pestañas de verdad ----------
-const pests = w.document.querySelectorAll('nav.pestanas [data-pestana]');
-ok(pests.length === 5, `hay cinco pestañas (hay ${pests.length})`);
-let dibujadas = 0;
-pests.forEach(function (p) {
-  clic(w, p);
-  if (w.document.querySelector('main').innerHTML.length > 500) dibujadas++;
-});
-ok(dibujadas === 5, `las cinco pestañas se dibujan al tocarlas (${dibujadas})`);
+// ---------- el tutorial lleva paso a paso ----------
+/* La comprobación honesta de un tutorial guiado: jugar tocando UNICAMENTE lo
+ * que la cinta señala, sin saber nada del juego, y ver si llega al final.
+ *
+ * Si un paso apunta a algo que no está en pantalla, o a algo que al tocarlo no
+ * hace nada, este bucle se atasca y la prueba falla diciendo en qué paso.
+ */
+(function seguirLaCinta() {
+  const pasosVistos = [];
+  let toques = 0;
 
-// ---------- tomar un trabajo ----------
-clic(w, w.document.querySelector('[data-pestana="trabajo"]'));
-const ofertaFormal = w.document.querySelector('[data-tomar][data-formal="1"]');
-ok(!!ofertaFormal, 'hay ofertas de empleo formal');
-clic(w, ofertaFormal);
-cerrarModales(w);
-ok(w.Motor.get().empleo !== null, 'aceptar la oferta deja empleo registrado');
+  while (w.document.querySelector('.guia') && toques < 40) {
+    const paso = w.document.querySelector('.guia-paso');
+    const txt = w.document.querySelector('.guia-txt');
+    const etiqueta = (paso ? paso.textContent : '?') + ' ' +
+                     (txt ? txt.textContent.slice(0, 30) : '');
+    if (pasosVistos[pasosVistos.length - 1] !== etiqueta) pasosVistos.push(etiqueta);
 
-// ---------- abrir cuenta y ver la tarjeta educativa ----------
-clic(w, w.document.querySelector('[data-pestana="banco"]'));
-const abrirMonetaria = w.document.querySelector('[data-abrir="monetaria"]');
-ok(!!abrirMonetaria, 'se ofrece abrir la cuenta monetaria');
-clic(w, abrirMonetaria);
-const tarjeta = modalAbierto(w);
-ok(!!tarjeta && tarjeta.textContent.indexOf('monetaria') >= 0,
-   'abrir cuenta muestra su tarjeta educativa');
-cerrarModales(w);
-ok(w.Motor.get().monetaria !== null, 'la cuenta quedó abierta');
+    /* Un jugador guiado toca lo que la cinta señala; y si lo que hay que
+     * tocar está en otra pestaña, toca "Llévame ahí", que es justo para eso.
+     * Si no hay ninguna de las dos, el paso no lleva a ningún lado. */
+    // Con la geometría de mentira, el foco se dibuja en cada paso
+    if (w.document.querySelector('.senala') && !w.document.querySelector('.foco')) {
+      ok(false, 'el foco debería estar encendido en el paso ' + toques);
+    }
+    const objetivo = w.document.querySelector('.senala') ||
+                     w.document.querySelector('[data-guia-ir]');
+    if (!objetivo) break;
+    clic(w, objetivo);
+    cerrarModales(w);                     // tarjetas educativas y anuncios de la ruta
+    toques++;
+  }
 
-// ---------- asignar semanas y cerrar el turno ----------
+  ok(!w.document.querySelector('.guia'),
+     'el tutorial se completa tocando solo lo que señala (' + toques + ' toques)');
+  /* Y al terminarlo la pantalla queda limpia.
+   *
+   * El velo del foco lo dibuja un elemento aparte de la cinta, así que al
+   * apagarse la cinta se quedaba encendido: el juego terminaba el tutorial y
+   * dejaba la pantalla a oscuras con una flecha señalando un hueco vacío. */
+  ok(!w.document.querySelector('.foco'), 'y el velo oscuro se apaga con ella');
+  ok(!w.document.querySelector('.foco-flecha'), 'y la flecha también');
+  ok(!w.document.querySelector('.senala'), 'y no queda nada señalado');
+  ok(pasosVistos.length >= 8,
+     'y pasa por ' + pasosVistos.length + ' instrucciones distintas, no una sola');
+  const z = w.Motor.get();
+  ok(z.decisionEstudio !== null,
+     'al terminarlo el jugador ya decidió si estudia o no');
+  ok(z.empleo !== null && z.mesesJugados >= 1,
+     'y tiene un trabajito y un mes cerrado');
+  /* Y NO tiene cuenta en el banco, que es lo correcto: a los 13 no hay razón
+   * para tenerla, y el tutorial dejó de regalar productos financieros por
+   * obediencia. */
+  ok(z.monetaria === null && z.ahorro === null,
+     'y sigue sin cuenta en el banco, porque todavía no le hace falta');
+  if (w.document.querySelector('.guia')) {
+    console.log('           se atascó en: ' + pasosVistos[pasosVistos.length - 1]);
+  }
+})();
+
+// ---------- la ruta va abriéndose ----------
+/* Al terminar el tutorial el jugador ya tiene empleo, cuenta y un mes cerrado.
+ * Lo que se comprueba aquí es que la ruta fue abriendo cada cosa a su tiempo y
+ * que lo que todavía no toca sigue sin aparecer. */
+ok(w.Motor.desbloqueado('trabajo'), 'decidir sobre el estudio abrió el trabajo');
+ok(!w.Motor.desbloqueado('banco'),
+   'el banco todavía no: se abre cuando el efectivo empiece a irse solo');
+ok(!w.document.querySelector('[data-pestana="banco"]'), 'ni su pestaña');
+ok(w.Motor.desbloqueado('extra'), 'cerrar el primer mes abrió los trabajos extra');
+ok(w.Motor.desbloqueado('mejoras'),
+   'y con ellos las Mejoras, que es donde los números suben');
+ok(pestanasVisibles(w).length === 5,
+   'van cinco pestañas (hay ' + pestanasVisibles(w).length + ')');
+
+/* El banco llega cuando duele no tenerlo. Se le adelanta la fuga de efectivo,
+ * que es lo que el juego mira, y se cierra un mes para que la ruta lo vea. */
+w.Motor.get().totales.fugaEfectivo = 40;
 clic(w, w.document.querySelector('[data-pestana="casa"]'));
-const semanas = w.document.querySelectorAll('[data-espacio]');
-ok(semanas.length === 4, 'hay cuatro semanas para repartir');
-for (let i = 0; i < 3; i++) {
-  clic(w, w.document.querySelectorAll('[data-espacio]')[i]);
-  const bTrabajar = w.document.querySelector('[data-poner="trabajo"]');
-  ok(!!bTrabajar || i > 0, 'al tocar una semana aparecen las actividades');
-  clic(w, bTrabajar);
+ok(!!w.document.querySelector('[data-pestana="banco"]'),
+   'con el efectivo yéndose, la pestaña del banco aparece');
+ok(w.Motor.desbloqueado('ahorro') && !w.Motor.desbloqueado('monetaria'),
+   'y lo que ofrece es la cuenta de ahorro, no la monetaria');
+cerrarModales(w);
+
+clic(w, w.document.querySelector('[data-pestana="banco"]'));
+ok(!!w.document.querySelector('[data-abrir="ahorro"]'),
+   'el banco ofrece abrir la cuenta de ahorro');
+ok(!w.document.querySelector('[data-abrir="monetaria"]'),
+   'pero no la monetaria: esa la pide un patrono formal');
+ok(w.document.querySelector('main').textContent.indexOf('sin manejo de cuenta') >= 0,
+   'y dice que la de ahorro no cobra manejo');
+ok(!w.document.querySelector('#pedir-prestamo'),
+   'no hay crédito, que a los 13 no existe');
+ok(!w.document.querySelector('#abrir-pension'),
+   'ni pensión, que llega con la edad');
+ok(!w.document.querySelector('[data-sub="vivienda"]'),
+   'ni el apartado de vivienda: un menor de edad no se muda solo');
+
+// Abre la de ahorro, que es la que un chico de 13 abre de verdad
+clic(w, w.document.querySelector('[data-abrir="ahorro"]'));
+cerrarModales(w);
+ok(w.Motor.get().ahorro !== null, 'la cuenta de ahorro queda abierta');
+
+// ---------- asignar semanas y cerrar otro turno ----------
+clic(w, w.document.querySelector('[data-pestana="casa"]'));
+const casillas = w.document.querySelectorAll('[data-espacio]');
+ok(casillas.length === 8, `el mes son ocho jornadas (hay ${casillas.length})`);
+
+const bloqueadas = w.document.querySelectorAll('.jornada.bloqueado').length;
+const estudiando = w.Motor.get().estudio;
+ok(estudiando ? bloqueadas === 4 : bloqueadas === 0,
+   estudiando ? `el colegio tiene tomadas ${bloqueadas} jornadas` : 'sin colegio no hay jornadas tomadas');
+
+/* Tocar una jornada del colegio no hace nada más que explicar por qué. */
+if (bloqueadas) {
+  const tomada = w.document.querySelector('.jornada.bloqueado');
+  clic(w, tomada);
+  ok(!w.document.querySelector('.jornada.sel'),
+     'una jornada del colegio no se puede seleccionar');
+  ok(w.document.querySelector('main').textContent.indexOf('del colegio') >= 0,
+     'y el juego explica por qué en vez de quedarse callado');
 }
-clic(w, w.document.querySelectorAll('[data-espacio]')[3]);
-clic(w, w.document.querySelector('[data-poner="descanso"]'));
-ok(w.Motor.espaciosUsados('trabajo') === 3, 'quedaron tres semanas de trabajo asignadas');
+
+const cuantas = repartirJornadas(w);
+const enTrabajo2 = w.Motor.espaciosUsados('trabajo');
+ok(enTrabajo2 === cuantas - 2,
+   `quedaron ${enTrabajo2} jornadas de trabajo y dos de descanso`);
+ok(w.Motor.get().espacios.every(x => !!x), 'el mes quedó repartido completo');
+cerrarModales(w);
 
 const mesAntes = w.Motor.get().mesesJugados;
 clic(w, w.document.querySelector('#cerrar-turno'));
@@ -171,6 +310,45 @@ const resumen = modalAbierto(w).textContent;
 ok(resumen.indexOf('Salario') >= 0, 'el resumen muestra el salario cobrado');
 cerrarModales(w);
 ok(w.Motor.get().mesesJugados === mesAntes + 1, 'el mes avanzó');
+ok(w.Motor.desbloqueado('noticias'),
+   'al segundo mes se abren las noticias, que traen el mercado laboral');
+const total = pestanasVisibles(w).length;
+ok(total === 7, `y ya están las siete pestañas (hay ${total})`);
+let dibujadas = 0;
+pestanasVisibles(w).forEach(function (p) {
+  clic(w, p);
+  if (w.document.querySelector('main').innerHTML.length > 500) dibujadas++;
+});
+ok(dibujadas === 7, `las siete pestañas se dibujan al tocarlas (${dibujadas})`);
+
+// ---------- el trabajo quedó partido en apartados ----------
+clic(w, w.document.querySelector('[data-pestana="trabajo"]'));
+const subs = w.document.querySelectorAll('.sub-pestanas [data-sub]');
+ok(subs.length === 2, `trabajo tiene dos apartados hasta que se abra migrar (hay ${subs.length})`);
+ok(w.document.querySelector('.sub.activa[data-sub="empleo"]'),
+   'con empleo, el apartado que abre es Mi empleo');
+ok(w.document.querySelectorAll('[data-tomar]').length === 0,
+   'y las ofertas no están encima');
+ok(w.document.querySelector('.retrato .muneco'),
+   'mi empleo muestra al personaje vestido de su oficio');
+clic(w, w.document.querySelector('[data-sub="ofertas"]'));
+const ofertas = w.document.querySelectorAll('[data-tomar]').length;
+// Son tres trabajitos y uno ya es el suyo, asi que quedan dos con boton
+ok(ofertas === 2, `las ofertas aparecen al tocar su apartado (${ofertas})`);
+ok(w.document.querySelector('main').textContent.indexOf('te falta') < 0,
+   'y lo que todavía no puede tomar no se le muestra: no existe hasta que se abra');
+ok(!!w.document.querySelector('.oferta .oferta-retrato .muneco'),
+   'cada oferta trae al personaje vestido de ese oficio');
+ok(w.document.querySelectorAll('[data-tomar][data-formal="1"]').length === 0,
+   'a un menor de edad nadie le ofrece un contrato formal');
+ok(w.document.querySelector('main').textContent.indexOf('Mercado laboral') < 0,
+   'y el mercado laboral ya no está en trabajo');
+
+// ---------- el mercado laboral vive en noticias ----------
+clic(w, w.document.querySelector('[data-pestana="noticias"]'));
+const noticias = w.document.querySelector('main').textContent;
+ok(noticias.indexOf('Mercado laboral') >= 0, 'noticias trae el mercado laboral');
+ok(noticias.indexOf('Lo que ha pasado') >= 0, 'y la bitácora de lo que ha pasado');
 
 // ---------- el guardado sobrevive a recargar ----------
 const patrimonio = w.Motor.patrimonio();
@@ -181,23 +359,49 @@ ok(Math.abs(w.Motor.patrimonio() - patrimonio) < 0.01, 'al recargar, el patrimon
 
 // ---------- pedir monto en una ventana con campo ----------
 clic(w, w.document.querySelector('[data-pestana="banco"]'));
-const abrirAhorro = w.document.querySelector('[data-abrir="ahorro"]');
-if (abrirAhorro) { clic(w, abrirAhorro); cerrarModales(w); }
-clic(w, w.document.querySelector('[data-pestana="banco"]'));
-const mover = w.document.querySelector('[data-mover="monetaria|ahorro"]');
-ok(!!mover, 'se ofrece mover dinero entre cuentas');
+const mover = w.document.querySelector('[data-mover="efectivo|ahorro"]');
+ok(!!mover, 'se ofrece mover dinero del efectivo al ahorro');
 if (mover) {
   const antesAhorro = w.Motor.get().ahorro;
   clic(w, mover);
   const campo = w.document.querySelector('.velo #monto');
   ok(!!campo, 'la ventana de monto trae su campo numérico');
   if (campo) {
-    campo.value = '150';
+    // Un chico de 13 mueve quetzales, no cientos
+    campo.value = '20';
     clic(w, w.document.querySelector('.velo #ok'));
     ok(w.Motor.get().ahorro > antesAhorro, 'el traslado de dinero se ejecutó');
   }
   cerrarModales(w);
 }
+
+// ---------- la monetaria y su manejo de cuenta ----------
+/* Es la diferencia que el juego quiere enseñar: la de ahorro no cuesta nada, y
+ * la monetaria cobra manejo a quien no trae planilla de una empresa. */
+(function manejoDeCuenta() {
+  const z = w.Motor.get();
+  z.edad = 18;
+  z.vistos.cumplio18 = true;
+  z.efectivo = 600;             // ya es adulto: el mínimo de apertura sube a Q200
+  clic(w, w.document.querySelector('[data-pestana="casa"]'));
+  cerrarModales(w);
+  ok(w.Motor.desbloqueado('monetaria'), 'a los 18 se abre la monetaria');
+  clic(w, w.document.querySelector('[data-pestana="banco"]'));
+  const abrirMon = w.document.querySelector('[data-abrir="monetaria"]');
+  ok(!!abrirMon, 'y el banco la ofrece');
+  ok(w.document.querySelector('main').textContent.indexOf('manejo') >= 0,
+     'diciendo de entrada que cobra manejo de cuenta');
+  clic(w, abrirMon);
+  cerrarModales(w);
+  ok(z.monetaria !== null, 'la monetaria queda abierta');
+  ok(w.Motor.manejoDeCuenta() > 0,
+     `y el banco le cobra Q${w.Motor.manejoDeCuenta()} al mes, porque nadie le acredita planilla`);
+  w.Motor.tomarTrabajo('tienda', true);
+  ok(w.Motor.manejoDeCuenta() === 0,
+     'con un empleo formal el manejo desaparece: al banco le interesa la planilla');
+  w.Motor.tomarTrabajo('tienda', false);
+  ok(w.Motor.manejoDeCuenta() > 0, 'y en informal vuelve a cobrarse');
+})();
 
 // ---------- el menú de opciones y el cambio de idioma ----------
 clic(w, w.document.querySelector('[data-abrir-menu]'));
@@ -208,14 +412,29 @@ clic(w, btnIdioma);
 ok(w.Idioma.actual() === 'en', 'el idioma cambió a inglés');
 cerrarModales(w);
 clic(w, w.document.querySelector('[data-pestana="banco"]'));
-ok(w.document.querySelector('main').textContent.indexOf('Cash on hand') >= 0,
+ok(w.document.querySelector('main').textContent.indexOf('In hand') >= 0,
    'la interfaz se redibuja en inglés');
 w.Idioma.poner('es');
 clic(w, w.document.querySelector('[data-pestana="banco"]'));
 
+// ---------- la pantalla de "Yo" ----------
+/* Lo que el jugador ES (su patrimonio, su historial, su nivel) salió de la
+ * pestaña del banco y vive aquí, detrás del muñeco de la barra de arriba. */
+clic(w, w.document.querySelector('[data-pestana="banco"]'));
+ok(w.document.querySelector('main').textContent.indexOf('Patrimonio') < 0,
+   'el banco ya no muestra el patrimonio: eso no es un producto');
+
+clic(w, w.document.querySelector('[data-ver-perfil]'));
+const perfil = modalAbierto(w);
+ok(!!perfil, 'el muñeco de la barra abre la pantalla de Yo');
+ok(!!perfil && perfil.textContent.indexOf('Patrimonio') >= 0,
+   'y ahí sí está el patrimonio');
+ok(!!perfil && !!perfil.querySelector('.retrato.grande .muneco'),
+   'con el personaje en grande');
+
 // ---------- glosario ----------
-const bGlos = w.document.querySelector('#ver-glosario');
-ok(!!bGlos, 'el banco ofrece el glosario');
+const bGlos = w.document.querySelector('.velo #ver-glosario');
+ok(!!bGlos, 'la pantalla de Yo ofrece el glosario');
 clic(w, bGlos);
 const glos = modalAbierto(w);
 ok(!!glos && glos.querySelectorAll('.glosa').length >= 19,
@@ -224,7 +443,7 @@ cerrarModales(w);
 
 // ---------- un minijuego, con sus temporizadores de verdad ----------
 clic(w, w.document.querySelector('[data-pestana="casa"]'));
-clic(w, w.document.querySelectorAll('[data-espacio]')[0]);
+clic(w, jornadasLibres(w)[0]);
 clic(w, w.document.querySelector('[data-poner="minijuego"]'));
 clic(w, w.document.querySelector('[data-pestana="extra"]'));
 const bJugar = w.document.querySelector('[data-jugar="estafas"]');

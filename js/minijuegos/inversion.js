@@ -7,7 +7,7 @@
 Minijuegos.registrar({
   id: 'inversion',
   nombre: 'Decisión de inversión',
-  icono: '📊',
+  icono: 'barras',
   tipo: 'avanzado',
   requiereNivel: 'maestria',
   requiereCarrera: 'maestria',

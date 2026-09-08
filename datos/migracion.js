@@ -30,16 +30,16 @@ var MIGRACION = {
 
   // Trabajos disponibles allá, en dólares al mes
   empleos: [
-    { id: 'construccion_us', nombre: 'Construcción', icono: '🔨',
-      sueldoDolares: 2600, varianza: 0.15, requisito: 'bachiller',
+    { id: 'construccion_us', nombre: 'Construcción', icono: 'martillo',
+      sueldoDolares: 2600, varianza: 0.15, requisito: 'primaria',
       descripcion: 'Duro y bien pagado. Sin papeles, sin protección.' },
-    { id: 'restaurante_us', nombre: 'Cocina en restaurante', icono: '🍳',
-      sueldoDolares: 2300, varianza: 0.08, requisito: 'bachiller',
+    { id: 'restaurante_us', nombre: 'Cocina en restaurante', icono: 'sarten',
+      sueldoDolares: 2300, varianza: 0.08, requisito: 'primaria',
       descripcion: 'Turnos largos y estables.' },
-    { id: 'limpieza_us', nombre: 'Limpieza', icono: '🧹',
-      sueldoDolares: 2000, varianza: 0.10, requisito: 'bachiller',
+    { id: 'limpieza_us', nombre: 'Limpieza', icono: 'escoba',
+      sueldoDolares: 2000, varianza: 0.10, requisito: 'primaria',
       descripcion: 'Lo más fácil de conseguir al llegar.' },
-    { id: 'tecnico_us', nombre: 'Técnico especializado', icono: '⚙️',
+    { id: 'tecnico_us', nombre: 'Técnico especializado', icono: 'engranaje',
       sueldoDolares: 3800, varianza: 0.10, requisito: 'tecnico',
       descripcion: 'Tu título vale allá. No todos pueden entrar aquí.' }
   ],

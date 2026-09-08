@@ -6,7 +6,7 @@
 Minijuegos.registrar({
   id: 'presupuesto',
   nombre: 'Cuadra el mes',
-  icono: '🧾',
+  icono: 'recibo',
   tipo: 'basico',
   descripcion: 'Reparte el sueldo. Van a caer imprevistos.',
   ensena: 'Sin un colchón, cualquier imprevisto se vuelve deuda.',
@@ -16,11 +16,11 @@ Minijuegos.registrar({
 
   jugar: function (caja, api) {
     var CATEGORIAS = [
-      { id: 'renta',      nombre: 'Renta y servicios', icono: '🏠', minimo: 0.35, esencial: true },
-      { id: 'comida',     nombre: 'Comida',            icono: '🍲', minimo: 0.20, esencial: true },
-      { id: 'transporte', nombre: 'Transporte',        icono: '🚌', minimo: 0.08, esencial: true },
-      { id: 'ocio',       nombre: 'Gustos',            icono: '🎉', minimo: 0,    esencial: false },
-      { id: 'colchon',    nombre: 'Fondo de emergencia', icono: '🛟', minimo: 0,  esencial: false }
+      { id: 'renta',      nombre: 'Renta y servicios', icono: 'casa', minimo: 0.35, esencial: true },
+      { id: 'comida',     nombre: 'Comida',            icono: 'plato', minimo: 0.20, esencial: true },
+      { id: 'transporte', nombre: 'Transporte',        icono: 'bus', minimo: 0.08, esencial: true },
+      { id: 'ocio',       nombre: 'Gustos',            icono: 'confeti', minimo: 0,    esencial: false },
+      { id: 'colchon',    nombre: 'Fondo de emergencia', icono: 'salvavidas', minimo: 0,  esencial: false }
     ];
 
     var IMPREVISTOS = [
@@ -54,7 +54,7 @@ Minijuegos.registrar({
                    restante() + '</strong></span></p><div class="mj-presu">';
         CATEGORIAS.forEach(function (c) {
           html += '<div class="mj-cat">' +
-            '<div class="mj-cat-nom">' + c.icono + ' ' + c.nombre +
+            '<div class="mj-cat-nom">' + Ico(c.icono) + ' ' + c.nombre +
               (c.esencial ? ' <span class="etiqueta">mínimo Q' + Math.round(sueldo * c.minimo) + '</span>' : '') +
             '</div>' +
             '<div class="mj-cat-ctrl">' +

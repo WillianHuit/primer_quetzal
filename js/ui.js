@@ -11,6 +11,39 @@ var UI = (function () {
   var espacioSel = null;
   var app;
 
+  /* El orden importa: de el sale el sentido en que se desliza la vista al
+   * cambiar de pestaña. Tocar una pestaña de la derecha entra desde la
+   * derecha, y al revés. Sin eso el cambio no se siente como un lugar al que
+   * te moviste, solo como un parpadeo. */
+  /* El estudio va antes que el trabajo porque ese es el orden en que se
+   * viven: a los 13 la decisión es el colegio, y el trabajo viene después. */
+  var ORDEN = ['casa', 'estudio', 'trabajo', 'mejoras', 'banco', 'extra', 'noticias'];
+  var sentido = 0;        // -1 izquierda, +1 derecha, 0 sin animación
+  var pestanaPrevia = 'casa';
+
+  /* Las pestañas que hoy existen. El mes está siempre; las demás se abren por
+   * la ruta de datos/progreso.js. Todo lo que reparte ancho o calcula el
+   * sentido del deslizamiento se cuenta sobre ESTA lista, no sobre las cinco,
+   * porque si no la marca de la pestaña activa apunta a un hueco. */
+  function ordenVisible() {
+    return ORDEN.filter(function (id) {
+      return id === 'casa' || Motor.desbloqueado(id);
+    });
+  }
+
+  /* Cambia de pestaña calculando el sentido. Lo usan tanto la barra de abajo
+   * como la guía del primer turno, para que las dos se vean igual. */
+  function irAPestana(id) {
+    if (!id || id === pestana) { sentido = 0; return; }
+    var orden = ordenVisible();
+    var de = orden.indexOf(pestana), a = orden.indexOf(id);
+    sentido = (de < 0 || a < 0 || a > de) ? 1 : -1;
+    pestanaPrevia = pestana;
+    pestana = id;
+    espacioSel = null;
+    subDe.trabajo = null; subDe.banco = null; verDetalle = false;
+  }
+
   // Plantillas de las lecciones del reporte. El motor devuelve clave y datos.
   var LECCIONES = {
     fuga: 'Se te fueron {0} en gastos hormiga del efectivo. Ese dinero no compró nada que recuerdes.',
@@ -26,14 +59,19 @@ var UI = (function () {
     bien: 'Vas bien. Sigue apartando antes de gastar y cuidando tu historial.'
   };
 
+  /* El signo va antes de la Q. "Q-2,312" se lee como un codigo; "-Q2,312"
+   * se lee como lo que es. */
   function Q(n) {
     if (n === null || n === undefined || isNaN(n)) return '—';
     var loc = Idioma.actual() === 'en' ? 'en-US' : 'es-GT';
-    return 'Q' + Number(n).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var v = Number(n);
+    return (v < 0 ? '-Q' : 'Q') +
+           Math.abs(v).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   function Q0(n) {
     var loc = Idioma.actual() === 'en' ? 'en-US' : 'es-GT';
-    return 'Q' + Math.round(Number(n) || 0).toLocaleString(loc);
+    var v = Math.round(Number(n) || 0);
+    return (v < 0 ? '-Q' : 'Q') + Math.abs(v).toLocaleString(loc);
   }
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
@@ -41,6 +79,32 @@ var UI = (function () {
     });
   }
   function pct(n) { return Math.round(n * 100) + '%'; }
+
+  /* Una pastilla: icono + dato, sin etiqueta.
+   *
+   * Reemplaza a las filas de "Etiqueta ....... valor" en las listas largas.
+   * Tres pastillas se leen de un vistazo; tres filas de texto hay que leerlas.
+   */
+  function pastilla(icono, texto, clase) {
+    return '<span class="pastilla' + (clase ? ' ' + clase : '') + '">' +
+           (icono ? Ico(icono) : '') + '<b>' + texto + '</b></span>';
+  }
+  function pastillas(lista) {
+    return '<div class="pastillas">' + lista.filter(Boolean).join('') + '</div>';
+  }
+
+  /* Un párrafo de los que enseñan, guardado detrás de un toque.
+   *
+   * El juego tiene mucho que explicar y quien lo juega tiene 14 años. La
+   * explicación no se borra: se esconde, y sale cuando la pide. */
+  function porQue(clave, cuerpo, etiqueta) {
+    return '<div class="porque' + (abiertos[clave] ? ' abierto' : '') + '">' +
+      '<button class="porque-btn" data-porque="' + clave + '">' +
+        Ico('libro') + ' ' + (etiqueta || T('¿Por qué?')) + '</button>' +
+      (abiertos[clave] ? '<div class="porque-cuerpo">' + cuerpo + '</div>' : '') +
+      '</div>';
+  }
+  var abiertos = {};   // qué explicaciones dejó abiertas el jugador
   function fila(etq, val, cls) {
     return '<div class="fila"><span class="etq">' + etq + '</span>' +
            '<span class="val ' + (cls || '') + '">' + val + '</span></div>';
@@ -62,9 +126,9 @@ var UI = (function () {
 
   function barra() {
     var e = Motor.get();
+    var t = Motor.trabajoActual();
     var energiaPct = Math.round((e.energia / CONFIG.energia.maxima) * 100);
     var baja = e.energia < CONFIG.energia.umbralRiesgo ? ' baja' : '';
-    var tramo = Motor.tramoPuntaje();
     var etapa = Motor.etapaActual();
     var deuda = Motor.deudaTotal();
 
@@ -73,22 +137,154 @@ var UI = (function () {
         '<div class="fecha">' +
           T('{0} {1} · {2} años', nombreMes(e.mes), e.anio, e.edad) +
           (etapa.mesesPorTurno > 1 ? ' · ' + T('turnos por {0}', turnoNombre()) : '') +
-          '<button class="barra-btn" data-abrir-menu>⋯</button>' +
+          '<button class="barra-btn" data-abrir-menu>' + Ico('puntos') + '</button>' +
         '</div>' +
         '<div class="cifras">' +
+          // El muñeco es el botón de "Yo": lo que el jugador es, aparte de
+          // lo que el jugador hace.
+          '<button class="avatar" data-ver-perfil="1" aria-label="' + T('Yo') + '">' +
+            Muneco({ trabajo: t ? t.id : null, estudia: !!e.estudio,
+                     graduado: e.carrerasTerminadas.length > 0 && !e.estudio }) +
+          '</button>' +
           '<span class="dinero">' + Q0(Motor.patrimonio()) + '</span>' +
-          '<span class="chip">⚡ ' + Math.round(e.energia) + '</span>' +
-          '<span class="chip">📊 ' + Math.round(e.puntaje) + '</span>' +
+          '<span class="chip">' + Ico('rayo') + ' ' + Math.round(e.energia) + '</span>' +
           (deuda > 0 ? '<span class="chip alerta">' + T('debe {0}', Q0(deuda)) + '</span>' : '') +
         '</div>' +
         '<div class="energia-barra"><div class="energia-relleno' + baja +
           '" style="width:' + energiaPct + '%"></div></div>' +
-        '<div class="fecha" style="margin-top:4px">' +
-          T('Historial: {0}', K('tramos', tramo.nombre, tramo.nombre)) + '</div>' +
       '</div>';
   }
 
   // =============== pestaña: el mes ===============
+
+  /* La meta que sigue, en una tarjeta discreta.
+   *
+   * Es el tutorial cuando el tutorial ya no estorba: mientras la cinta de
+   * abajo esté diciendo lo mismo, esto se calla. Cuando la cinta termina, la
+   * ruta sigue existiendo y esta tarjeta es la única que la menciona. */
+  function tarjetaLoQueSigue() {
+    var e = Motor.get();
+    /* Con el tutorial saltado, los pasos que solo enseñan a navegar ("toca la
+     * pestaña Estudio") no son una meta: son una instruccion que ya nadie
+     * pidio. Se persiguen solo los peldaños que abren algo. */
+    var sig = Motor.siguientePeldano(!!e.vistos.guiaSaltada);
+    if (!sig) return '';
+    if (sig.peldano.guia && !e.vistos.guiaSaltada) return '';   // ya lo dice la cinta
+    return '<div class="tarjeta sigue">' +
+      '<div class="titulo">' + Ico('bandera-meta') + ' ' + T('Lo que sigue') + '</div>' +
+      '<p class="sutil" style="margin:7px 0 0">' +
+        esc(K('progreso_pista', sig.peldano.id, sig.peldano.pista)) + '</p>' +
+      '</div>';
+  }
+
+  /* El mes, dibujado: cuatro semanas de dos jornadas.
+   *
+   * Antes eran cuatro cuadros y una semana entera era la unidad más chica que
+   * el jugador podía mover, así que "estudio por la mañana y trabajo por la
+   * tarde" —que es como vive medio país— no se podía representar. Ahora la
+   * fila de arriba son las mañanas y la de abajo las tardes.
+   *
+   * Las casillas del colegio salen marcadas y no se pueden tocar: eso no es
+   * una limitación de la interfaz, es la regla. */
+  function rejillaJornadas(e) {
+    var iconos = { trabajo: 'maletin', estudio: 'birrete', minijuego: 'mando',
+                   'minijuego-usado': 'visto', descanso: 'luna', '': 'mas' };
+    var claves = { trabajo: 'Trabajo', estudio: 'Estudio', minijuego: 'Extra',
+                   'minijuego-usado': 'Hecho', descanso: 'Descanso', '': 'Libre' };
+    var semanas = CONFIG.jornadasPorMes / CONFIG.jornadasPorSemana;
+
+    var h = '<div class="jornadas" style="--semanas:' + semanas + '">';
+    h += '<div class="jor-eje"></div>';
+    for (var c = 0; c < semanas; c++) h += '<div class="jor-cab">' + T('Sem {0}', c + 1) + '</div>';
+
+    ['am', 'pm'].forEach(function (j) {
+      var icoJornada = j === 'am' ? 'manana' : 'tarde';
+      h += '<div class="jor-eje" title="' + (j === 'am' ? T('Mañana') : T('Tarde')) + '">' +
+           Ico(icoJornada) + '</div>';
+      for (var sm = 0; sm < semanas; sm++) {
+        var i = Motor.indiceDe(sm, j);
+        var tipo = e.espacios[i];
+        var bloq = Motor.espacioBloqueado(i);
+        h += '<div class="jornada' + (tipo ? ' lleno' : '') + (bloq ? ' bloqueado' : '') +
+             (espacioSel === i ? ' sel' : '') + '" data-espacio="' + i + '">' +
+             '<div class="ic-caja">' + Ico(bloq ? 'birrete' : iconos[tipo]) + '</div>' +
+             '<div class="nom">' + T(claves[tipo]) + '</div></div>';
+      }
+    });
+    return h + '</div>';
+  }
+
+  /* Lo que va a pasar al cerrar el mes, en tres cifras.
+   *
+   * Eran doce filas de texto. Un chico de catorce años no lee doce filas: lee
+   * "entra tanto, sale tanto, te queda tanto" y, si quiere, abre el detalle. */
+  function tarjetaLoQueViene(e, t, v, puedeTrabajar) {
+    var espT = Motor.espaciosUsados('trabajo');
+    var entra = 0;
+    if (e.migracion && espT > 0) {
+      var empM = buscar(MIGRACION.empleos, e.migracion.empleoId);
+      entra = empM.sueldoDolares * CONFIG.tipoCambio * Motor.proporcionPago(espT);
+    } else if (t && espT > 0) {
+      entra = Motor.salarioEsperado(t, e.empleo.formal) * Motor.proporcionPago(espT, t) +
+              Motor.bonoPorJornada() * espT;
+    }
+    if (Motor.esMenor()) entra += e.mesada || 0;
+    // El negocio produce sin gastar jornadas: es la entrada que no cuesta tiempo
+    var efM = Motor.efectosDeMejoras();
+    entra += efM.ingresoPasivo;
+
+    var detalle = [];
+    if (efM.costoMensual) detalle.push([T('Mantenimiento de tus mejoras'), efM.costoMensual]);
+
+    var nombreVivienda = e.migracion ? T('Vivir en Estados Unidos')
+                       : (e.casa ? D(buscar(CASAS, e.casa.id), 'nombre')
+                                 : K('vivienda_nombre', e.vivienda, v ? v.nombre : ''));
+    var gasto = Motor.gastoMensualVivienda();
+    detalle.push([Motor.esMenor() && !e.migracion ? T('Tus gastos') : T('{0} y gastos', esc(nombreVivienda)),
+                  gasto]);
+    if (e.estudio) detalle.push([T('Colegiatura'), Motor.costoMensualEstudio()]);
+    if (Motor.manejoDeCuenta() > 0) detalle.push([T('Manejo de cuenta'), Motor.manejoDeCuenta()]);
+    if (e.hipoteca) detalle.push([T('Cuota de hipoteca'), e.hipoteca.cuota]);
+    if (e.pension && e.pension.aporteMensual > 0) detalle.push([T('Aporte a pensión'), e.pension.aporteMensual]);
+    var cuotas = 0;
+    for (var k = 0; k < e.prestamos.length; k++) cuotas += e.prestamos[k].cuota;
+    if (cuotas > 0) detalle.push([T('Cuotas de crédito'), cuotas]);
+    if (e.tarjeta && e.tarjeta.saldo > 0) {
+      detalle.push([T('Pago de tarjeta'),
+        Math.max(50, e.tarjeta.saldo * CREDITOS.tarjeta.pagoMinimoPorcentaje)]);
+    }
+    if (e.deudaHogar > 0) detalle.push([T('Lo que quedaste debiendo'), e.deudaHogar]);
+    if (e.efectivo > 0) {
+      detalle.push([T('Se te irá del efectivo'),
+        Math.min(e.efectivo * CONFIG.efectivo.fugaMensual, CONFIG.efectivo.fugaMaxima)]);
+    }
+    var sale = detalle.reduce(function (a, d) { return a + d[1]; }, 0);
+    var queda = entra - sale;
+
+    var h = '<div class="tarjeta resumen-mes">';
+    h += '<div class="tres-cifras">' +
+      '<div><span class="etq">' + T('Entra') + '</span><b class="pos">' + Q0(entra) + '</b></div>' +
+      '<div><span class="etq">' + T('Sale') + '</span><b class="neg">' + Q0(sale) + '</b></div>' +
+      '<div class="queda"><span class="etq">' + T('Queda') + '</span><b class="' +
+        (queda >= 0 ? 'pos' : 'neg') + '">' + Q0(queda) + '</b></div>' +
+      '</div>';
+    if (puedeTrabajar && espT > 0 && espT < CONFIG.jornadasPorMes) {
+      h += '<p class="sutil">' +
+        T('Trabajas {0} de {1} jornadas: cobras el {2} del sueldo.',
+          espT, CONFIG.jornadasPorMes, pct(Motor.proporcionPago(espT, t))) + '</p>';
+    }
+    h += '<button class="porque-btn" data-detalle="1">' + Ico(verDetalle ? 'visto' : 'mas') + ' ' +
+         (verDetalle ? T('Ocultar el detalle') : T('Ver a dónde se va')) + '</button>';
+    if (verDetalle) {
+      h += '<div class="porque-cuerpo">';
+      detalle.forEach(function (d) { h += fila(d[0], '-' + Q(d[1]), 'neg'); });
+      h += '</div>';
+    }
+    return h + '</div>';
+  }
+
+  var verDetalle = false;
+  var avisoBloqueo = false;
 
   function vistaCasa() {
     var e = Motor.get();
@@ -112,187 +308,226 @@ var UI = (function () {
         T('Tu primer año es tranquilo. No van a caer imprevistos mientras agarras el ritmo.') + '</div>';
     }
 
-    h += '<div class="tarjeta"><p class="sutil">' +
-         T('Cuatro semanas. Toca una y elige en qué la usas.');
+    h += '<div class="tarjeta">';
     if (etapa.mesesPorTurno > 1) {
-      h += ' ' + T('Este reparto se repite los {0} meses del {1}.', etapa.mesesPorTurno, turnoNombre());
-    }
-    h += '</p><div class="semanas">';
-
-    var iconos = { trabajo: '💼', estudio: '🎓', minijuego: '🎮', 'minijuego-usado': '✅', descanso: '😴', '': '＋' };
-    var claves = { trabajo: 'Trabajo', estudio: 'Estudio', minijuego: 'Extra',
-                   'minijuego-usado': 'Hecho', descanso: 'Descanso', '': 'Libre' };
-    for (var i = 0; i < e.espacios.length; i++) {
-      var tipo = e.espacios[i];
-      h += '<div class="semana' + (tipo ? ' lleno' : '') + (espacioSel === i ? ' sel' : '') +
-           '" data-espacio="' + i + '"><div>' + iconos[tipo] + '</div>' +
-           '<div class="nom">' + T(claves[tipo]) + '</div></div>';
-    }
-    h += '</div>';
-
-    var puedeTrabajar = t || e.migracion;
-    if (espacioSel !== null) {
-      h += '<div class="btn-fila" style="margin-top:10px">';
-      h += '<button class="btn-chico" data-poner="trabajo"' + (puedeTrabajar ? '' : ' disabled') + '>💼 ' + T('Trabajar') + '</button>';
-      h += '<button class="btn-chico" data-poner="estudio"' + (e.estudio ? '' : ' disabled') + '>🎓 ' + T('Estudiar') + '</button>';
-      h += '<button class="btn-chico" data-poner="minijuego">🎮 ' + T('Extra') + '</button>';
-      h += '<button class="btn-chico" data-poner="descanso">😴 ' + T('Descansar') + '</button>';
-      h += '<button class="btn-chico" data-poner="">' + T('Vaciar') + '</button>';
-      h += '</div>';
-      if (!puedeTrabajar) h += '<p class="aviso">' + T('No tienes trabajo. Busca uno en la pestaña de trabajo.') + '</p>';
-      if (!e.estudio) h += '<p class="sutil" style="margin-top:6px">' + T('Para estudiar, inscríbete primero.') + '</p>';
-    }
-    h += '</div>';
-
-    var espT = Motor.espaciosUsados('trabajo');
-    var estimado = 0;
-    if (e.migracion && espT > 0) {
-      var empM = buscar(MIGRACION.empleos, e.migracion.empleoId);
-      estimado = empM.sueldoDolares * CONFIG.tipoCambio * Motor.proporcionPago(espT);
-    } else if (t && espT > 0) {
-      estimado = Motor.salarioEsperado(t, e.empleo.formal) * Motor.proporcionPago(espT);
-    }
-    h += '<div class="tarjeta"><h3 style="margin-top:0">' + T('Lo que viene') + '</h3>';
-    h += fila(T('Ingreso estimado'), Q(estimado), estimado > 0 ? 'pos' : '');
-    if (puedeTrabajar && espT > 0 && espT < 4) {
       h += '<p class="sutil">' +
-        T('Trabajas {0} de 4 semanas, así que cobras el {1} del sueldo.', espT, pct(Motor.proporcionPago(espT))) +
+        T('Este reparto se repite los {0} meses del {1}.', etapa.mesesPorTurno, turnoNombre()) +
         '</p>';
     }
-    var nombreVivienda = e.migracion ? T('Vivir en Estados Unidos')
-                       : (e.casa ? D(buscar(CASAS, e.casa.id), 'nombre')
-                                 : K('vivienda_nombre', e.vivienda, v ? v.nombre : ''));
-    h += fila(T('{0} y gastos', esc(nombreVivienda)), '-' + Q(Motor.gastoMensualVivienda()), 'neg');
-    if (e.hipoteca) h += fila(T('Cuota de hipoteca'), '-' + Q(e.hipoteca.cuota), 'neg');
-    if (e.pension && e.pension.aporteMensual > 0) {
-      h += fila(T('Aporte a pensión'), '-' + Q(e.pension.aporteMensual));
+    h += rejillaJornadas(e);
+
+    var puedeTrabajar = t || e.migracion;
+    if (avisoBloqueo) {
+      h += '<p class="aviso">' + T('Esa jornada es del colegio. Mientras estés inscrito no se puede vaciar.') + '</p>';
+      avisoBloqueo = false;
     }
-    if (e.estudio) h += fila(T('Colegiatura'), '-' + Q(Motor.costoMensualEstudio()), 'neg');
-    var cuotas = 0;
-    for (var k = 0; k < e.prestamos.length; k++) cuotas += e.prestamos[k].cuota;
-    if (cuotas > 0) h += fila(T('Cuotas de crédito'), '-' + Q(cuotas), 'neg');
-    if (e.tarjeta && e.tarjeta.saldo > 0) {
-      h += fila(T('Pago de tarjeta'),
-        '-' + Q(Math.max(50, e.tarjeta.saldo * CREDITOS.tarjeta.pagoMinimoPorcentaje)), 'neg');
-    }
-    if (e.deudaHogar > 0) h += fila(T('Lo que quedaste debiendo'), '-' + Q(e.deudaHogar), 'neg');
-    if (e.efectivo > 0) {
-      h += fila(T('Se te irá del efectivo'),
-        '-' + Q(Math.min(e.efectivo * CONFIG.efectivo.fugaMensual, CONFIG.efectivo.fugaMaxima)), 'neg');
+    if (espacioSel !== null) {
+      h += '<div class="btn-fila acciones-jornada">';
+      h += '<button class="btn-chico" data-poner="trabajo"' + (puedeTrabajar ? '' : ' disabled') + '>' + Ico('maletin') + ' ' + T('Trabajar') + '</button>';
+      // Estudiar solo tiene sentido con una carrera de horario libre: en el
+      // colegio las jornadas ya vienen puestas y no se agregan a mano.
+      if (e.estudio && !e.estudio.jornada) {
+        h += '<button class="btn-chico" data-poner="estudio">' + Ico('birrete') + ' ' + T('Estudiar') + '</button>';
+      }
+      if (Motor.desbloqueado('extra')) {
+        h += '<button class="btn-chico" data-poner="minijuego">' + Ico('mando') + ' ' + T('Extra') + '</button>';
+      }
+      h += '<button class="btn-chico" data-poner="descanso">' + Ico('luna') + ' ' + T('Descansar') + '</button>';
+      h += '<button class="btn-chico" data-poner="">' + T('Vaciar') + '</button>';
+      h += '</div>';
+      if (!puedeTrabajar) h += '<p class="aviso">' + T('Todavía no tienes trabajo. Búscalo en la pestaña Trabajo.') + '</p>';
     }
     h += '</div>';
 
+    h += tarjetaLoQueSigue();
+
+    h += tarjetaLoQueViene(e, t, v, puedeTrabajar);
+
     h += '<button class="btn-primario" id="cerrar-turno">' + T('Terminar el {0}', turnoNombre()) + ' ▸</button>';
-    h += '<div class="btn-fila" style="margin-top:8px"><button class="btn-chico" id="adelantar" style="flex:1">⏩ ' +
+    h += '<div class="btn-fila" style="margin-top:8px"><button class="btn-chico" id="adelantar" style="flex:1">' + Ico('adelantar') + ' ' +
          T('Adelantar hasta que pase algo') + '</button></div>';
     return h;
   }
 
   // =============== pestaña: trabajo ===============
 
+  /* Tres apartados en vez de una sola lista larga.
+   *
+   * Esta era la pantalla más larga del juego: el empleo actual, el mercado
+   * laboral, las trece ofertas y la decisión de irse del país, todo seguido.
+   * La decisión que de verdad importa —aceptar una oferta— quedaba enterrada a
+   * dos pantallazos de scroll. El mercado laboral se fue a Noticias, porque no
+   * es algo que se hace sino algo que se lee, y el resto quedó en apartados.
+   */
+  var SUB_TRABAJO = [
+    { id: 'empleo',  ic: 'maletin',      tx: 'Mi empleo' },
+    { id: 'ofertas', ic: 'portapapeles', tx: 'Ofertas' },
+    { id: 'migrar',  ic: 'avion',        tx: 'Irme del país' }
+  ];
+
+  /* Qué apartado tiene abierto cada pestaña que está partida en apartados.
+   * null = el que tenga sentido según el estado de la partida. */
+  var subDe = { trabajo: null, banco: null };
+
+  function subTrabajoActivo() {
+    var e = Motor.get();
+    var visibles = SUB_TRABAJO.filter(function (sp) {
+      return sp.id !== 'migrar' || Motor.desbloqueado('migrar');
+    });
+    // Sin empleo, la pantalla útil es la de ofertas y no la de "no tienes nada"
+    var elegido = subDe.trabajo || (e.empleo ? 'empleo' : 'ofertas');
+    var existe = visibles.some(function (sp) { return sp.id === elegido; });
+    return { id: existe ? elegido : visibles[0].id, visibles: visibles };
+  }
+
+  /* Barra de apartados dentro de una pestaña. Genérica a propósito: si mañana
+   * otra pestaña se parte, se dibuja igual. */
+  function subPestanas(sub) {
+    var h = '<div class="sub-pestanas">';
+    sub.visibles.forEach(function (sp) {
+      h += '<button class="sub' + (sub.id === sp.id ? ' activa' : '') +
+           '" data-sub="' + sp.id + '">' + Ico(sp.ic) +
+           '<span>' + T(sp.tx) + '</span></button>';
+    });
+    return h + '</div>';
+  }
+
   function vistaTrabajo() {
     var e = Motor.get();
-    var actual = Motor.trabajoActual();
     var h = '<h2>' + T('Trabajo') + '</h2>';
 
-    // ----- viviendo fuera del país -----
-    if (e.migracion) {
-      var g = e.migracion;
-      var emp = buscar(MIGRACION.empleos, g.empleoId);
-      var canal = MIGRACION.canales[g.canal];
-      h += '<div class="tarjeta acento"><div class="titulo">' + emp.icono + ' ' +
-           esc(D(emp, 'nombre')) + '</div>';
-      h += '<p class="sutil" style="margin:6px 0">' + T('Estás en Estados Unidos.') + '</p>';
-      h += fila(T('Sueldo'), 'US$' + emp.sueldoDolares.toLocaleString());
-      h += fila(T('Costo de vida allá'), '-US$' + MIGRACION.costoVidaDolares.toLocaleString(), 'neg');
-      h += fila(T('Tiempo fuera'), T('{0} meses', g.mesesFuera));
-      h += fila(T('Ahorro que llevas allá'), Q(g.ahorroDolares * CONFIG.tipoCambio), 'pos');
-      h += '</div>';
+    // Viviendo fuera del país no hay apartados: la vida laboral es una sola
+    if (e.migracion) return h + trabajoFuera();
 
-      h += '<h3>' + T('Lo que mandas a casa') + '</h3><div class="tarjeta">';
-      h += fila(T('Mandas'), pct(g.enviaPorcentaje) + ' ' + T('de lo que te sobra'));
-      h += fila(T('Por'), esc(K('canal_nombre', g.canal, canal.nombre)));
-      h += fila(T('Comisión'), pct(canal.comision), 'neg');
-      h += fila(T('Enviado hasta hoy'), Q(e.totalEnviado), 'pos');
-      h += fila(T('Se lo llevaron las comisiones'), Q(e.comisionesEnvio), 'neg');
-      if (e.comisionesEnvio > 2000 && g.canal === 'ventanilla') {
-        h += '<div class="aprendizaje">' + esc(K('varios', 'leccionEnvio', MIGRACION.leccion)) + '</div>';
-      }
-      h += '<div class="btn-fila" style="margin-top:10px">';
-      MIGRACION.enviosSugeridos.forEach(function (p) {
-        h += '<button class="btn-chico' + (g.enviaPorcentaje === p ? ' activa' : '') +
-             '" data-envio="' + p + '">' + T('Mandar {0}', pct(p)) + '</button>';
-      });
-      h += '</div><div class="btn-fila" style="margin-top:8px">';
-      Object.keys(MIGRACION.canales).forEach(function (id) {
-        h += '<button class="btn-chico' + (g.canal === id ? ' activa' : '') +
-             '" data-canal="' + id + '">' +
-             esc(K('canal_nombre', id, MIGRACION.canales[id].nombre)) + '</button>';
-      });
-      h += '</div></div>';
+    var sub = subTrabajoActivo();
+    h += subPestanas(sub);
+    h += sub.id === 'empleo' ? trabajoMiEmpleo()
+       : sub.id === 'ofertas' ? trabajoOfertas()
+       : trabajoIrme();
+    return h;
+  }
 
-      h += '<div class="btn-fila" style="margin-top:14px"><button class="btn-chico" id="regresar" style="flex:1">✈️ ' +
-           T('Regresar a Guatemala') + '</button></div>';
-      return h;
+  // ----- apartado: mi empleo -----
+
+  function trabajoMiEmpleo() {
+    var e = Motor.get();
+    var actual = Motor.trabajoActual();
+    if (!actual) {
+      return '<div class="vacio">' +
+        '<div class="retrato">' + Muneco({ estudia: !!e.estudio }) + '</div>' +
+        T('Todavía no trabajas. Mira las Ofertas.') +
+        '</div>';
     }
 
-    if (actual) {
-      h += '<div class="tarjeta acento">';
-      h += '<div class="titulo">' + actual.icono + ' ' + esc(D(actual, 'nombre')) + '</div>';
-      h += fila(T('Modalidad'), e.empleo.formal ? T('Formal')
-                : '<span class="etiqueta alerta">' + T('Informal') + '</span>');
-      h += fila(T('Salario estimado'), Q(Motor.salarioEsperado(actual, e.empleo.formal)), 'pos');
-      h += fila(T('Tiempo en el puesto'), T('{0} meses', e.empleo.mesesEnPuesto));
-      var mult = Motor.multiplicadorMercado(actual.id);
-      if (mult !== 1) h += fila(T('Efecto del mercado'), T('{0} del sueldo base', pct(mult)), mult >= 1 ? 'pos' : 'neg');
-      h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="renunciar">' +
-           T('Renunciar') + '</button></div></div>';
-    }
+    /* El personaje vestido del oficio.
+     *
+     * Es la única parte de la pantalla que le dice al jugador qué es lo que
+     * hace, sin que la tenga que leer. */
+    var h = '<div class="tarjeta acento centrado">';
+    h += '<div class="retrato">' + Muneco({
+      trabajo: actual.id, estudia: !!e.estudio,
+      graduado: e.carrerasTerminadas.length > 0 && !e.estudio
+    }) + '</div>';
+    h += '<div class="titulo centrado-fila">' + Ico(actual.icono) + ' ' + esc(D(actual, 'nombre')) + '</div>';
+    h += '<div class="moneda-mes">' + Q0(Motor.salarioEsperado(actual, e.empleo.formal)) +
+         '<span>' + T('al mes, mes completo') + '</span></div>';
+    h += pastillas([
+      pastilla(e.empleo.formal ? 'visto' : 'alerta',
+               e.empleo.formal ? T('Formal') : T('Informal'),
+               e.empleo.formal ? 'ok' : 'mal'),
+      pastilla('reloj', T('{0} meses aquí', e.empleo.mesesEnPuesto)),
+      Motor.multiplicadorMercado(actual.id) !== 1
+        ? pastilla('tendencia', T('Mercado: {0}', pct(Motor.multiplicadorMercado(actual.id))),
+                   Motor.multiplicadorMercado(actual.id) >= 1 ? 'ok' : 'mal')
+        : '',
+      Motor.bonoPorJornada() > 0
+        ? pastilla('llave-inglesa', T('+{0} por jornada', Q0(Motor.bonoPorJornada())), 'ok') : ''
+    ]);
+    h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="renunciar">' +
+         T('Renunciar') + '</button></div></div>';
 
-    h += '<h3>' + T('Mercado laboral') + '</h3><div class="tarjeta"><p class="sutil">' +
-         T('La demanda cambia con los años. Investiga antes de estudiar, y aun así no des nada por seguro.') +
-         '</p>';
-    for (var c = 0; c < CARRERAS.length; c++) {
-      var car = CARRERAS[c];
-      var et = etiquetaDemanda(e.mercado[car.id]);
-      h += '<div class="fila"><span class="etq">' + car.icono + ' ' + esc(D(car, 'nombre')) + '</span>' +
-           '<span class="etiqueta ' + et.clase + '">' + T(et.texto) + '</span></div>';
+    if (!e.empleo.formal) {
+      h += porQue('informal',
+        '<p>' + T('En informal ganas más en la mano cada mes, pero sin Bono 14, sin aguinaldo, sin seguro y sin forma de comprobar ingresos cuando pidas un crédito.') + '</p>',
+        T('Qué te falta por ser informal'));
     }
-    h += '</div>';
+    return h;
+  }
 
-    h += '<h3>' + T('Ofertas') + '</h3>';
-    for (var i = 0; i < TRABAJOS.length; i++) {
-      var tr = TRABAJOS[i];
-      var chk = Motor.puedeAplicar(tr);
+  // ----- apartado: ofertas -----
+
+  /* Las ofertas: solo las que el jugador puede tomar hoy, con su dibujo.
+   *
+   * Cada oferta es una tarjeta con el personaje vestido de ese oficio, su
+   * descripción y lo que paga. Un chico de 13 años no compara tres filas de
+   * texto; compara tres dibujos.
+   *
+   * Y lo que todavía no alcanza NO se muestra. Estuvo un rato abajo, en una
+   * lista de "para estos te falta", y era la misma parálisis en versión corta:
+   * trece renglones de cosas que no puede hacer. El juego se descubre por la
+   * ruta; lo que no está abierto no existe todavía. */
+  function trabajoOfertas() {
+    var e = Motor.get();
+    var actual = Motor.trabajoActual();
+    var abiertas = TRABAJOS.filter(function (tr) { return Motor.puedeAplicar(tr).ok; });
+
+    var h = '';
+    abiertas.forEach(function (tr) {
       var esActual = actual && actual.id === tr.id;
-      h += '<div class="opcion' + (esActual ? ' activa' : '') + (chk.ok ? '' : ' bloqueada') + '">';
-      h += '<div class="titulo">' + tr.icono + ' ' + esc(D(tr, 'nombre'));
-      if (tr.varianza >= 0.5) h += '<span class="etiqueta alerta">' + T('ingreso variable') + '</span>';
-      h += '</div><p class="sutil" style="margin:6px 0">' + esc(D(tr, 'descripcion')) + '</p>';
-      h += fila(T('Sueldo estimado'), Q0(Motor.salarioEsperado(tr, true)), 'pos');
-      if (!chk.ok) {
-        h += '<p class="aviso">' + (chk.motivo === 'nivel'
-             ? T('Necesitas nivel {0}.', nivel(tr.requisito))
-             : T('Necesitas {0} de capital.', Q0(tr.capitalRequerido))) + '</p>';
-      } else if (!esActual) {
-        h += '<div class="btn-fila" style="margin-top:10px">';
-        if (CONFIG.dificultad[e.dificultad].permiteFormal) {
-          h += '<button class="btn-chico" data-tomar="' + tr.id + '" data-formal="1">' +
-               T('Aceptar formal') + '</button>';
-        }
-        if (tr.permiteInformal) {
-          h += '<button class="btn-chico" data-tomar="' + tr.id + '" data-formal="0">' +
-               T('Informal (+{0})', pct(CONFIG.primaInformalidad)) + '</button>';
-        }
-        h += '</div>';
-      }
+      h += '<div class="opcion oferta' + (esActual ? ' activa' : '') + '">';
+      h += '<div class="oferta-retrato">' + Muneco({ trabajo: tr.id }) + '</div>';
+      h += '<div class="oferta-cuerpo">';
+      h += '<div class="titulo">' + Ico(tr.icono) + ' ' + esc(D(tr, 'nombre'));
+      if (esActual) h += '<span class="etiqueta ok">' + T('actual') + '</span>';
       h += '</div>';
-    }
+      h += '<p class="sutil" style="margin:6px 0">' + esc(D(tr, 'descripcion')) + '</p>';
+      h += pastillas([
+        pastilla('moneda', tr.pagoPorJornada
+          ? T('{0} por jornada', Q0(tr.pagoPorJornada))
+          : T('{0} al mes', Q0(Motor.salarioEsperado(tr, true))), 'ok'),
+        tr.varianza >= 0.5 ? pastilla('alerta', T('ingreso variable'), 'mal') : '',
+        tr.capitalRequerido ? pastilla('billete', T('capital {0}', Q0(tr.capitalRequerido))) : ''
+      ]);
+      if (!esActual) h += botonesTomar(e, tr);
+      h += '</div></div>';
+    });
 
-    // ----- irse del país -----
+    if (!abiertas.length) {
+      h += '<div class="vacio">' + T('Ahora mismo no hay nada que puedas tomar.') + '</div>';
+    }
+    return h;
+  }
+
+  /* Los botones de aceptar.
+   *
+   * Un contrato formal no se le puede dar a un menor de edad, y los
+   * trabajitos de niño no existen en formal ni en la vida real: por eso
+   * `soloInformal`. Lo que queda es un botón, no dos. */
+  function botonesTomar(e, tr) {
+    var puedeFormal = CONFIG.dificultad[e.dificultad].permiteFormal &&
+                      !tr.soloInformal && !Motor.esMenor();
+    var h = '<div class="btn-fila" style="margin-top:10px">';
+    if (puedeFormal) {
+      h += '<button class="btn-chico" data-tomar="' + tr.id + '" data-formal="1">' +
+           Ico('visto') + ' ' + T('Aceptar formal') + '</button>';
+    }
+    if (tr.permiteInformal) {
+      h += '<button class="btn-chico" data-tomar="' + tr.id + '" data-formal="0">' +
+           (puedeFormal ? T('Informal (+{0})', pct(CONFIG.primaInformalidad)) : T('Aceptar')) +
+           '</button>';
+    }
+    if (!puedeFormal && !tr.permiteInformal) {
+      h += '<button class="btn-chico" data-tomar="' + tr.id + '" data-formal="0">' + T('Aceptar') + '</button>';
+    }
+    return h + '</div>';
+  }
+
+  // ----- apartado: irme del país -----
+
+  function trabajoIrme() {
     var mig = Motor.puedeMigrar();
-    h += '<h3>' + T('Irte del país') + '</h3><div class="opcion">';
-    h += '<div class="titulo">✈️ ' + T('Migrar a Estados Unidos') + '</div>';
+    var h = '<div class="opcion">';
+    h += '<div class="titulo">' + Ico('avion') + ' ' + T('Migrar a Estados Unidos') + '</div>';
     h += '<p class="sutil" style="margin:6px 0">' +
       T('Se gana mucho más en dólares y se gasta mucho más. No construyes historial aquí, y cada envío pierde comisión.') +
       '</p>';
@@ -302,69 +537,643 @@ var UI = (function () {
     else h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="migrar">' +
               T('Ver qué implica') + '</button></div>';
     h += '</div>';
+    return h;
+  }
 
+  // ----- viviendo fuera del país -----
+
+  function trabajoFuera() {
+    var e = Motor.get();
+    var g = e.migracion;
+    var emp = buscar(MIGRACION.empleos, g.empleoId);
+    var canal = MIGRACION.canales[g.canal];
+    var h = '<div class="tarjeta acento"><div class="titulo">' + Ico(emp.icono) + ' ' +
+            esc(D(emp, 'nombre')) + '</div>';
+    h += '<p class="sutil" style="margin:6px 0">' + T('Estás en Estados Unidos.') + '</p>';
+    h += fila(T('Sueldo'), 'US$' + emp.sueldoDolares.toLocaleString());
+    h += fila(T('Costo de vida allá'), '-US$' + MIGRACION.costoVidaDolares.toLocaleString(), 'neg');
+    h += fila(T('Tiempo fuera'), T('{0} meses', g.mesesFuera));
+    h += fila(T('Ahorro que llevas allá'), Q(g.ahorroDolares * CONFIG.tipoCambio), 'pos');
+    h += '</div>';
+
+    h += '<h3>' + T('Lo que mandas a casa') + '</h3><div class="tarjeta">';
+    h += fila(T('Mandas'), pct(g.enviaPorcentaje) + ' ' + T('de lo que te sobra'));
+    h += fila(T('Por'), esc(K('canal_nombre', g.canal, canal.nombre)));
+    h += fila(T('Comisión'), pct(canal.comision), 'neg');
+    h += fila(T('Enviado hasta hoy'), Q(e.totalEnviado), 'pos');
+    h += fila(T('Se lo llevaron las comisiones'), Q(e.comisionesEnvio), 'neg');
+    if (e.comisionesEnvio > 2000 && g.canal === 'ventanilla') {
+      h += '<div class="aprendizaje">' + esc(K('varios', 'leccionEnvio', MIGRACION.leccion)) + '</div>';
+    }
+    h += '<div class="btn-fila" style="margin-top:10px">';
+    MIGRACION.enviosSugeridos.forEach(function (pp) {
+      h += '<button class="btn-chico' + (g.enviaPorcentaje === pp ? ' activa' : '') +
+           '" data-envio="' + pp + '">' + T('Mandar {0}', pct(pp)) + '</button>';
+    });
+    h += '</div><div class="btn-fila" style="margin-top:8px">';
+    Object.keys(MIGRACION.canales).forEach(function (id) {
+      h += '<button class="btn-chico' + (g.canal === id ? ' activa' : '') +
+           '" data-canal="' + id + '">' +
+           esc(K('canal_nombre', id, MIGRACION.canales[id].nombre)) + '</button>';
+    });
+    h += '</div></div>';
+
+    h += '<div class="btn-fila" style="margin-top:14px"><button class="btn-chico" id="regresar" style="flex:1">' +
+         Ico('avion') + ' ' + T('Regresar a Guatemala') + '</button></div>';
+    return h;
+  }
+
+  // =============== pestaña: noticias ===============
+
+  /* Lo que se lee, separado de lo que se hace.
+   *
+   * El mercado laboral estaba metido entre el empleo actual y las ofertas, y
+   * ahí estorbaba: es información de contexto, no una decisión. Junto con las
+   * promociones vigentes y la bitácora de lo que ha pasado forma un apartado
+   * con sentido propio, y de paso las promociones dejan de ser invisibles en
+   * cuanto se cierra la ventana que las ofreció.
+   */
+  function vistaNoticias() {
+    var e = Motor.get();
+    var h = '<h2>' + T('Noticias') + '</h2>';
+
+    // ----- mercado laboral -----
+    h += '<h3>' + T('Mercado laboral') + '</h3><div class="tarjeta"><p class="sutil">' +
+         T('La demanda cambia con los años. Investiga antes de estudiar, y aun así no des nada por seguro.') +
+         '</p>';
+    for (var c = 0; c < CARRERAS.length; c++) {
+      var car = CARRERAS[c];
+      var et = etiquetaDemanda(e.mercado[car.id]);
+      h += '<div class="fila"><span class="etq">' + Ico(car.icono) + ' ' + esc(D(car, 'nombre')) + '</span>' +
+           '<span class="etiqueta ' + et.clase + '">' + T(et.texto) + '</span></div>';
+    }
+    h += '</div>';
+
+    // ----- promociones vigentes -----
+    var vigentes = (e.promosActivas || []).filter(function (pa) {
+      return !!buscar(PROMOCIONES, pa.id);
+    });
+    if (vigentes.length) {
+      h += '<h3>' + T('Promociones vigentes') + '</h3>';
+      vigentes.forEach(function (pa) {
+        var def = buscar(PROMOCIONES, pa.id);
+        h += '<div class="opcion"><div class="titulo">' + Ico(def.icono) + ' ' +
+             esc(D(def, 'titulo')) + '</div>';
+        h += fila(T('Le quedan'), T('{0} meses', pa.mesesRestantes));
+        if (def.letraChica) {
+          h += '<div class="letra-chica">' + esc(D(def, 'letraChica')) + '</div>';
+        }
+        h += '</div>';
+      });
+    }
+
+    // ----- lo que ha pasado -----
+    h += '<h3>' + T('Lo que ha pasado') + '</h3>';
+    var conEventos = (e.bitacora || []).filter(function (m) {
+      return m.eventos && m.eventos.length;
+    }).slice(-8).reverse();
+
+    if (!conEventos.length) {
+      h += '<div class="vacio">' +
+        T('Todavía no ha pasado nada digno de contarse. Los imprevistos y las promociones van a aparecer aquí.') +
+        '</div>';
+    } else {
+      conEventos.forEach(function (m) {
+        h += '<div class="tarjeta"><div class="titulo" style="text-transform:capitalize">' +
+             Ico('calendario') + ' ' + esc(m.mes) + ' ' + m.anio + '</div>';
+        h += '<ul class="eventos">';
+        m.eventos.forEach(function (t) { h += '<li>' + esc(t) + '</li>'; });
+        h += '</ul></div>';
+      });
+    }
     return h;
   }
 
   // =============== pestaña: estudio ===============
 
+  /* Todo lo que el jugador puede estudiar ahora mismo.
+   *
+   * Antes esta pantalla ofrecía UNA sola opción, la que SIGUIENTE_CARRERA
+   * decía que tocaba, y eso convertía la decisión en un trámite: el juego ya
+   * había elegido el diversificado por él. Cuando hay dos caminos —el
+   * bachillerato es un año más corto, el perito sale con oficio— tiene que
+   * poder verlos juntos y compararlos. */
+  function carrerasPosibles(e) {
+    return CARRERAS.filter(function (c) {
+      var i = NIVELES_EDUCATIVOS.indexOf.bind(NIVELES_EDUCATIVOS);
+      return i(e.educacion) >= i(c.requiere) && i(e.educacion) < i(c.nivelQueOtorga);
+    });
+  }
+
   function vistaEstudio() {
     var e = Motor.get();
     var h = '<h2>' + T('Estudio') + '</h2>';
 
-    h += '<div class="tarjeta">' + fila(T('Tu nivel'), esc(nivel(e.educacion)));
-    h += '<p class="sutil" style="margin-top:8px">' +
-      T('En Guatemala la licenciatura sube el ingreso mediano apenas 13% sobre un bachiller. La maestría lo sube 133%. La ruta larga paga solo si la terminas.') +
-      '</p></div>';
+    if (e.estudio) return h + estudioEnCurso(e);
+    if (e.decisionEstudio === null) return h + estudioDecidir(e);
+    return h + estudioRutas(e);
+  }
 
-    if (e.estudio) {
-      var car = buscar(CARRERAS, e.estudio.carreraId);
-      var avance = Math.min(1, e.estudio.mesesAvanzados / car.mesesRequeridos);
-      h += '<div class="tarjeta acento"><div class="titulo">' + car.icono + ' ' + esc(D(car, 'nombre')) + '</div>';
-      h += '<div class="progreso"><div class="progreso-relleno" style="width:' + (avance * 100) + '%"></div></div>';
-      h += fila(T('Avance'), T('{0} de {1} meses', Math.round(e.estudio.mesesAvanzados), car.mesesRequeridos));
-      h += fila(T('Modalidad'), e.estudio.privada ? T('Privada') : T('Pública'));
-      h += fila(T('Costo mensual'), e.estudio.privada ? '-' + Q(Motor.costoMensualEstudio()) : T('gratis'),
-                e.estudio.privada ? 'neg' : 'pos');
-      h += '<p class="sutil" style="margin-top:8px">' +
-        T('Cada semana que dedicas avanza medio mes de carrera. Dos semanas al mes es el ritmo normal.') + '</p>';
-      h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="abandonar">' +
-           T('Abandonar') + '</button></div></div>';
+  /* La primera pantalla del juego: estudias, y qué, o no estudias.
+   *
+   * Es la única decisión que el juego pregunta de frente, y ninguna opción
+   * dice "recomendado". Vuelve a salir cada vez que el jugador se gradúa. */
+  function estudioDecidir(e) {
+    var opciones = carrerasPosibles(e);
+    var esPrimera = e.educacion === 'primaria';
+
+    var h = '<div class="tarjeta decidir">';
+    h += '<div class="retrato chico">' + Muneco({ estudia: true, trabajo: e.empleo ? e.empleo.id : null }) + '</div>';
+    h += '<h3>' + (esPrimera ? T('Saliste de primaria. ¿Y ahora?')
+                             : T('Te graduaste. ¿Sigues estudiando?')) + '</h3>';
+    h += '<p class="sutil">' + (opciones.length > 1
+      ? T('Puedes estudiar cualquiera de estas, o ponerte a trabajar. Las dos se pueden.')
+      : T('Puedes estudiar o ponerte a trabajar. Las dos se pueden.')) + '</p>';
+    h += '</div>';
+
+    if (!opciones.length) {
+      h += '<div class="tarjeta centrado"><p class="sutil">' +
+           T('Ya llegaste hasta donde llega la escalera. Nada más que estudiar.') + '</p>' +
+           '<button class="btn-primario" data-decide="1" data-no-estudiar="1">' +
+           Ico('maletin') + ' ' + T('A trabajar') + '</button></div>';
       return h;
     }
 
-    h += '<h3>' + T('Rutas disponibles') + '</h3>';
-    for (var i = 0; i < CARRERAS.length; i++) {
-      var c = CARRERAS[i];
-      var yaTiene = NIVELES_EDUCATIVOS.indexOf(e.educacion) >= NIVELES_EDUCATIVOS.indexOf(c.nivelQueOtorga);
-      var puede = NIVELES_EDUCATIVOS.indexOf(e.educacion) >= NIVELES_EDUCATIVOS.indexOf(c.requiere) && !yaTiene;
-      var et = etiquetaDemanda(e.mercado[c.id]);
-      h += '<div class="opcion' + (puede ? '' : ' bloqueada') + '">';
-      h += '<div class="titulo">' + c.icono + ' ' + esc(D(c, 'nombre')) +
-           '<span class="etiqueta ' + et.clase + '">' + T(et.texto) + '</span></div>';
-      h += '<p class="sutil" style="margin:6px 0">' + esc(D(c, 'descripcion')) + '</p>';
-      h += fila(T('Duración'), T('{0} meses de carrera', c.mesesRequeridos));
-      h += fila(T('Pública'), c.costoAnualPublico === 0 ? T('gratis') : T('{0} al año', Q0(c.costoAnualPublico)),
-                c.costoAnualPublico === 0 ? 'pos' : '');
-      h += fila(T('Privada'), T('{0} al año', Q0(c.costoAnualPrivado)), 'neg');
-      if (!puede) {
-        h += '<p class="aviso">' + (yaTiene ? T('Ya tienes ese nivel o uno mayor.')
-             : T('Primero necesitas nivel {0}.', nivel(c.requiere))) + '</p>';
-      } else {
-        h += '<div class="btn-fila" style="margin-top:10px">' +
-             '<button class="btn-chico" data-inscribir="' + c.id + '" data-priv="0">' + T('Pública') + '</button>' +
-             '<button class="btn-chico" data-inscribir="' + c.id + '" data-priv="1">' + T('Privada') + '</button></div>';
-      }
-      h += '</div>';
-    }
+    opciones.forEach(function (c, i) { h += tarjetaCarrera(e, c, i === 0); });
+
+    h += '<button class="btn-primario claro" data-no-estudiar="1" style="margin-top:6px">' +
+         Ico('maletin') + ' ' + T('No, a trabajar') + '</button>';
+    h += '<p class="sutil centrado" style="margin-top:10px">' +
+      T('Puedes cambiar de opinión después. Esta pantalla no se cierra nunca.') + '</p>';
+    h += porQue('estudiar',
+      '<p>' + T('En Guatemala un trabajador sin básicos gana alrededor de Q2,400 al mes. Con diversificado, Q3,800. Con licenciatura, Q4,300, que es apenas 13% más. Con maestría, Q10,000.') + '</p>' +
+      '<p>' + T('O sea que los saltos grandes están al principio y al final de la escalera, no en el medio.') + '</p>',
+      T('Qué se gana con cada nivel'));
     return h;
+  }
+
+  /* Una carrera, con lo que cuesta y sus botones para inscribirse.
+   *
+   * `primera` marca la que la cinta del tutorial señala: con `data-decide`
+   * puesto solo en una, el tutorial apunta a un botón concreto en vez de a
+   * cualquiera de los seis que puede haber en pantalla. */
+  function tarjetaCarrera(e, c, primera) {
+    var et = c.sinMercado ? null : etiquetaDemanda(e.mercado[c.id]);
+    var h = '<div class="opcion">';
+    h += '<div class="titulo">' + Ico(c.icono) + ' ' + esc(D(c, 'nombre')) +
+         (et ? '<span class="etiqueta ' + et.clase + '">' + T(et.texto) + '</span>' : '') + '</div>';
+    h += '<p class="sutil" style="margin:6px 0">' + esc(D(c, 'descripcion')) + '</p>';
+    h += pastillas([
+      pastilla('calendario', T('{0} años', Math.round(c.mesesRequeridos / 12))),
+      pastilla(c.horario === 'fijo' ? 'manana' : (c.horario === 'jornada' ? 'tarde' : 'calendario'),
+               c.horario === 'fijo' ? T('Toma tus mañanas')
+                                    : (c.horario === 'jornada' ? T('Mañana o tarde') : T('Horario libre'))),
+      pastilla('moneda', c.costoAnualPublico === 0 ? T('Pública: gratis')
+                                                   : T('{0} al año', Q0(c.costoAnualPublico)), 'ok'),
+      pastilla('billete', T('Privada: {0}', Q0(c.costoAnualPrivado)), 'mal')
+    ]);
+    h += botonesInscribir(c, primera);
+    return h + '</div>';
+  }
+
+  /* Mientras está inscrito. */
+  function estudioEnCurso(e) {
+    var car = buscar(CARRERAS, e.estudio.carreraId);
+    var avance = Math.min(1, e.estudio.mesesAvanzados / car.mesesRequeridos);
+    var faltan = Math.max(0, Math.ceil(car.mesesRequeridos - e.estudio.mesesAvanzados));
+    var h = '<div class="tarjeta acento">';
+    h += '<div class="retrato chico">' + Muneco({ estudia: true, trabajo: e.empleo ? e.empleo.id : null }) + '</div>';
+    h += '<div class="titulo">' + Ico(car.icono) + ' ' + esc(D(car, 'nombre')) + '</div>';
+    h += '<div class="progreso"><div class="progreso-relleno" style="width:' + (avance * 100) + '%"></div></div>';
+    h += pastillas([
+      pastilla('calendario', T('Faltan {0} meses', faltan)),
+      pastilla(e.estudio.jornada === 'pm' ? 'tarde' : 'manana',
+               e.estudio.jornada ? (e.estudio.jornada === 'pm' ? T('Jornada de la tarde') : T('Jornada de la mañana'))
+                                 : T('Horario libre')),
+      pastilla('moneda', e.estudio.privada ? '-' + Q0(Motor.costoMensualEstudio()) + T(' al mes')
+                                           : T('gratis'),
+               e.estudio.privada ? 'mal' : 'ok')
+    ]);
+
+    if (e.estudio.jornada) {
+      h += '<p class="sutil">' +
+        T('El colegio te toma esa jornada de las cuatro semanas y no se puede vaciar. La otra jornada es tuya.') +
+        '</p>';
+    } else {
+      h += '<p class="sutil">' +
+        T('Cada jornada que le dedicas avanza un cuarto de mes de carrera. Cuatro al mes es el ritmo normal.') +
+        '</p>';
+    }
+    h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico peligro" id="abandonar">' +
+         T('Dejar de estudiar') + '</button></div></div>';
+    return h;
+  }
+
+  /* Dijo que no, o ya terminó algo: la lista de lo que puede estudiar. */
+  function estudioRutas(e) {
+    var h = '<div class="tarjeta">';
+    h += fila(T('Tu nivel'), '<strong>' + esc(nivel(e.educacion)) + '</strong>');
+    h += '</div>';
+
+    var opciones = carrerasPosibles(e);
+    opciones.forEach(function (c) { h += tarjetaCarrera(e, c, false); });
+
+    if (!opciones.length) {
+      h += '<div class="vacio">' + T('Ya llegaste hasta donde llega la escalera.') + '</div>';
+    }
+    h += porQue('estudiar',
+      '<p>' + T('En Guatemala la licenciatura sube el ingreso mediano apenas 13% sobre un bachiller. La maestría lo sube 133%. La ruta larga paga solo si la terminas.') + '</p>',
+      T('Qué se gana con cada nivel'));
+    return h;
+  }
+
+  /* Los botones para inscribirse.
+   *
+   * Con horario de jornada hay que elegir mañana o tarde ANTES de inscribirse,
+   * porque esa elección decide en qué jornada va a poder trabajar los próximos
+   * años. Con horario libre basta pública o privada. */
+  function botonesInscribir(c, primera) {
+    var marca = primera ? ' data-decide="1"' : '';
+    var h = '<div class="btn-fila" style="margin-top:10px">';
+    if (c.horario === 'jornada') {
+      h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="0" data-jornada="am">' +
+           Ico('manana') + ' ' + T('Mañana') + '</button>';
+      h += '<button class="btn-chico" data-inscribir="' + c.id + '" data-priv="0" data-jornada="pm">' +
+           Ico('tarde') + ' ' + T('Tarde') + '</button>';
+      h += '<button class="btn-chico" data-inscribir="' + c.id + '" data-priv="1" data-jornada="am">' +
+           T('Privada') + '</button>';
+    } else {
+      h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="0">' +
+           T('Pública') + '</button>';
+      h += '<button class="btn-chico" data-inscribir="' + c.id + '" data-priv="1">' +
+           T('Privada') + '</button>';
+    }
+    return h + '</div>';
   }
 
   // =============== pestaña: banco ===============
 
-  function vistaBanco() {
+  /* El banco, partido en tres apartados.
+   *
+   * Era la pantalla más larga del juego con diferencia: el estado de cuenta,
+   * el historial de crédito, las cuentas, el plazo, los préstamos, la tarjeta,
+   * el prestamista, la pensión, las casas en venta y el alquiler, todo seguido
+   * en un solo scroll de siete pantallazos.
+   *
+   * Lo que era información del jugador (cuánto tiene, cómo va su historial) se
+   * fue a la pantalla de "Yo", que se abre desde la barra de arriba: no es algo
+   * que se hace en el banco, es algo que se consulta. Lo que quedó son las tres
+   * cosas que sí se hacen aquí.
+   */
+  var SUB_BANCO = [
+    { id: 'cuentas',  ic: 'banco',   tx: 'Cuentas' },
+    { id: 'credito',  ic: 'tarjeta', tx: 'Crédito' },
+    { id: 'vivienda', ic: 'casa',    tx: 'Vivienda' }
+  ];
+
+  function subBancoActivo() {
     var e = Motor.get();
+    var hayCredito = e.prestamos.length > 0 || !!e.tarjeta;
+    var visibles = SUB_BANCO.filter(function (sp) {
+      if (sp.id === 'credito') {
+        return Motor.desbloqueado('credito') || Motor.desbloqueado('tarjeta') || hayCredito;
+      }
+      // A un menor de edad no se le ofrece mudarse: no es una decisión suya
+      if (sp.id === 'vivienda') return !Motor.esMenor() || !!e.casa;
+      return true;
+    });
+    var elegido = subDe.banco || 'cuentas';
+    var existe = visibles.some(function (sp) { return sp.id === elegido; });
+    return { id: existe ? elegido : visibles[0].id, visibles: visibles };
+  }
+
+  function vistaBanco() {
     var h = '<h2>' + T('Banco Cardamomo') + '</h2>';
+    var sub = subBancoActivo();
+    if (sub.visibles.length > 1) h += subPestanas(sub);
+    return h + (sub.id === 'cuentas' ? bancoCuentas()
+              : sub.id === 'credito' ? bancoCredito()
+              : bancoVivienda());
+  }
+
+  function bancoCuentas() {
+    var e = Motor.get();
+    var h = '';
+    h += tarjetaSaldos(e);
+    /* Primero la de ahorro, que es la que un menor abre de verdad, y después
+     * la monetaria, que llega cuando un patrono formal la pide. Cada una tiene
+     * su propia llave en la ruta: no se regalan juntas. */
+    var cuentasOfrecidas = [];
+    if (Motor.desbloqueado('ahorro')) cuentasOfrecidas.push('ahorro');
+    if (Motor.desbloqueado('monetaria')) cuentasOfrecidas.push('monetaria');
+
+    if (cuentasOfrecidas.some(function (t2) { return e[t2] === null; })) {
+      h += '<h3>' + T('Abrir cuenta') + '</h3>';
+      cuentasOfrecidas.forEach(function (tipo) {
+        if (e[tipo] !== null) return;
+        var p = CONFIG.productos[tipo];
+        var icoCuenta = tipo === 'monetaria' ? 'tarjeta' : 'banco';
+        var minimo = Motor.aperturaMinima(tipo);
+        h += '<div class="opcion"><div class="titulo">' + Ico(icoCuenta) +
+             ' ' + esc(K('producto_nombre', tipo, p.nombre)) + '</div>';
+        h += '<p class="sutil" style="margin:6px 0">' + esc(K('producto_desc', tipo, p.descripcion)) + '</p>';
+        h += pastillas([
+          pastilla('tendencia', T('{0}% al año', (p.tasaAnual * 100).toFixed(2)),
+                   p.tasaAnual >= 0.02 ? 'ok' : ''),
+          pastilla('cartera', T('abres con {0}', Q0(minimo))),
+          p.manejoMensual
+            ? pastilla('recibo', T('manejo {0} al mes', Q0(p.manejoMensual)), 'mal')
+            : pastilla('visto', T('sin manejo de cuenta'), 'ok')
+        ]);
+        if (p.manejoMensual) {
+          h += porQue('manejo' + tipo,
+            '<p>' + T('El manejo de cuenta se te cobra cada mes solo por tenerla abierta. Va de Q10 a Q15 según el banco.') + '</p>' +
+            '<p>' + T('Si tu sueldo lo deposita una empresa no te lo cobran, porque al banco le interesa tener tu planilla. El que lo paga es justo el que abrió la cuenta sin necesitarla.') + '</p>',
+            T('Qué es el manejo de cuenta'));
+        }
+        if (Motor.esMenor()) {
+          h += '<p class="sutil" style="margin:6px 0 0">' +
+               T('Siendo menor de edad la abres con un adulto, y con menos dinero.') + '</p>';
+        }
+        h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-abrir="' +
+             tipo + '">' + T('Abrir con {0}', Q0(minimo)) + '</button></div></div>';
+      });
+    }
+
+    if (e.monetaria !== null || e.ahorro !== null) {
+      h += '<h3>' + T('Mover dinero') + '</h3><div class="tarjeta"><div class="btn-fila">';
+      if (e.monetaria !== null) {
+        h += '<button class="btn-chico" data-mover="efectivo|monetaria">' + T('Efectivo ▸ Monetaria') + '</button>';
+        h += '<button class="btn-chico" data-mover="monetaria|efectivo">' + T('Monetaria ▸ Efectivo') + '</button>';
+      }
+      if (e.ahorro !== null) {
+        h += '<button class="btn-chico" data-mover="efectivo|ahorro">' + T('Efectivo ▸ Ahorro') + '</button>';
+        if (e.monetaria !== null) h += '<button class="btn-chico" data-mover="monetaria|ahorro">' +
+                                       T('Monetaria ▸ Ahorro') + '</button>';
+        h += '<button class="btn-chico" data-mover="ahorro|efectivo">' + T('Ahorro ▸ Efectivo') + '</button>';
+      }
+      h += '</div></div>';
+    }
+
+    if (Motor.desbloqueado('plazo') && (e.ahorro !== null || e.monetaria !== null)) {
+      h += '<h3>' + T('Depósito a plazo') + '</h3>';
+      if (e.plazo) {
+        h += '<div class="tarjeta acento">';
+        h += fila(T('Monto'), Q(e.plazo.monto));
+        h += fila(T('Tasa'), (e.plazo.tasa * 100).toFixed(2) + '%');
+        h += fila(T('Rendimiento acumulado'), Q(e.plazo.ganado), 'pos');
+        h += fila(T('Le faltan'), T('{0} meses', e.plazo.mesesRestantes));
+        h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="romper-plazo">' +
+             T('Sacarlo antes (pierdes lo ganado)') + '</button></div></div>';
+      } else {
+        h += '<div class="opcion"><div class="titulo">' + Ico('tendencia') + ' ' +
+             esc(K('producto_nombre', 'plazo', CONFIG.productos.plazo.nombre)) + '</div>';
+        h += '<p class="sutil" style="margin:6px 0">' +
+             esc(K('producto_desc', 'plazo', CONFIG.productos.plazo.descripcion)) + '</p>';
+        h += fila(T('Rendimiento anual'), (CONFIG.productos.plazo.tasaAnual * 100).toFixed(2) + '%', 'pos');
+        h += fila(T('Mínimo'), Q0(CONFIG.productos.plazo.aperturaMinima));
+        h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="abrir-plazo">' +
+             T('Abrir') + '</button></div></div>';
+      }
+    }
+
+    // La sección de crédito existe si la ruta la abrió, o si ya hay algo
+    // vivo que el jugador tiene que poder ver y pagar.
+
+    // ----- pensión -----
+    if (Motor.desbloqueado('pension') || e.pension) {
+    h += '<h3>' + T('Plan de pensiones') + '</h3>';
+    if (e.pension) {
+      var ganado = e.pension.saldo - e.pension.aportado;
+      h += '<div class="tarjeta acento">';
+      h += fila(T('Acumulado'), Q(e.pension.saldo), 'pos');
+      h += fila(T('De eso pusiste tú'), Q(e.pension.aportado));
+      h += fila(T('Lo puso el tiempo'), Q(ganado), 'pos');
+      h += fila(T('Aporte mensual'), Q(e.pension.aporteMensual));
+      h += fila(T('Rendimiento'), (PENSION.rendimientoAnual * 100).toFixed(2) + '%', 'pos');
+      if (ganado > e.pension.aportado * 0.5) {
+        h += '<div class="aprendizaje">' +
+          T('Fíjate en la proporción. Lo que ganaste sin hacer nada ya se acerca a lo que aportaste.') +
+          '</div>';
+      }
+      h += '<div class="btn-fila" style="margin-top:10px">' +
+           '<button class="btn-chico" id="cambiar-pension">' + T('Cambiar aporte') + '</button>' +
+           '<button class="btn-chico peligro" id="retirar-pension">' +
+           (e.edad < PENSION.edadRetiro ? T('Retirar antes de tiempo') : T('Retirar')) +
+           '</button></div></div>';
+    } else {
+      h += '<div class="opcion"><div class="titulo">' + Ico(PENSION.icono) + ' ' +
+           esc(K('producto_nombre', 'pension', PENSION.nombre)) + '</div>';
+      h += '<p class="sutil" style="margin:6px 0">' +
+           esc(K('producto_desc', 'pension', PENSION.descripcion)) + '</p>';
+      h += fila(T('Rendimiento anual'), (PENSION.rendimientoAnual * 100).toFixed(2) + '%', 'pos');
+      h += fila(T('Aporte mínimo'), Q0(PENSION.aporteMinimo));
+      h += fila(T('Se retira a los'), T('{0} años', PENSION.edadRetiro));
+      h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="abrir-pension">' +
+           T('Abrir plan') + '</button></div></div>';
+    }
+
+    }
+
+
+    return h;
+  }
+
+  function bancoCredito() {
+    var e = Motor.get();
+    var h = '';
+    var hayCredito = e.prestamos.length > 0 || !!e.tarjeta;
+    if (Motor.desbloqueado('credito') || Motor.desbloqueado('tarjeta') || hayCredito) {
+    h += '<h3>' + T('Crédito') + '</h3>';
+    for (var i = 0; i < e.prestamos.length; i++) {
+      var p = e.prestamos[i];
+      h += '<div class="opcion' + (p.tipo === 'informal' ? ' peligro' : '') + '">';
+      h += '<div class="titulo">' + (p.tipo === 'informal' ? Ico('bandera') + ' ' + T('Préstamo del barrio')
+                                                           : Ico('banco') + ' ' + T('Préstamo personal')) + '</div>';
+      h += fila(T('Saldo'), Q(p.saldo), 'neg');
+      h += fila(T('Cuota'), Q(p.cuota));
+      // Nominal y efectiva juntas a proposito: es el concepto que el glosario
+      // marca como el peor entendido del pais, y verlas lado a lado lo ensena.
+      var efectiva = (Math.pow(1 + p.tasaMensual, 12) - 1) * 100;
+      h += fila(T('Tasa nominal'), T('{0}% anual', (p.tasaMensual * 12 * 100).toFixed(2)));
+      h += fila(T('Tasa efectiva'), T('{0}% anual', efectiva.toFixed(2)),
+                p.tipo === 'informal' ? 'neg' : '');
+      h += fila(T('Le faltan'), T('{0} cuotas', p.mesesRestantes));
+      if (p.atrasos) h += '<p class="aviso">' + T('Llevas {0} cuota(s) de atraso.', p.atrasos) + '</p>';
+      h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-abonar="' + i +
+           '">' + T('Abonar de más') + '</button></div></div>';
+    }
+
+    if (e.tarjeta) {
+      var usoPct = e.tarjeta.limite ? Math.round((e.tarjeta.saldo / e.tarjeta.limite) * 100) : 0;
+      h += '<div class="opcion"><div class="titulo">' + Ico('tarjeta') + ' ' + T('Tarjeta de crédito') + '</div>';
+      h += fila(T('Saldo'), Q(e.tarjeta.saldo), e.tarjeta.saldo > 0 ? 'neg' : '');
+      h += fila(T('Límite'), Q0(e.tarjeta.limite));
+      h += fila(T('Usado'), usoPct + '%');
+      h += fila(T('Tasa'), T('{0}% anual', (CREDITOS.tarjeta.tasaAnual * 100).toFixed(2)), 'neg');
+      h += '<div class="fila"><span class="etq">' + T('Cada mes pago') + '</span><span class="val">' +
+           '<button class="btn-chico" id="alternar-minimo">' +
+           (e.tarjeta.pagarMinimo ? T('solo el mínimo') : T('todo el saldo')) + '</button></span></div>';
+      if (e.tarjeta.pagarMinimo && e.tarjeta.saldo > 0) {
+        h += '<div class="aprendizaje">' +
+          T('Pagando solo el mínimo, esta deuda casi no baja y los intereses se acumulan sobre los intereses.') +
+          '</div>';
+      }
+      h += '<div class="btn-fila" style="margin-top:10px">' +
+           '<button class="btn-chico" id="gastar-tarjeta">' + T('Comprar con la tarjeta') + '</button>' +
+           '<button class="btn-chico" id="pagar-tarjeta">' + T('Abonar') + '</button></div></div>';
+    }
+
+    h += '<div class="btn-fila" style="margin-bottom:12px">';
+    if (Motor.desbloqueado('credito')) {
+      h += '<button class="btn-chico" id="pedir-prestamo">' + Ico('banco') + ' ' + T('Pedir préstamo') + '</button>';
+    }
+    if (Motor.desbloqueado('tarjeta') && !e.tarjeta) {
+      h += '<button class="btn-chico" id="pedir-tarjeta">' + Ico('tarjeta') + ' ' + T('Pedir tarjeta') + '</button>';
+    }
+    if (Motor.desbloqueado('informal')) {
+      h += '<button class="btn-chico peligro" id="pedir-informal">' + Ico('bandera') + ' ' + T('Prestamista del barrio') + '</button>';
+    }
+    h += '</div>';
+    }
+
+
+    return h;
+  }
+
+  function bancoVivienda() {
+    var e = Motor.get();
+    var h = '';
+    // ----- casa propia e hipoteca -----
+    if (Motor.desbloqueado('casa') || e.casa) {
+    h += '<h3>' + T('Casa propia') + '</h3>';
+    if (e.casa) {
+      var casaDef = buscar(CASAS, e.casa.id);
+      h += '<div class="tarjeta acento"><div class="titulo">' + Ico(casaDef.icono) + ' ' +
+           esc(D(casaDef, 'nombre')) + '</div>';
+      h += fila(T('Vale hoy'), Q(e.casa.valor), 'pos');
+      if (e.hipoteca) {
+        h += fila(T('Debes de hipoteca'), Q(e.hipoteca.saldo), 'neg');
+        h += fila(T('Cuota'), Q(e.hipoteca.cuota));
+        h += fila(T('Le faltan'), T('{0} cuotas', e.hipoteca.mesesRestantes));
+        h += fila(T('Es tuyo de verdad'), Q(e.casa.valor - e.hipoteca.saldo),
+                  (e.casa.valor - e.hipoteca.saldo) > 0 ? 'pos' : 'neg');
+        if (e.hipoteca.atrasos) {
+          h += '<p class="aviso">' + T('Llevas {0} cuota(s) de atraso. Con la casa de por medio, esto termina en embargo.', e.hipoteca.atrasos) + '</p>';
+        }
+      } else {
+        h += '<div class="aprendizaje">' + T('La casa está pagada. Es completamente tuya.') + '</div>';
+      }
+      h += '</div>';
+    } else if (!e.migracion) {
+      h += '<p class="sutil">' + T('La decisión financiera más grande de una vida. El banco pide historial, ingreso comprobable y enganche.') + '</p>';
+      for (var ci = 0; ci < CASAS.length; ci++) {
+        var casa = CASAS[ci];
+        var chkH = Motor.requisitoHipoteca(casa, HIPOTECA.plazos[1]);
+        h += '<div class="opcion' + (chkH.ok ? '' : ' bloqueada') + '">';
+        h += '<div class="titulo">' + Ico(casa.icono) + ' ' + esc(D(casa, 'nombre'));
+        if (casa.apoyoFHA) h += '<span class="etiqueta ok">' + T('enganche 5%') + '</span>';
+        h += '</div><p class="sutil" style="margin:6px 0">' + esc(D(casa, 'descripcion')) + '</p>';
+        h += fila(T('Precio'), Q0(casa.precio));
+        h += fila(T('Enganche y gastos'), Q0(Motor.efectivoParaEnganche(casa)), 'neg');
+        h += fila(T('Cuota a {0} años', HIPOTECA.plazos[1]),
+                  Q0(Motor.cuotaHipoteca(casa, HIPOTECA.plazos[1])));
+        if (!chkH.ok) h += '<p class="aviso">' + esc(chkH.razon) + '</p>';
+        else h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-casa="' +
+                  casa.id + '">' + T('Ver la hipoteca') + '</button></div>';
+        h += '</div>';
+      }
+    }
+
+    }
+
+
+    h += '<h3>' + T('Vivienda') + '</h3>';
+    if (e.casa || e.migracion) {
+      h += '<p class="sutil">' + (e.casa ? T('Vives en tu propia casa.')
+                                         : T('Vives fuera del país.')) + '</p>';
+    } else
+    Object.keys(CONFIG.vivienda).forEach(function (id) {
+      var v = CONFIG.vivienda[id];
+      var esActual = e.vivienda === id;
+      h += '<div class="opcion' + (esActual ? ' activa' : '') + '">';
+      h += '<div class="titulo">' + Ico('casa') + ' ' + esc(K('vivienda_nombre', id, v.nombre)) +
+           (esActual ? '<span class="etiqueta ok">' + T('actual') + '</span>' : '') + '</div>';
+      h += '<p class="sutil" style="margin:6px 0">' + esc(K('vivienda_desc', id, v.descripcion)) + '</p>';
+      h += fila(T('Costo total al mes'), Q0(v.renta + v.serviciosComida + v.personal), 'neg');
+      if (v.requisitoIngreso) h += fila(T('Ingreso exigido'), Q0(v.requisitoIngreso));
+      if (!esActual) h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-mudar="' +
+                          id + '">' + T('Mudarse aquí') + '</button></div>';
+      h += '</div>';
+    });
+
+
+    return h;
+  }
+
+  /* Los saldos, cortos: lo que hay en cada lugar y nada más.
+   *
+   * El patrimonio y el historial ya no van aquí: van en "Yo". */
+  function tarjetaSaldos(e) {
+    var h = '<div class="tarjeta saldos">';
+    h += fila(Ico('cartera') + ' ' + T('En la mano'), Q(e.efectivo));
+    if (e.monetaria !== null || Motor.desbloqueado('monetaria')) {
+      h += fila(Ico('tarjeta') + ' ' + T('Monetaria'),
+                e.monetaria === null ? '<span class="sutil">' + T('sin abrir') + '</span>' : Q(e.monetaria));
+    }
+    h += fila(Ico('banco') + ' ' + T('Ahorro'),
+              e.ahorro === null ? '<span class="sutil">' + T('sin abrir') + '</span>' : Q(e.ahorro));
+    if (e.plazo) {
+      h += fila(Ico('tendencia') + ' ' + T('Plazo fijo'),
+                Q(e.plazo.monto) + ' · ' + T('{0} meses', e.plazo.mesesRestantes));
+    }
+    /* Y si el banco le está cobrando manejo, se dice aquí y no en la letra
+     * chica: es un cargo que el jugador puede evitar y tiene que poder verlo. */
+    var manejo = Motor.manejoDeCuenta();
+    if (manejo > 0) {
+      h += '<div class="fila"><span class="etq">' + Ico('recibo') + ' ' +
+           T('Manejo de cuenta') + '</span><span class="val neg">-' + Q(manejo) +
+           T(' al mes') + '</span></div>';
+      h += '<p class="sutil" style="margin:6px 0 0">' +
+           T('No te lo cobrarían si una empresa te depositara el sueldo.') + '</p>';
+    }
+    return h + '</div>';
+  }
+
+  // =============== la pantalla de "Yo" ===============
+
+  /* Todo lo que el jugador es, en un solo lugar.
+   *
+   * Se abre tocando el muñeco de la barra de arriba. Está aparte del banco a
+   * propósito: mezclar "cuánto tengo" con "qué producto contrato" es lo que
+   * hacía que la pestaña del banco fuera ilegible. */
+  /* La ventana de "Yo". Se conecta a mano porque vive fuera de #app y la
+   * delegacion de clics de la aplicacion no la alcanza. */
+  function mostrarPerfil() {
+    var dm = modal(vistaPerfil());
+    var g = dm.querySelector('#ver-glosario');
+    if (g) g.addEventListener('click', function () { dm.remove(); mostrarGlosario(); });
+    var r = dm.querySelector('#ver-reporte');
+    if (r) r.addEventListener('click', function () { dm.remove(); mostrarReporte(); });
+    return dm;
+  }
+
+  function vistaPerfil() {
+    var e = Motor.get();
+    var t = Motor.trabajoActual();
+    var h = '<div class="retrato grande">' + Muneco({
+      trabajo: t ? t.id : (e.migracion ? e.migracion.empleoId : null),
+      estudia: !!e.estudio,
+      graduado: e.carrerasTerminadas.length > 0 && !e.estudio
+    }) + '</div>';
+    h += '<h2 class="centrado">' + T('{0} años', e.edad) + '</h2>';
+    h += pastillas([
+      pastilla('birrete', esc(nivel(e.educacion))),
+      pastilla('maletin', t ? esc(D(t, 'nombre')) : T('sin trabajo')),
+      pastilla('rayo', Math.round(e.energia) + '/' + CONFIG.energia.maxima,
+               e.energia < CONFIG.energia.umbralRiesgo ? 'mal' : 'ok'),
+      Motor.esMenor() ? pastilla('persona', T('menor de edad')) : ''
+    ]);
 
     h += '<div class="tarjeta">';
     h += fila(T('Efectivo en mano'), Q(e.efectivo));
@@ -391,197 +1200,252 @@ var UI = (function () {
               Motor.tieneFiador() ? 'pos' : 'neg');
     h += '</div>';
 
-    if (e.monetaria === null || e.ahorro === null) {
-      h += '<h3>' + T('Abrir cuenta') + '</h3>';
-      ['monetaria', 'ahorro'].forEach(function (tipo) {
-        if (e[tipo] !== null) return;
-        var p = CONFIG.productos[tipo];
-        h += '<div class="opcion"><div class="titulo">' + (tipo === 'monetaria' ? '💳' : '🏦') +
-             ' ' + esc(K('producto_nombre', tipo, p.nombre)) + '</div>';
-        h += '<p class="sutil" style="margin:6px 0">' + esc(K('producto_desc', tipo, p.descripcion)) + '</p>';
-        h += fila(T('Rendimiento anual'), (p.tasaAnual * 100).toFixed(2) + '%');
-        h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-abrir="' +
-             tipo + '">' + T('Abrir con {0}', Q0(p.aperturaMinima)) + '</button></div></div>';
-      });
-    }
 
-    if (e.monetaria !== null || e.ahorro !== null) {
-      h += '<h3>' + T('Mover dinero') + '</h3><div class="tarjeta"><div class="btn-fila">';
-      if (e.monetaria !== null) {
-        h += '<button class="btn-chico" data-mover="efectivo|monetaria">' + T('Efectivo ▸ Monetaria') + '</button>';
-        h += '<button class="btn-chico" data-mover="monetaria|efectivo">' + T('Monetaria ▸ Efectivo') + '</button>';
-      }
-      if (e.ahorro !== null) {
-        h += '<button class="btn-chico" data-mover="efectivo|ahorro">' + T('Efectivo ▸ Ahorro') + '</button>';
-        if (e.monetaria !== null) h += '<button class="btn-chico" data-mover="monetaria|ahorro">' +
-                                       T('Monetaria ▸ Ahorro') + '</button>';
-        h += '<button class="btn-chico" data-mover="ahorro|efectivo">' + T('Ahorro ▸ Efectivo') + '</button>';
-      }
-      h += '</div></div>';
-    }
-
-    if (e.ahorro !== null || e.monetaria !== null) {
-      h += '<h3>' + T('Depósito a plazo') + '</h3>';
-      if (e.plazo) {
-        h += '<div class="tarjeta acento">';
-        h += fila(T('Monto'), Q(e.plazo.monto));
-        h += fila(T('Tasa'), (e.plazo.tasa * 100).toFixed(2) + '%');
-        h += fila(T('Rendimiento acumulado'), Q(e.plazo.ganado), 'pos');
-        h += fila(T('Le faltan'), T('{0} meses', e.plazo.mesesRestantes));
-        h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="romper-plazo">' +
-             T('Sacarlo antes (pierdes lo ganado)') + '</button></div></div>';
-      } else {
-        h += '<div class="opcion"><div class="titulo">📈 ' +
-             esc(K('producto_nombre', 'plazo', CONFIG.productos.plazo.nombre)) + '</div>';
-        h += '<p class="sutil" style="margin:6px 0">' +
-             esc(K('producto_desc', 'plazo', CONFIG.productos.plazo.descripcion)) + '</p>';
-        h += fila(T('Rendimiento anual'), (CONFIG.productos.plazo.tasaAnual * 100).toFixed(2) + '%', 'pos');
-        h += fila(T('Mínimo'), Q0(CONFIG.productos.plazo.aperturaMinima));
-        h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="abrir-plazo">' +
-             T('Abrir') + '</button></div></div>';
-      }
-    }
-
-    h += '<h3>' + T('Crédito') + '</h3>';
-    for (var i = 0; i < e.prestamos.length; i++) {
-      var p = e.prestamos[i];
-      h += '<div class="opcion' + (p.tipo === 'informal' ? ' peligro' : '') + '">';
-      h += '<div class="titulo">' + (p.tipo === 'informal' ? '🚩 ' + T('Préstamo del barrio')
-                                                           : '🏦 ' + T('Préstamo personal')) + '</div>';
-      h += fila(T('Saldo'), Q(p.saldo), 'neg');
-      h += fila(T('Cuota'), Q(p.cuota));
-      // Nominal y efectiva juntas a proposito: es el concepto que el glosario
-      // marca como el peor entendido del pais, y verlas lado a lado lo ensena.
-      var efectiva = (Math.pow(1 + p.tasaMensual, 12) - 1) * 100;
-      h += fila(T('Tasa nominal'), T('{0}% anual', (p.tasaMensual * 12 * 100).toFixed(2)));
-      h += fila(T('Tasa efectiva'), T('{0}% anual', efectiva.toFixed(2)),
-                p.tipo === 'informal' ? 'neg' : '');
-      h += fila(T('Le faltan'), T('{0} cuotas', p.mesesRestantes));
-      if (p.atrasos) h += '<p class="aviso">' + T('Llevas {0} cuota(s) de atraso.', p.atrasos) + '</p>';
-      h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-abonar="' + i +
-           '">' + T('Abonar de más') + '</button></div></div>';
-    }
-
-    if (e.tarjeta) {
-      var usoPct = e.tarjeta.limite ? Math.round((e.tarjeta.saldo / e.tarjeta.limite) * 100) : 0;
-      h += '<div class="opcion"><div class="titulo">💳 ' + T('Tarjeta de crédito') + '</div>';
-      h += fila(T('Saldo'), Q(e.tarjeta.saldo), e.tarjeta.saldo > 0 ? 'neg' : '');
-      h += fila(T('Límite'), Q0(e.tarjeta.limite));
-      h += fila(T('Usado'), usoPct + '%');
-      h += fila(T('Tasa'), T('{0}% anual', (CREDITOS.tarjeta.tasaAnual * 100).toFixed(2)), 'neg');
-      h += '<div class="fila"><span class="etq">' + T('Cada mes pago') + '</span><span class="val">' +
-           '<button class="btn-chico" id="alternar-minimo">' +
-           (e.tarjeta.pagarMinimo ? T('solo el mínimo') : T('todo el saldo')) + '</button></span></div>';
-      if (e.tarjeta.pagarMinimo && e.tarjeta.saldo > 0) {
-        h += '<div class="aprendizaje">' +
-          T('Pagando solo el mínimo, esta deuda casi no baja y los intereses se acumulan sobre los intereses.') +
-          '</div>';
-      }
-      h += '<div class="btn-fila" style="margin-top:10px">' +
-           '<button class="btn-chico" id="gastar-tarjeta">' + T('Comprar con la tarjeta') + '</button>' +
-           '<button class="btn-chico" id="pagar-tarjeta">' + T('Abonar') + '</button></div></div>';
-    }
-
-    h += '<div class="btn-fila" style="margin-bottom:12px">';
-    h += '<button class="btn-chico" id="pedir-prestamo">🏦 ' + T('Pedir préstamo') + '</button>';
-    if (!e.tarjeta) h += '<button class="btn-chico" id="pedir-tarjeta">💳 ' + T('Pedir tarjeta') + '</button>';
-    h += '<button class="btn-chico peligro" id="pedir-informal">🚩 ' + T('Prestamista del barrio') + '</button></div>';
-
-    // ----- pensión -----
-    h += '<h3>' + T('Plan de pensiones') + '</h3>';
-    if (e.pension) {
-      var ganado = e.pension.saldo - e.pension.aportado;
-      h += '<div class="tarjeta acento">';
-      h += fila(T('Acumulado'), Q(e.pension.saldo), 'pos');
-      h += fila(T('De eso pusiste tú'), Q(e.pension.aportado));
-      h += fila(T('Lo puso el tiempo'), Q(ganado), 'pos');
-      h += fila(T('Aporte mensual'), Q(e.pension.aporteMensual));
-      h += fila(T('Rendimiento'), (PENSION.rendimientoAnual * 100).toFixed(2) + '%', 'pos');
-      if (ganado > e.pension.aportado * 0.5) {
-        h += '<div class="aprendizaje">' +
-          T('Fíjate en la proporción. Lo que ganaste sin hacer nada ya se acerca a lo que aportaste.') +
-          '</div>';
-      }
-      h += '<div class="btn-fila" style="margin-top:10px">' +
-           '<button class="btn-chico" id="cambiar-pension">' + T('Cambiar aporte') + '</button>' +
-           '<button class="btn-chico peligro" id="retirar-pension">' +
-           (e.edad < PENSION.edadRetiro ? T('Retirar antes de tiempo') : T('Retirar')) +
-           '</button></div></div>';
-    } else {
-      h += '<div class="opcion"><div class="titulo">' + PENSION.icono + ' ' +
-           esc(K('producto_nombre', 'pension', PENSION.nombre)) + '</div>';
-      h += '<p class="sutil" style="margin:6px 0">' +
-           esc(K('producto_desc', 'pension', PENSION.descripcion)) + '</p>';
-      h += fila(T('Rendimiento anual'), (PENSION.rendimientoAnual * 100).toFixed(2) + '%', 'pos');
-      h += fila(T('Aporte mínimo'), Q0(PENSION.aporteMinimo));
-      h += fila(T('Se retira a los'), T('{0} años', PENSION.edadRetiro));
-      h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="abrir-pension">' +
-           T('Abrir plan') + '</button></div></div>';
-    }
-
-    // ----- casa propia e hipoteca -----
-    h += '<h3>' + T('Casa propia') + '</h3>';
-    if (e.casa) {
-      var casaDef = buscar(CASAS, e.casa.id);
-      h += '<div class="tarjeta acento"><div class="titulo">' + casaDef.icono + ' ' +
-           esc(D(casaDef, 'nombre')) + '</div>';
-      h += fila(T('Vale hoy'), Q(e.casa.valor), 'pos');
-      if (e.hipoteca) {
-        h += fila(T('Debes de hipoteca'), Q(e.hipoteca.saldo), 'neg');
-        h += fila(T('Cuota'), Q(e.hipoteca.cuota));
-        h += fila(T('Le faltan'), T('{0} cuotas', e.hipoteca.mesesRestantes));
-        h += fila(T('Es tuyo de verdad'), Q(e.casa.valor - e.hipoteca.saldo),
-                  (e.casa.valor - e.hipoteca.saldo) > 0 ? 'pos' : 'neg');
-        if (e.hipoteca.atrasos) {
-          h += '<p class="aviso">' + T('Llevas {0} cuota(s) de atraso. Con la casa de por medio, esto termina en embargo.', e.hipoteca.atrasos) + '</p>';
-        }
-      } else {
-        h += '<div class="aprendizaje">' + T('La casa está pagada. Es completamente tuya.') + '</div>';
-      }
-      h += '</div>';
-    } else if (!e.migracion) {
-      h += '<p class="sutil">' + T('La decisión financiera más grande de una vida. El banco pide historial, ingreso comprobable y enganche.') + '</p>';
-      for (var ci = 0; ci < CASAS.length; ci++) {
-        var casa = CASAS[ci];
-        var chkH = Motor.requisitoHipoteca(casa, HIPOTECA.plazos[1]);
-        h += '<div class="opcion' + (chkH.ok ? '' : ' bloqueada') + '">';
-        h += '<div class="titulo">' + casa.icono + ' ' + esc(D(casa, 'nombre'));
-        if (casa.apoyoFHA) h += '<span class="etiqueta ok">' + T('enganche 5%') + '</span>';
-        h += '</div><p class="sutil" style="margin:6px 0">' + esc(D(casa, 'descripcion')) + '</p>';
-        h += fila(T('Precio'), Q0(casa.precio));
-        h += fila(T('Enganche y gastos'), Q0(Motor.efectivoParaEnganche(casa)), 'neg');
-        h += fila(T('Cuota a {0} años', HIPOTECA.plazos[1]),
-                  Q0(Motor.cuotaHipoteca(casa, HIPOTECA.plazos[1])));
-        if (!chkH.ok) h += '<p class="aviso">' + esc(chkH.razon) + '</p>';
-        else h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-casa="' +
-                  casa.id + '">' + T('Ver la hipoteca') + '</button></div>';
-        h += '</div>';
-      }
-    }
-
-    h += '<h3>' + T('Vivienda') + '</h3>';
-    if (e.casa || e.migracion) {
-      h += '<p class="sutil">' + (e.casa ? T('Vives en tu propia casa.')
-                                         : T('Vives fuera del país.')) + '</p>';
-    } else
-    Object.keys(CONFIG.vivienda).forEach(function (id) {
-      var v = CONFIG.vivienda[id];
-      var esActual = e.vivienda === id;
-      h += '<div class="opcion' + (esActual ? ' activa' : '') + '">';
-      h += '<div class="titulo">🏠 ' + esc(K('vivienda_nombre', id, v.nombre)) +
-           (esActual ? '<span class="etiqueta ok">' + T('actual') + '</span>' : '') + '</div>';
-      h += '<p class="sutil" style="margin:6px 0">' + esc(K('vivienda_desc', id, v.descripcion)) + '</p>';
-      h += fila(T('Costo total al mes'), Q0(v.renta + v.serviciosComida + v.personal), 'neg');
-      if (v.requisitoIngreso) h += fila(T('Ingreso exigido'), Q0(v.requisitoIngreso));
-      if (!esActual) h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-mudar="' +
-                          id + '">' + T('Mudarse aquí') + '</button></div>';
-      h += '</div>';
-    });
-
-    h += '<div class="btn-fila" style="margin-top:16px">' +
-         '<button class="btn-chico" id="ver-glosario">📖 ' + T('Glosario') + '</button>' +
-         '<button class="btn-chico" id="ver-reporte">📈 ' + T('Cómo voy') + '</button></div>';
+    h += '<div class="btn-fila" style="margin-top:14px">' +
+         '<button class="btn-chico" id="ver-glosario" style="flex:1">' + Ico('libro') + ' ' + T('Glosario') + '</button>' +
+         '<button class="btn-chico" id="ver-reporte" style="flex:1">' + Ico('tendencia') + ' ' + T('Cómo voy') + '</button></div>';
+    h += '<button class="btn-primario" data-cerrar style="margin-top:10px">' + T('Cerrar') + '</button>';
     return h;
+  }
+
+  // =============== pestaña: mejoras ===============
+
+  /* La capa de tycoon.
+   *
+   * Es la única pantalla del juego donde los números suben. Todo lo demás mide
+   * lo que se va —la renta, la colegiatura, los gastos hormiga— y para alguien
+   * de trece años eso es un juego sin premio. Aquí se compra algo, se ve el
+   * nivel subir y el mes siguiente entra más dinero.
+   *
+   * Y sigue siendo educación financiera, sin trampa: el dinero de las mejoras
+   * es el mismo dinero de todo lo demás, así que comprar una es no tener eso.
+   * Lo que la pantalla enseña a leer es **en cuántos meses se paga sola**, que
+   * es el único cálculo que hay que hacer antes de comprar una herramienta.
+   */
+  function vistaMejoras() {
+    var e = Motor.get();
+    var ef = Motor.efectosDeMejoras();
+    var t = Motor.trabajoActual();
+    var h = '<h2>' + T('Mejoras') + '</h2>';
+
+    /* --- el escenario, que es lo que hace que esto parezca un tycoon ---
+     *
+     * Antes esta pantalla eran cuatro tarjetas con un "Nivel 2 de 4" escrito,
+     * y el jugador tenía que imaginarse el resto. Ahora ve su negocio, y ve
+     * que le crece. */
+    h += '<div class="tarjeta escenario">';
+    h += '<div class="escena-caja' + (escenaCrecio ? ' crecio' : '') + '">';
+    escenaCrecio = false;
+    h += Escena.dibujar({
+      negocio: Motor.nivelDeCadena('negocio'),
+      oficio: Motor.nivelDeCadena('oficio'),
+      escuela: Motor.nivelDeCadena('escuela'),
+      casa: Motor.nivelDeCadena('casa'),
+      produce: ef.ingresoPasivo > 0,
+      trabajo: t ? t.id : null,
+      estudia: !!e.estudio,
+      graduado: e.carrerasTerminadas.length > 0 && !e.estudio
+    });
+    h += '</div>';
+
+    // --- lo que produce hoy, que es el marcador del tycoon ---
+    var porJornada = Motor.bonoPorJornada();
+    var netoNegocio = ef.ingresoPasivo - ef.costoMensual;
+    h += '<div class="tres-cifras">' +
+      '<div><span class="etq">' + T('Por jornada') + '</span><b class="' +
+        (porJornada > 0 ? 'pos' : '') + '">+' + Q0(porJornada) + '</b></div>' +
+      '<div><span class="etq">' + T('Tu negocio') + '</span><b class="' +
+        (ef.ingresoPasivo > 0 ? 'pos' : '') + '">' + Q0(ef.ingresoPasivo) + '</b></div>' +
+      '<div class="queda"><span class="etq">' + T('Queda limpio') + '</span><b class="' +
+        (netoNegocio >= 0 ? 'pos' : 'neg') + '">' + Q0(netoNegocio) + '</b></div>' +
+      '</div>';
+    h += '<p class="sutil" style="margin:0">' +
+      T('Tienes {0} para invertir. Lo que compres aquí se queda contigo para siempre.',
+        Q0(Motor.dineroDisponible())) + '</p>';
+    h += '</div>';
+
+    h += graficaNegocio(e);
+
+    CADENAS.forEach(function (cad) { h += tarjetaCadena(e, cad); });
+
+    h += porQue('mejoras',
+      '<p>' + T('Una mejora no es un gasto: es una inversión, y una inversión se mide en cuántos meses tarda en pagarse sola.') + '</p>' +
+      '<p>' + T('Divide lo que cuesta entre lo que te da al mes. Si el resultado es menos que los meses que la vas a usar, conviene. Ese cálculo sirve igual para una canasta de Q150 que para un camión.') + '</p>',
+      T('Cómo se decide una mejora'));
+    return h;
+  }
+
+  /* Una cadena de mejoras: el nivel que lleva y lo que sigue. */
+  function tarjetaCadena(e, cad) {
+    var lista = Motor.mejorasDeCadena(cad.id);
+    var nivel = Motor.nivelDeCadena(cad.id);
+    var sig = Motor.siguienteMejora(cad.id);
+    var actual = nivel > 0 ? lista[nivel - 1] : null;
+
+    var h = '<div class="cadena' + (nivel > 0 ? ' activa' : '') + '">';
+    h += '<div class="cadena-alto">';
+    h += '<span class="cadena-ic">' + Ico(actual ? actual.icono : cad.icono) + '</span>';
+    h += '<span class="cadena-nom">' + esc(K('cadena_nombre', cad.id, cad.nombre)) +
+         '<small>' + (actual ? esc(D(actual, 'nombre'))
+                             : T('todavía nada')) + '</small></span>';
+    h += '</div>';
+
+    // Los puntos del nivel: es lo que hace que se sienta un tycoon
+    h += '<div class="niveles">';
+    for (var i = 0; i < lista.length; i++) {
+      h += '<span class="punto' + (i < nivel ? ' lleno' : '') + '"></span>';
+    }
+    h += '<span class="niveles-txt">' + T('Nivel {0} de {1}', nivel, lista.length) + '</span>';
+    h += '</div>';
+
+    if (!sig) {
+      h += '<div class="al-maximo">' + Ico('crown') + ' ' +
+           T('Al máximo. No hay nada más que mejorar aquí.') + '</div>';
+      return h + '</div>';
+    }
+
+    h += '<div class="mejora-sig">';
+    h += '<div class="titulo">' + Ico(sig.icono) + ' ' + esc(D(sig, 'nombre')) + '</div>';
+    h += pastillas(pastillasDeMejora(sig));
+    var falta = Motor.faltaParaMejora(sig.id);
+
+    /* La barra de cuánto le falta para poder comprarla.
+     *
+     * Es lo que convierte "no te alcanza" en una meta. En un tycoon el jugador
+     * tiene que poder ver que se está acercando, si no cierra la pantalla. */
+    if (!falta || falta.motivo === 'dinero') {
+      var tiene = Math.min(Motor.dineroDisponible(), sig.costo);
+      var pct2 = Math.round((tiene / sig.costo) * 100);
+      h += '<div class="progreso mejora-barra"><div class="progreso-relleno" style="width:' +
+           pct2 + '%"></div></div>';
+      h += '<div class="fila"><span class="etq sutil">' +
+           T('Llevas {0} de {1}', Q0(tiene), Q0(sig.costo)) + '</span>' +
+           '<span class="val sutil">' + pct2 + '%</span></div>';
+    }
+
+    if (falta) {
+      h += '<p class="aviso">' + esc(K('mejora_falta', falta.motivo, falta.razon)) + '</p>';
+      h += '<button class="btn-primario" disabled>' + T('Comprar por {0}', Q0(sig.costo)) + '</button>';
+    } else {
+      h += '<button class="btn-primario" data-mejora="' + sig.id + '">' +
+           Ico('mas') + ' ' + T('Comprar por {0}', Q0(sig.costo)) + '</button>';
+    }
+    h += '</div>';
+    return h + '</div>';
+  }
+
+  /* La gráfica de lo que ha producido el negocio, mes por mes.
+   *
+   * Se dibuja con Chart.js, que vive en vendor/ dentro del repositorio. Y
+   * SIEMPRE comprobando que exista: si ese archivo faltara, la pantalla se
+   * dibuja igual sin la gráfica en vez de quedarse en blanco.
+   *
+   * El lienzo se llena después de pintar, porque Chart.js necesita el elemento
+   * ya metido en la página para medirlo.
+   */
+  var graficaViva = null;
+  var escenaCrecio = false;
+
+  function graficaNegocio(e) {
+    if (typeof Chart === 'undefined') return '';
+    var meses = (e.bitacora || []).slice(-12);
+    var conNegocio = meses.filter(function (m) { return (m.negocio || 0) > 0; });
+    // Con menos de dos meses de historia la gráfica no dice nada
+    if (conNegocio.length < 2) return '';
+    return '<div class="tarjeta grafica-caja">' +
+      '<h3 style="margin-top:0">' + T('Lo que ha producido tu negocio') + '</h3>' +
+      '<canvas id="grafica-negocio" height="150"></canvas></div>';
+  }
+
+  /* Llena el lienzo de la gráfica. Se llama al final de pintar(). */
+  function pintarGraficaNegocio() {
+    if (typeof Chart === 'undefined') return;
+    /* Todo aquí adentro va protegido. Una gráfica es un adorno: si el
+     * navegador no puede dibujarla —o si esto corre en un DOM de prueba que no
+     * tiene canvas— la pantalla tiene que quedar igual, no en blanco. */
+    try {
+      if (!document.getElementById) return;
+      var lienzo = document.getElementById('grafica-negocio');
+      if (!lienzo) return;
+      var e = Motor.get();
+      if (!e) return;
+      var meses = (e.bitacora || []).slice(-12);
+      if (graficaViva) { graficaViva.destroy(); graficaViva = null; }
+      graficaViva = new Chart(lienzo, {
+        type: 'bar',
+        data: {
+          labels: meses.map(function (m) { return String(m.mes || '').slice(0, 3); }),
+          datasets: [{
+            label: T('Tu negocio'),
+            data: meses.map(function (m) { return Math.round(m.negocio || 0); }),
+            backgroundColor: colorDePaleta('--verde', '#1f7a5a'),
+            borderRadius: 5,
+            maxBarThickness: 26
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 500 },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { beginAtZero: true, ticks: { font: { size: 10 }, maxTicksLimit: 4 },
+                 grid: { color: colorDePaleta('--linea', '#dbe4e0') } }
+          }
+        }
+      });
+    } catch (err) { graficaViva = null; }
+  }
+
+  /* El valor de verdad de una variable de la paleta.
+   * Chart.js dibuja en un canvas y ahí no llegan las variables de CSS: hay
+   * que resolverlas a mano. */
+  function colorDePaleta(nombre, respaldo) {
+    try {
+      var v = getComputedStyle(document.documentElement).getPropertyValue(nombre);
+      return (v && v.trim()) || respaldo;
+    } catch (e) { return respaldo; }
+  }
+
+  /* Lo que da una mejora, en pastillas, más el dato que importa: en cuántos
+   * meses se paga sola. */
+  function pastillasDeMejora(m) {
+    var ef = m.efecto || {};
+    var lista = [];
+    if (ef.ingresoPasivo) {
+      lista.push(pastilla('piggy-bank', T('+{0} al mes', Q0(ef.ingresoPasivo)), 'ok'));
+    }
+    if (ef.bonoJornada) {
+      lista.push(pastilla('maletin', T('+{0} por jornada', Q0(ef.bonoJornada)), 'ok'));
+    }
+    if (ef.avanceEstudio) {
+      var pct2 = Math.round((ef.avanceEstudio / AVANCE_POR_JORNADA_ESTUDIO) * 100);
+      lista.push(pastilla('birrete', T('estudias {0}% más rápido', pct2), 'ok'));
+    }
+    if (ef.energiaExtra) {
+      lista.push(pastilla('rayo', T('+{0} de energía al descansar', ef.energiaExtra), 'ok'));
+    }
+    if (ef.costoMensual) {
+      lista.push(pastilla('recibo', T('-{0} al mes de mantenimiento', Q0(ef.costoMensual)), 'mal'));
+    }
+    var meses = mesesEnPagarse(m);
+    if (meses) lista.push(pastilla('calendario', T('se paga en {0} meses', meses)));
+    return lista;
+  }
+
+  /* En cuántos meses se paga sola una mejora.
+   *
+   * Es el número que el juego quiere que el jugador aprenda a calcular, así
+   * que lo calcula a la vista y no lo esconde. Solo tiene sentido cuando la
+   * mejora produce dinero: las de energía y de estudio pagan en tiempo. */
+  function mesesEnPagarse(m) {
+    var ef = m.efecto || {};
+    var alMes = (ef.ingresoPasivo || 0) - (ef.costoMensual || 0);
+    // Una herramienta paga por jornada: se cuenta un mes de trabajo completo
+    if (ef.bonoJornada) alMes += ef.bonoJornada * CONFIG.jornadasPorMes;
+    if (alMes <= 0) return 0;
+    return Math.ceil(m.costo / alMes);
   }
 
   // =============== pestaña: extra ===============
@@ -589,27 +1453,25 @@ var UI = (function () {
   function vistaExtra() {
     var e = Motor.get();
     var h = '<h2>' + T('Trabajos extra') + '</h2>';
-    h += '<p class="sutil">' +
-      T('Cada uno consume una semana. Pagan poco comparado con un sueldo, pero algo es algo y algunos te enseñan a cuidar tu dinero.') +
-      '</p>';
-
     var libres = Motor.espaciosUsados('minijuego');
     if (libres === 0) {
       h += '<div class="aprendizaje">' +
-        T('Para jugar uno, primero asigna una semana a Extra en la pestaña del mes.') + '</div>';
+        T('Para jugar uno, primero pon una jornada en Extra en la pestaña del mes.') + '</div>';
     }
 
     var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas);
     for (var i = 0; i < lista.length; i++) {
       var j = lista[i];
       var etiqueta = j.tipo === 'generico' ? T('paga') : (j.tipo === 'basico' ? T('enseña') : T('de tu profesión'));
-      h += '<div class="opcion"><div class="titulo">' + j.icono + ' ' + esc(D(j, 'nombre')) +
+      h += '<div class="opcion"><div class="titulo">' + Ico(j.icono) + ' ' + esc(D(j, 'nombre')) +
            '<span class="etiqueta">' + etiqueta + '</span></div>';
       h += '<p class="sutil" style="margin:6px 0">' + esc(D(j, 'descripcion')) + '</p>';
-      if (j.ensena) h += '<p class="sutil"><strong>' + T('Enseña:') + '</strong> ' + esc(D(j, 'ensena')) + '</p>';
-      h += fila(T('Paga hasta'), Q0(j.pagoMaximo), 'pos');
+      h += pastillas([
+        pastilla('moneda', T('hasta {0}', Q0(j.pagoMaximo)), 'ok'),
+        j.ensena ? pastilla('libro', esc(D(j, 'ensena'))) : ''
+      ]);
       h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-jugar="' +
-           j.id + '"' + (libres > 0 ? '' : ' disabled') + '>' + T('Jugar') + '</button></div></div>';
+           j.id + '"' + (libres > 0 ? '' : ' disabled') + '>' + Ico('mando') + ' ' + T('Jugar') + '</button></div></div>';
     }
 
     var bloqueados = Minijuegos.todos().length - lista.length;
@@ -622,32 +1484,107 @@ var UI = (function () {
 
   // =============== pestañas ===============
 
+  var PESTANAS_DEF = {
+    casa:    { ic: 'calendario', tx: 'Mes' },
+    trabajo: { ic: 'maletin', tx: 'Trabajo' },
+    // 'trending-up' viene del respaldo de Lucide: dice crecimiento, que es de
+    // lo que trata esta pestaña, y no se confunde con ningún otro del juego.
+    mejoras: { ic: 'trending-up', tx: 'Mejoras' },
+    estudio: { ic: 'birrete', tx: 'Estudio' },
+    banco:   { ic: 'banco', tx: 'Banco' },
+    extra:   { ic: 'mando', tx: 'Extra' },
+    noticias: { ic: 'periodico', tx: 'Noticias' }
+  };
+
   function pestanas() {
-    var items = [
-      { id: 'casa', ic: '🏠', tx: 'Mes' },
-      { id: 'trabajo', ic: '💼', tx: 'Trabajo' },
-      { id: 'estudio', ic: '🎓', tx: 'Estudio' },
-      { id: 'banco', ic: '🏦', tx: 'Banco' },
-      { id: 'extra', ic: '🎮', tx: 'Extra' }
-    ];
-    var h = '<nav class="pestanas">';
+    var items = ordenVisible().map(function (id) {
+      return { id: id, ic: PESTANAS_DEF[id].ic, tx: PESTANAS_DEF[id].tx };
+    });
+    /* La marca de la pestaña activa se dibuja una sola vez y viaja de la
+     * posición anterior a la nueva. Como la barra se vuelve a dibujar entera
+     * en cada render, una transición de CSS no serviría (el elemento es
+     * nuevo cada vez); una animación con las dos posiciones sí. */
+    var orden = items.map(function (it) { return it.id; });
+    var desde = Math.max(0, orden.indexOf(pestanaPrevia));
+    var hasta = Math.max(0, orden.indexOf(pestana));
+
+    var h = '<nav class="pestanas" style="--pestanas:' + items.length + '">';
+    h += '<span class="pest-marca" style="--desde:' + desde + ';--hasta:' + hasta + '"></span>';
     items.forEach(function (it) {
       h += '<button' + (pestana === it.id ? ' class="activa"' : '') + ' data-pestana="' + it.id + '">' +
-           '<span>' + it.ic + '</span><span class="txt">' + T(it.tx) + '</span></button>';
+           '<span class="ic-caja">' + Ico(it.ic) + '</span>' +
+           '<span class="txt">' + T(it.tx) + '</span></button>';
     });
     return h + '</nav>';
   }
 
   var latirBarra = false;
 
+  /* Dibuja, y si la jugada acaba de abrir un peldaño de la ruta, lo anuncia.
+   *
+   * El orden es a proposito: primero se revisa la ruta, luego se pinta (para
+   * que la pestaña nueva ya esté detrás de la tarjeta) y al final sale el
+   * anuncio. Al revés, el jugador cierra la tarjeta y ve la pantalla vieja.
+   */
   function render() {
+    // La vista va en la llamada porque los pasos del tutorial dependen de
+    // dónde está el jugador, no solo de su estado de cuenta.
+    var nuevos = Motor.revisarProgreso({ pestana: pestana, espacioSel: espacioSel });
+    pintar();
+    // Los peldaños sin título son movimientos del tutorial: se abren callados
+    var anunciables = nuevos.filter(function (p) { return !!p.titulo; });
+    if (anunciables.length) anunciarPeldanos(anunciables);
+  }
+
+  /* Anuncia los peldaños recién abiertos, de uno en uno. Cada tarjeta espera
+   * a que la cierren antes de sacar la siguiente: dos ventanas encimadas no
+   * se leen, se cierran. */
+  function anunciarPeldanos(lista) {
+    var i = 0;
+    (function siguiente() {
+      if (i >= lista.length) return pintar();
+      var p = lista[i++];
+      Sonido.tono('logro');
+      modal(
+        '<span class="icono">' + Ico(p.icono) + '</span>' +
+        '<div class="peldano-sello">' + T('Se abrió algo nuevo') + '</div>' +
+        '<h2>' + esc(K('progreso_titulo', p.id, p.titulo)) + '</h2>' +
+        '<p>' + esc(K('progreso_texto', p.id, p.texto)) + '</p>' +
+        (p.leccion
+          ? '<div class="aprendizaje"><strong>' + T('Lo que importa.') + '</strong> ' +
+            esc(K('progreso_leccion', p.id, p.leccion)) + '</div>'
+          : '') +
+        avanceRuta() +
+        '<button class="btn-primario" data-cerrar>' + T('Seguir') + '</button>',
+        siguiente);
+    })();
+  }
+
+  /* Cuánto de la ruta llevas abierto. Sale en cada anuncio, porque saber que
+   * faltan cuatro cosas más es lo que hace que valga la pena seguir. */
+  function avanceRuta() {
+    var abiertos = Motor.peldanosAbiertos();
+    var total = PROGRESO.length;
+    return '<div class="fila" style="margin-top:14px">' +
+             '<span class="etq">' + T('Tu ruta') + '</span>' +
+             '<span class="val">' + T('{0} de {1}', abiertos, total) + '</span></div>' +
+           '<div class="progreso"><div class="progreso-relleno" style="width:' +
+             Math.round((abiertos / total) * 100) + '%"></div></div>';
+  }
+
+  function pintar() {
     var cuerpo = pestana === 'casa' ? vistaCasa()
                : pestana === 'trabajo' ? vistaTrabajo()
                : pestana === 'estudio' ? vistaEstudio()
                : pestana === 'banco' ? vistaBanco()
+               : pestana === 'noticias' ? vistaNoticias()
+               : pestana === 'mejoras' ? vistaMejoras()
                : vistaExtra();
-    app.innerHTML = barra() + '<main>' + cuerpo + '</main>' + pestanas();
+    var clase = 'vista' + (sentido ? ' vista-entra ' + (sentido > 0 ? 'desde-der' : 'desde-izq') : '');
+    app.innerHTML = barra() + '<main class="' + clase + '">' + cuerpo + '</main>' + pestanas();
+    sentido = 0;
     pintarGuia();
+    pintarGraficaNegocio();
     // La barra de dinero late cuando el saldo cambio, para que el jugador vea
     // que algo paso sin tener que comparar cifras de memoria.
     if (latirBarra) {
@@ -679,7 +1616,7 @@ var UI = (function () {
     e.vistos[clave] = true;
     Motor.guardar();
     Sonido.tono('logro');
-    modal('<span class="icono">' + icono + '</span><h2>' + esc(titulo) + '</h2><p>' + cuerpo + '</p>' +
+    modal('<span class="icono">' + Ico(icono) + '</span><h2>' + esc(titulo) + '</h2><p>' + cuerpo + '</p>' +
       (leccion ? '<div class="aprendizaje"><strong>' + T('Lo que importa.') + '</strong> ' + leccion + '</div>' : '') +
       '<button class="btn-primario" data-cerrar>' + T('Entendido') + '</button>', alCerrar);
     return true;
@@ -700,6 +1637,18 @@ var UI = (function () {
       if (!isNaN(v) && v > 0) alConfirmar(v);
       render();
     });
+  }
+
+  /* Una pregunta de sí o no. Existe para lo que no se puede deshacer. */
+  function confirmar(titulo, texto, alAceptar) {
+    var d = modal('<span class="icono">' + Ico('alerta') + '</span><h2>' + esc(titulo) + '</h2>' +
+      '<p>' + esc(texto) + '</p>' +
+      '<button class="btn-primario peligro" id="si-confirmo">' + T('Sí, hazlo') + '</button>' +
+      '<div class="btn-fila" style="margin-top:8px"><button class="btn-chico" data-cerrar style="flex:1">' +
+      T('Mejor no') + '</button></div>');
+    var b = d.querySelector('#si-confirmo');
+    if (b) b.addEventListener('click', function () { d.remove(); alAceptar(); });
+    return d;
   }
 
   function aviso(titulo, texto) {
@@ -763,13 +1712,15 @@ var UI = (function () {
     var entra = [
       { id: 'salario',   nombre: T('Salario'),          monto: (m.salario || 0) + (m.bono || 0) },
       { id: 'remesa',    nombre: T('Remesas'),          monto: m.remesa || 0 },
-      { id: 'extras',    nombre: T('Ingresos extra'),   monto: m.extras || 0 },
+      { id: 'extras',    nombre: T('Ingresos extra'),
+        monto: (m.extras || 0) + (m.mesada || 0) + (m.negocio || 0) },
       { id: 'intereses', nombre: T('Intereses ganados'), monto: (m.intereses || 0) + (m.rendimientoPension || 0) }
     ];
     var sale = [
       { id: 'vivienda',    nombre: T('Vivienda y gastos'), monto: m.vivienda || 0 },
       { id: 'transporte',  nombre: T('Transporte'),        monto: m.transporte || 0 },
       { id: 'colegiatura', nombre: T('Colegiatura'),       monto: m.colegiatura || 0 },
+      { id: 'mejoras',     nombre: T('Mantenimiento de tus mejoras'), monto: m.mantenimiento || 0 },
       { id: 'deuda',       nombre: T('Deudas e intereses'),
         monto: (m.cuotasPagadas || 0) + (m.pagoTarjeta || 0) + (m.cuotaHipoteca || 0) + (m.interesesPagados || 0) },
       { id: 'enviado',     nombre: T('Mandado a tu familia'),
@@ -779,7 +1730,7 @@ var UI = (function () {
       { id: 'fuga',        nombre: T('Gastos hormiga'),
         monto: (m.fuga || 0) + (m.perdidaEfectivo || 0) },
       { id: 'impuestos',   nombre: T('Impuestos y aportes'),
-        monto: (m.isr || 0) + (m.aportePension || 0) }
+        monto: (m.isr || 0) + (m.aportePension || 0) + (m.manejo || 0) }
     ];
 
     var suma = function (xs) { var t = 0; for (var i = 0; i < xs.length; i++) t += xs[i].monto; return t; };
@@ -852,7 +1803,7 @@ var UI = (function () {
       var r = elemento.getBoundingClientRect();
       var s = document.createElement('span');
       s.className = 'moneda-vuela';
-      s.textContent = '🪙';
+      s.innerHTML = Ico('moneda');
       s.style.left = (r.left + r.width / 2 - 11) + 'px';
       s.style.top = (r.top + window.scrollY - 6) + 'px';
       document.body.appendChild(s);
@@ -863,60 +1814,26 @@ var UI = (function () {
   // =============== primer turno guiado ===============
 
   /* La guia avanza sola segun lo que el jugador YA hizo, no con un boton de
-   * siguiente. Cada paso tiene una condicion: mientras no se cumpla, la guia
-   * se queda ahi y señala donde hay que tocar. Asi nadie termina el tutorial
-   * sin haber hecho nunca lo que el tutorial explica.
+   * siguiente. Mientras el peldaño no se cumpla, la cinta se queda ahi y
+   * señala donde hay que tocar. Asi nadie termina el tutorial sin haber hecho
+   * nunca lo que el tutorial explica.
+   *
+   * Los pasos NO viven aqui: son los primeros peldaños de la ruta, los que
+   * llevan `guia: true` en datos/progreso.js. Tener una sola lista es lo que
+   * evita que el tutorial diga una cosa y el juego abra otra.
    *
    * Se puede salir en un toque. Alguien que ya entiende no tiene por que
    * pasar por esto, y a quien vuelve meses despues le sirve empezar de nuevo.
    */
 
-  var PASOS_GUIA = [
-    {
-      id: 'empleo',
-      txt: 'Sin empleo no entra dinero. Entra a Trabajo y acepta uno: fíjate que el formal y el informal pagan distinto.',
-      senala: '[data-pestana="trabajo"]',
-      hecho: function (e) { return !!e.empleo; }
-    },
-    {
-      id: 'semanas',
-      txt: 'Ahora reparte tus cuatro semanas del mes. Toca una semana y elige qué hacer con ella.',
-      senala: '.semanas',
-      pestana: 'casa',
-      hecho: function (e) { return e.espacios.some(function (x) { return !!x; }); }
-    },
-    {
-      id: 'llenar',
-      txt: 'Llena las cuatro. Trabajar las cuatro paga completo, pero te deja sin energía y enfermarte cuesta más que una semana.',
-      senala: '.semanas',
-      pestana: 'casa',
-      hecho: function (e) { return e.espacios.every(function (x) { return !!x; }); }
-    },
-    {
-      id: 'cuenta',
-      txt: 'Abre una cuenta en el Banco. En efectivo tu dinero se encoge solo, y sin cuenta las remesas te cobran más comisión.',
-      senala: '[data-pestana="banco"]',
-      hecho: function (e) { return e.monetaria !== null || e.ahorro !== null; }
-    },
-    {
-      id: 'cerrar',
-      txt: 'Listo. Cierra el mes y mira el resumen: te va a mostrar en una barra a dónde se fue cada quetzal.',
-      senala: '#cerrar-turno',
-      pestana: 'casa',
-      hecho: function (e) { return e.mesesJugados > 0; }
-    }
-  ];
+  var PASOS_GUIA = PROGRESO.filter(function (p) { return p.guia; });
 
   function guiaActiva() {
     var e = Motor.get();
-    if (!e || e.vistos.guiaSaltada || e.vistos.guiaTerminada) return null;
-    for (var i = 0; i < PASOS_GUIA.length; i++) {
-      if (!PASOS_GUIA[i].hecho(e)) return { paso: PASOS_GUIA[i], n: i + 1 };
-    }
-    // Se cumplieron todos: no volver a mostrarla
-    e.vistos.guiaTerminada = true;
-    Motor.guardar();
-    return null;
+    if (!e || e.vistos.guiaSaltada) return null;
+    var sig = Motor.siguientePeldano();
+    if (!sig || !sig.peldano.guia) return null;
+    return { paso: sig.peldano, n: PASOS_GUIA.indexOf(sig.peldano) + 1 };
   }
 
   function pintarGuia() {
@@ -926,19 +1843,39 @@ var UI = (function () {
     if (previo) previo.classList.remove('senala');
 
     var act = guiaActiva();
-    if (!act) return;
+    // La marca en el body es lo que le da al contenido el espacio de la cinta
+    try { document.body.classList[act ? 'add' : 'remove']('hay-guia'); } catch (e) {}
+    if (!act) {
+      /* Y se apaga el foco.
+       *
+       * Sin esto, al terminar el tutorial la cinta desaparecía pero el velo
+       * oscuro y la flecha se quedaban pegados en la pantalla, señalando un
+       * hueco vacío, y el juego quedaba a oscuras para siempre. */
+      focoSel = null;
+      pintarFoco(null);
+      return;
+    }
 
+    /* El botón de salirse es un enlace chiquito arriba a la derecha, no un
+     * botón del mismo tamaño que el que hay que tocar.
+     *
+     * Estaba puesto como botón grande al lado del principal, y en esa posición
+     * era la salida más cómoda de la pantalla: invitaba a saltarse el tutorial
+     * en vez de hacerlo. Sigue estando —quien ya sabe jugar tiene derecho a
+     * irse en un toque— pero ya no compite. */
     var d = document.createElement('div');
     d.className = 'guia';
     d.innerHTML = '<div class="guia-cinta">' +
-      '<div class="guia-paso">' + T('Paso {0} de {1}', act.n, PASOS_GUIA.length) + '</div>' +
-      '<div class="guia-txt">' + T(act.paso.txt) + '</div>' +
-      '<div class="guia-btns">' +
-        (act.paso.pestana && pestana !== act.paso.pestana
-          ? '<button class="btn-primario" data-guia-ir="' + act.paso.pestana + '">' + T('Llévame ahí') + '</button>'
-          : '') +
-        '<button class="salir" data-guia-salir>' + T('Ya sé jugar') + '</button>' +
-      '</div></div>';
+      '<div class="guia-alto">' +
+        '<span class="guia-paso">' + T('Paso {0} de {1}', act.n, PASOS_GUIA.length) + '</span>' +
+        '<button class="guia-salir" data-guia-salir>' + T('Ya sé jugar') + '</button>' +
+      '</div>' +
+      '<div class="guia-txt">' + esc(K('progreso_pista', act.paso.id, act.paso.pista)) + '</div>' +
+      (act.paso.pestana && pestana !== act.paso.pestana
+        ? '<button class="btn-primario guia-ir" data-guia-ir="' + act.paso.pestana + '">' +
+          T('Llévame ahí') + '</button>'
+        : '') +
+      '</div>';
     document.body.appendChild(d);
 
     // La cinta vive fuera de #app, asi que la delegacion de clics de la
@@ -947,16 +1884,102 @@ var UI = (function () {
     if (salir) salir.addEventListener('click', saltarGuia);
     var ir = d.querySelector('[data-guia-ir]');
     if (ir) ir.addEventListener('click', function () {
-      pestana = ir.getAttribute('data-guia-ir');
-      espacioSel = null;
+      irAPestana(ir.getAttribute('data-guia-ir'));
       render();
     });
 
-    // Señala el elemento del paso, si esta a la vista en esta pestaña
+    // Señala el elemento del paso, si esta a la vista en esta pestaña.
+    // El selector puede venir calculado: hay pasos donde lo que hay que tocar
+    // cambia a mitad del paso.
     if (act.paso.senala) {
-      var obj = document.querySelector(act.paso.senala);
+      var sel = typeof act.paso.senala === 'function'
+        ? act.paso.senala(Motor.get(), { pestana: pestana, espacioSel: espacioSel })
+        : act.paso.senala;
+      var obj = sel && document.querySelector(sel);
       if (obj) obj.classList.add('senala');
+      focoSel = obj ? sel : null;
+      pintarFoco(obj);
+    } else {
+      focoSel = null;
+      pintarFoco(null);
     }
+  }
+
+  /* El foco: todo oscuro menos el pedazo que hay que tocar, con una flecha.
+   *
+   * El aro ámbar alrededor del objetivo no bastaba. En una pantalla llena de
+   * tarjetas y botones, un aro es un detalle más; alguien que abre el juego
+   * por primera vez no sabe dónde mirar. Esto apaga el resto.
+   *
+   * El truco es una sombra enorme: el hueco no se dibuja, así que lo que hay
+   * debajo se ve con su color de siempre y todo lo demás queda debajo de una
+   * capa negra. El foco NO recibe clics (pointer-events: none), así que el
+   * jugador puede seguir tocando lo que quiera: se le señala el camino, no se
+   * le cierra la puerta.
+   */
+  var focoSel = null;
+
+  function pintarFoco(obj) {
+    var viejo = document.querySelector('.foco');
+    if (viejo && viejo.remove) viejo.remove();
+    var flechaVieja = document.querySelector('.foco-flecha');
+    if (flechaVieja && flechaVieja.remove) flechaVieja.remove();
+    if (!obj || typeof obj.getBoundingClientRect !== 'function') return;
+
+    var r;
+    try { r = obj.getBoundingClientRect(); } catch (err) { return; }
+    // Sin navegador de verdad no hay geometría: las pruebas no dibujan foco
+    if (!r || !r.width || !r.height) return;
+
+    var m = 7;   // aire alrededor del objetivo
+    var d = document.createElement('div');
+    d.className = 'foco';
+    d.style.top = (r.top - m) + 'px';
+    d.style.left = (r.left - m) + 'px';
+    d.style.width = (r.width + m * 2) + 'px';
+    d.style.height = (r.height + m * 2) + 'px';
+    document.body.appendChild(d);
+
+    /* La flecha va aparte del velo y por encima de la cinta.
+     *
+     * Metida dentro del foco quedaba debajo de la cinta del tutorial, que es
+     * justo lo que hay entre la cinta y las pestañas: se dibujaba y no se
+     * veía. Aparte puede ir más arriba en el orden de capas sin que el velo
+     * oscurezca también la cinta. */
+    var f = document.createElement('span');
+    // Cabe arriba si el objetivo no está pegado al techo de la pantalla
+    var arriba = r.top > 120;
+    f.className = 'foco-flecha ' + (arriba ? 'arriba' : 'abajo');
+    f.style.left = (r.left + r.width / 2) + 'px';
+    // Pegada al objetivo: con mas hueco se mete encima de lo que hay arriba
+    f.style.top = (arriba ? r.top - m - 30 : r.top + r.height + m + 2) + 'px';
+    f.innerHTML = Ico('flecha');
+    document.body.appendChild(f);
+
+    /* Y si la flecha cae justo donde está la cinta, la cinta se levanta.
+     *
+     * Pasa siempre que el paso señala una pestaña: la barra de pestañas está
+     * abajo, la cinta se sienta justo encima, y la flecha no tenía dónde ir
+     * más que sobre el texto de la cinta. Se mide y se corre. */
+    try {
+      var cinta = document.querySelector('.guia');
+      var rc = cinta && cinta.getBoundingClientRect();
+      var rf = f.getBoundingClientRect();
+      if (rc && rc.height && rc.bottom > rf.top && rc.top < rf.bottom) {
+        var sube = Math.ceil(rc.bottom - rf.top) + 8;
+        cinta.style.bottom = 'calc(' + (60 + sube) + 'px + env(safe-area-inset-bottom))';
+        document.body.classList.add('cinta-alta');
+      } else {
+        document.body.classList.remove('cinta-alta');
+      }
+    } catch (err) {}
+  }
+
+  /* Al hacer scroll o girar el teléfono el objetivo se mueve y el foco se
+   * queda donde estaba. Esto lo vuelve a poner encima. */
+  function reubicarFoco() {
+    if (!focoSel) return;
+    pintarFoco(document.querySelector(focoSel));
   }
 
   function saltarGuia() {
@@ -967,22 +1990,28 @@ var UI = (function () {
     if (g) g.remove();
     var s = document.querySelector('.senala');
     if (s) s.classList.remove('senala');
+    focoSel = null;
+    pintarFoco(null);
   }
 
   // =============== resumen del turno ===============
 
   function resumenTurno(m, pendientes) {
-    var h = '<span class="icono">📅</span><h2 style="text-transform:capitalize">' +
+    var h = '<span class="icono">' + Ico('calendario') + '</span><h2 style="text-transform:capitalize">' +
             esc(m.mes) + ' ' + m.anio +
             (m.mesesCubiertos > 1 ? ' · ' + T('{0} meses', m.mesesCubiertos) : '') + '</h2>';
     h += barraFlujo(m);
     if (m.salario) h += fila(T('Salario'), Q(m.salario), 'pos');
     if (m.bono) h += fila(T('Bono de ley'), Q(m.bono), 'pos');
+    if (m.mesada) h += fila(T('Mesada'), Q(m.mesada), 'pos');
+    if (m.negocio) h += fila(T('Tu negocio'), Q(m.negocio), 'pos');
+    if (m.mantenimiento) h += fila(T('Mantenimiento de tus mejoras'), '-' + Q(m.mantenimiento), 'neg');
     if (m.remesa) h += fila(T('Remesas'), Q(m.remesa), 'pos');
     if (m.extras) h += fila(T('Ingresos extra'), Q(m.extras), 'pos');
     if (m.comisionRemesa) h += fila(T('Comisión de remesa'), '-' + Q(m.comisionRemesa), 'neg');
     if (m.vivienda) h += fila(T('Vivienda y gastos'), '-' + Q(m.vivienda), 'neg');
     if (m.colegiatura) h += fila(T('Colegiatura'), '-' + Q(m.colegiatura), 'neg');
+    if (m.manejo) h += fila(T('Manejo de cuenta'), '-' + Q(m.manejo), 'neg');
     if (m.enviado) h += fila(T('Mandado a tu familia'), '-' + Q(m.enviado), 'neg');
     if (m.comisionEnvio) h += fila(T('Comisión del envío'), '-' + Q(m.comisionEnvio), 'neg');
     if (m.cuotaHipoteca) h += fila(T('Cuota de hipoteca'), '-' + Q(m.cuotaHipoteca), 'neg');
@@ -1014,11 +2043,30 @@ var UI = (function () {
     cola.push(function (sig) { modal(resumenTurno(m, m.decisiones.length > 0), sig); });
     m.decisiones.forEach(function (d) { cola.push(function (sig) { mostrarDecision(d, sig); }); });
 
+    /* Cumplir 18 no es un evento cualquiera: es el mes en que el gasto de la
+     * casa deja de ser de tus papás y pasa a ser tuyo. Merece su propia
+     * ventana, porque explica de golpe por qué el mes siguiente no alcanza. */
+    if (m.cumpleMayoria) {
+      cola.push(function (sig) {
+        var e2 = Motor.get();
+        modal('<span class="icono">' + Ico('confeti') + '</span><h2>' +
+          T('Cumpliste {0}', CONFIG.mayoriaDeEdad) + '</h2>' +
+          '<p>' + T('Ya eres mayor de edad. Desde este mes te toca tu parte del gasto de la casa, puedes firmar un contrato formal y el banco te puede prestar.') + '</p>' +
+          '<div class="tres-cifras"><div><span class="etq">' + T('Antes gastabas') + '</span><b>' +
+            Q0(CONFIG.menor.gastoPersonal) + '</b></div>' +
+          '<div><span class="etq">' + T('Ahora') + '</span><b class="neg">' +
+            Q0(Motor.gastoMensualVivienda()) + '</b></div></div>' +
+          '<div class="aprendizaje"><strong>' + T('Lo que importa.') + '</strong> ' +
+          T('Ese salto le pasa a todo el mundo y a casi nadie le avisan. El que llega a los 18 con algo guardado aguanta el golpe; el que llega en cero, empieza pidiendo prestado.') +
+          '</div><button class="btn-primario" data-cerrar>' + T('Seguir') + '</button>', sig);
+      });
+    }
+
     if (m.graduacion) {
       cola.push(function (sig) {
         var c = buscar(CARRERAS, m.graduacion);
         Sonido.tono('logro');
-        modal('<span class="icono">🎓</span><h2>' + T('Te graduaste') + '</h2><p>' +
+        modal('<span class="icono">' + Ico('birrete') + '</span><h2>' + T('Te graduaste') + '</h2><p>' +
           T('Terminaste {0}. Ya calificas para empleos que antes no podías tomar.', esc(D(c, 'nombre'))) + '</p>' +
           (c.nivelQueOtorga === 'licenciatura'
             ? '<div class="aprendizaje">' +
@@ -1038,18 +2086,30 @@ var UI = (function () {
   }
 
   function mostrarDecision(d, sig) {
-    var def = d.clase === 'promo' ? buscar(PROMOCIONES, d.ref) : buscar(EVENTOS, d.ref);
+    var fuente = d.clase === 'promo' ? PROMOCIONES
+               : d.clase === 'decision' ? DECISIONES
+               : EVENTOS;
+    var def = buscar(fuente, d.ref);
     if (!def) { sig(); return; }
     Sonido.tono(d.clase === 'promo' ? 'toque' : 'alerta');
 
-    var h = '<span class="icono">' + def.icono + '</span><h2>' + esc(D(def, 'titulo')) + '</h2>';
+    /* Las tarjetas de decisión se ven distintas de los eventos: son una carta
+     * que se voltea, con el dibujo grande y los botones del mismo tamaño. Que
+     * ninguno se vea más importante que el otro es la mitad del ejercicio. */
+    var h = '<span class="icono' + (d.clase === 'decision' ? ' carta' : '') + '">' +
+            Ico(def.icono) + '</span>';
+    if (d.clase === 'decision') {
+      h += '<div class="sello-carta">' + Ico('balanza') + ' ' + T('Tienes que decidir') + '</div>';
+    }
+    h += '<h2>' + esc(D(def, 'titulo')) + '</h2>';
     h += '<p>' + esc(D(def, 'texto')) + '</p>';
     if (def.letraChica) h += '<div class="letra-chica"><strong>' + T('Letra chica:') + '</strong> ' +
                              esc(D(def, 'letraChica')) + '</div>';
 
     if (!def.opciones) h += '<button class="btn-primario" id="op0">' + T('Aceptar') + '</button>';
     else def.opciones.forEach(function (o, i) {
-      h += '<button class="btn-primario" id="op' + i + '" style="margin-top:8px">' +
+      h += '<button class="btn-primario ' + (i > 0 ? 'claro ' : '') + 'opcion-carta" id="op' + i + '">' +
+           (o.icono ? Ico(o.icono) + ' ' : '') +
            esc(K('opciones', def.id + ':' + i, o.etiqueta)) + '</button>';
     });
 
@@ -1079,7 +2139,7 @@ var UI = (function () {
     var previo = e.resumenesAnuales[e.resumenesAnuales.length - 2];
     var delta = previo ? r.patrimonio - previo.patrimonio : r.patrimonio;
 
-    var h = '<span class="icono">🗓️</span><h2>' + T('Cerraste el año {0}', r.anio) + '</h2>';
+    var h = '<span class="icono">' + Ico('calendario') + '</span><h2>' + T('Cerraste el año {0}', r.anio) + '</h2>';
     h += graficaPatrimonio(e.resumenesAnuales);
     h += fila(T('Edad'), T('{0} años', r.edad));
     h += fila(T('Patrimonio'), Q(r.patrimonio));
@@ -1111,7 +2171,7 @@ var UI = (function () {
   function mostrarReporteFinal(sig) {
     var r = Motor.reporte();
     Motor.archivarPartida();
-    var h = '<span class="icono">🏁</span><h2>' + T('Tu vida en números') + '</h2>';
+    var h = '<span class="icono">' + Ico('bandera-meta') + '</span><h2>' + T('Tu vida en números') + '</h2>';
     h += graficaPatrimonio(Motor.get().resumenesAnuales);
     h += fila(T('Edad final'), T('{0} años', r.edad));
     h += fila(T('Patrimonio'), Q(r.patrimonio), r.patrimonio >= 0 ? 'pos' : 'neg');
@@ -1146,7 +2206,7 @@ var UI = (function () {
   }
 
   function mostrarGlosario() {
-    var h = '<span class="icono">📖</span><h2>' + T('Glosario') + '</h2>';
+    var h = '<span class="icono">' + Ico('libro') + '</span><h2>' + T('Glosario') + '</h2>';
     GLOSARIO.forEach(function (g) {
       h += '<div class="glosa' + (g.clave ? ' clave' : '') + '"><strong>' +
            esc(K('glosario_termino', g.termino, g.termino)) + '</strong><p class="sutil">' +
@@ -1158,7 +2218,7 @@ var UI = (function () {
 
   function mostrarReporte() {
     var r = Motor.reporte();
-    var h = '<span class="icono">📈</span><h2>' + T('Cómo vas') + '</h2>';
+    var h = '<span class="icono">' + Ico('tendencia') + '</span><h2>' + T('Cómo vas') + '</h2>';
     h += fila(T('Edad'), T('{0} años', r.edad));
     h += fila(T('Patrimonio'), Q(r.patrimonio), r.patrimonio >= 0 ? 'pos' : 'neg');
     h += fila(T('Deuda'), Q(r.deuda), r.deuda > 0 ? 'neg' : '');
@@ -1187,13 +2247,14 @@ var UI = (function () {
   function mostrarMenu() {
     var h = '<h2>' + T('Opciones') + '</h2>';
     h += '<div class="btn-fila" style="margin-bottom:10px">' +
-         '<button class="btn-chico" id="m-idioma">🌐 ' +
+         '<button class="btn-chico" id="m-idioma">' + Ico('mundo') + ' ' +
            (Idioma.actual() === 'es' ? 'English' : 'Español') + '</button>' +
          '<button class="btn-chico" id="m-sonido">' +
-           (Sonido.activo() ? '🔊 ' + T('Sonido activado') : '🔇 ' + T('Sonido apagado')) + '</button></div>';
+           (Sonido.activo() ? Ico('sonido') + ' ' + T('Sonido activado')
+                            : Ico('sonido-off') + ' ' + T('Sonido apagado')) + '</button></div>';
     h += '<div class="btn-fila" style="margin-bottom:10px">' +
-         '<button class="btn-chico" id="m-glosario">📖 ' + T('Glosario') + '</button>' +
-         '<button class="btn-chico" id="m-reporte">📈 ' + T('Cómo voy') + '</button></div>';
+         '<button class="btn-chico" id="m-glosario">' + Ico('libro') + ' ' + T('Glosario') + '</button>' +
+         '<button class="btn-chico" id="m-reporte">' + Ico('tendencia') + ' ' + T('Cómo voy') + '</button></div>';
     h += '<h3>' + T('Tu partida') + '</h3>';
     h += '<div class="btn-fila"><button class="btn-chico" id="m-exportar">' + T('Copiar código de partida') +
          '</button><button class="btn-chico" id="m-importar">' + T('Pegar un código') + '</button></div>';
@@ -1266,7 +2327,7 @@ var UI = (function () {
       }
       Motor.guardar();
       interior.innerHTML =
-        '<span class="icono">' + res.def.icono + '</span><h2>' + esc(D(res.def, 'nombre')) + '</h2>' +
+        '<span class="icono">' + Ico(res.def.icono) + '</span><h2>' + esc(D(res.def, 'nombre')) + '</h2>' +
         fila(T('Puntos'), res.puntos) +
         fila(T('Aciertos'), T('{0} de {1}', res.aciertos, res.total)) +
         fila(T('Te pagaron'), Q(res.pago), 'pos') +
@@ -1282,9 +2343,10 @@ var UI = (function () {
 
   function conectar() {
     app.addEventListener('click', function (ev) {
-      var el = ev.target.closest('[data-pestana],[data-espacio],[data-poner],[data-tomar],[data-abrir],' +
+      var el = ev.target.closest('[data-pestana],[data-sub],[data-espacio],[data-poner],[data-tomar],[data-abrir],' +
         '[data-mover],[data-mudar],[data-inscribir],[data-jugar],[data-abonar],[data-abrir-menu],' +
-        '[data-casa],[data-envio],[data-canal],' +
+        '[data-casa],[data-envio],[data-canal],[data-porque],[data-detalle],[data-no-estudiar],' +
+        '[data-ver-perfil],[data-mejora],' +
         '#cerrar-turno,#adelantar,#renunciar,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
         '#pedir-tarjeta,#pedir-informal,#gastar-tarjeta,#pagar-tarjeta,#alternar-minimo,' +
         '#abrir-pension,#cambiar-pension,#retirar-pension,#migrar,#regresar,' +
@@ -1294,13 +2356,23 @@ var UI = (function () {
       var e = Motor.get();
 
       if (d.abrirMenu !== undefined) return mostrarMenu();
-      if (d.pestana) { pestana = d.pestana; espacioSel = null; return render(); }
+      if (d.verPerfil !== undefined) return mostrarPerfil();
+      if (d.pestana) { irAPestana(d.pestana); return render(); }
+      if (d.sub) { subDe[pestana] = d.sub; return render(); }
 
       if (d.espacio !== undefined) {
         var i = parseInt(d.espacio, 10);
+        // Las jornadas del colegio no se tocan: se explica y no se selecciona
+        if (Motor.espacioBloqueado(i)) { avisoBloqueo = true; espacioSel = null; return render(); }
         espacioSel = espacioSel === i ? null : i;
         return render();
       }
+
+      if (d.porque) {
+        abiertos[d.porque] = !abiertos[d.porque];
+        return render();
+      }
+      if (d.detalle) { verDetalle = !verDetalle; return render(); }
 
       if (d.poner !== undefined && espacioSel !== null) {
         Motor.asignarEspacio(espacioSel, d.poner);
@@ -1312,7 +2384,7 @@ var UI = (function () {
         Motor.tomarTrabajo(d.tomar, d.formal === '1');
         Motor.guardar(); render();
         if (d.formal === '0') {
-          tarjetaEducativa('informal', '⚠️', T('Aceptaste un trabajo informal'),
+          tarjetaEducativa('informal', 'alerta', T('Aceptaste un trabajo informal'),
             T('Vas a recibir {0} más en la mano cada mes. A cambio no tienes Bono 14 ni aguinaldo, no cotizas al seguro y el banco no puede comprobar tus ingresos.',
               pct(CONFIG.primaInformalidad)),
             T('Dos tercios de los guatemaltecos trabajan así. Es más dinero hoy y menos toda la vida, porque sin historial nadie te presta cuando lo necesitas.'));
@@ -1321,30 +2393,70 @@ var UI = (function () {
       }
 
       if (d.inscribir) {
-        var r = Motor.inscribirse(d.inscribir, d.priv === '1');
+        var r = Motor.inscribirse(d.inscribir, d.priv === '1', d.jornada);
         if (!r.ok) return aviso(T('No se puede'), r.razon);
         Motor.guardar(); render();
         var c = buscar(CARRERAS, d.inscribir);
-        return tarjetaEducativa('estudio', '🎓', T('Te inscribiste'),
-          T('Empiezas {0}. Cada semana que dediques avanza medio mes de carrera, y esa semana no la estás trabajando.',
-            esc(D(c, 'nombre'))),
-          T('La universidad pública es gratuita desde 2026. El costo real de estudiar en Guatemala no es la colegiatura, es el sueldo que dejas de ganar.'));
+        var cuerpo = c.horario === 'libre'
+          ? T('Empiezas {0}. Cada jornada que le dediques avanza un cuarto de mes de carrera, y esa jornada no la estás trabajando.',
+              esc(D(c, 'nombre')))
+          : T('Empiezas {0}. El colegio te toma la jornada de la {1} de las cuatro semanas; la otra es tuya para trabajar.',
+              esc(D(c, 'nombre')), d.jornada === 'pm' ? T('tarde') : T('mañana'));
+        return tarjetaEducativa('estudio' + c.id, 'birrete', T('Te inscribiste'), cuerpo,
+          T('El costo real de estudiar en Guatemala no es la colegiatura: la pública es gratis. Es el sueldo que dejas de ganar mientras estudias.'));
       }
 
-      if (el.id === 'abandonar') { Motor.abandonarEstudio(); Motor.guardar(); return render(); }
+      if (d.mejora) {
+        var rm = Motor.comprarMejora(d.mejora);
+        if (!rm.ok) return aviso(T('Todavía no'), rm.razon);
+        Sonido.tono('logro');
+        latirBarra = true;
+        escenaCrecio = true;   // que el escenario dé el saltito al redibujarse
+        render();
+        var mj = rm.mejora;
+        var nivelNuevo = Motor.nivelDeCadena(mj.cadena);
+        var deCuantos = Motor.mejorasDeCadena(mj.cadena).length;
+        /* La ventana de compra es la celebración: un tycoon tiene que decirte
+         * que subiste de nivel, no solo cobrarte. */
+        return tarjetaEducativa('mejora' + mj.id, mj.icono,
+          T('Compraste: {0}', esc(D(mj, 'nombre'))),
+          '<div class="sello-nivel">' + Ico(nivelNuevo === deCuantos ? 'crown' : 'sparkles') +
+            ' ' + T('Nivel {0} de {1}', nivelNuevo, deCuantos) + '</div>' +
+          (mesesEnPagarse(mj)
+            ? T('Te costó {0} y se paga sola en {1} meses. De ahí en adelante es ganancia.',
+                Q0(mj.costo), mesesEnPagarse(mj))
+            : T('Te costó {0}. Esta no se paga en dinero: se paga en tiempo y en salud.',
+                Q0(mj.costo))),
+          K('mejora_leccion', mj.id, mj.leccion));
+      }
+
+      if (d.noEstudiar) {
+        Motor.decidirEstudio('no');
+        render();
+        return tarjetaEducativa('noestudiar', 'maletin', T('Te vas a trabajar'),
+          T('Nadie te va a obligar. La pestaña de Estudio se queda ahí y puedes inscribirte cuando quieras.'),
+          T('Seis de cada diez chicos guatemaltecos no terminan básicos. La mayoría no lo decidió en una pantalla: se le fue haciendo tarde.'));
+      }
+
+      if (el.id === 'abandonar') {
+        return confirmar(T('¿Dejar de estudiar?'),
+          T('Pierdes lo que llevas avanzado. Si vuelves después, empiezas de cero.'),
+          function () { Motor.abandonarEstudio(); Motor.guardar(); render(); });
+      }
 
       if (d.abrir) {
-        var p = CONFIG.productos[d.abrir];
-        var ra = Motor.abrirCuenta(d.abrir, p.aperturaMinima);
+        var ra = Motor.abrirCuenta(d.abrir, Motor.aperturaMinima(d.abrir));
         if (!ra.ok) return aviso(T('No se pudo'), ra.razon);
         Sonido.tono('moneda'); render();
         if (d.abrir === 'monetaria') {
-          return tarjetaEducativa('monetaria', '💳', T('Abriste tu cuenta monetaria'),
-            T('La monetaria es para mover dinero: recibir el salario, pagar y transferir. Paga apenas 1.27% al año, así que no es para guardar.'),
-            T('Desde ahora tu salario y tus remesas entran a la cuenta en vez de al bolsillo. Eso solo ya frena los gastos hormiga y te baja la comisión de la remesa a la mitad.'));
+          return tarjetaEducativa('monetaria', 'tarjeta', T('Abriste tu cuenta monetaria'),
+            T('La monetaria es para mover dinero: recibir el salario de una empresa, pagar y transferir. Paga apenas 1.27% al año, así que no es para guardar.'),
+            Motor.manejoDeCuenta() > 0
+              ? T('Ojo: como nadie te deposita planilla, el banco te va a cobrar {0} de manejo cada mes. Ese cargo desaparece el día que una empresa te pague el sueldo aquí.', Q0(Motor.manejoDeCuenta()))
+              : T('Tu sueldo entra aquí en vez de al bolsillo, y como te lo deposita una empresa no te cobran manejo de cuenta.'));
         }
-        return tarjetaEducativa('ahorro', '🏦', T('Abriste tu cuenta de ahorro'),
-          T('El ahorro paga 2.65% al año, más del doble que la monetaria, porque el banco espera que no muevas ese dinero.'),
+        return tarjetaEducativa('ahorro', 'banco', T('Abriste tu cuenta de ahorro'),
+          T('El ahorro paga 2.65% al año, más del doble que la monetaria, y no cobra manejo de cuenta.'),
           T('Sobre lo que ganes de intereses te retienen 10% de impuesto. El rendimiento que te prometen nunca es el que recibes.'));
       }
 
@@ -1370,7 +2482,7 @@ var UI = (function () {
           var rp = Motor.abrirPlazo(v);
           if (!rp.ok) return aviso(T('No se pudo'), rp.razon);
           Motor.guardar();
-          tarjetaEducativa('plazo', '📈', T('Abriste un depósito a plazo'),
+          tarjetaEducativa('plazo', 'tendencia', T('Abriste un depósito a plazo'),
             T('Dejas el dinero quieto doce meses y rinde 6.35% al año, más del doble que el ahorro.'),
             T('Aquí es donde se ve el interés compuesto. Los intereses que ganas también empiezan a ganar intereses, y por eso ahorrar a los 20 vale muchísimo más que a los 40.'));
         }, T('Mínimo {0}, a doce meses.', Q0(CONFIG.productos.plazo.aperturaMinima)));
@@ -1389,7 +2501,7 @@ var UI = (function () {
         var rt = Motor.solicitarTarjeta();
         if (!rt.ok) return aviso(T('No calificas'), rt.razon);
         Motor.guardar(); render();
-        return tarjetaEducativa('tarjeta', '💳', T('Te dieron tarjeta de crédito'),
+        return tarjetaEducativa('tarjeta', 'tarjeta', T('Te dieron tarjeta de crédito'),
           T('Tu límite es {0}. Cada mes puedes pagar todo el saldo o solo el mínimo.', Q0(rt.limite)),
           T('La tasa es 45.84% al año. Pagando solo el mínimo, una compra de Q1,000 puede terminar costándote más del doble. Es el error financiero más caro y más común de tu edad.'));
       }
@@ -1472,7 +2584,7 @@ var UI = (function () {
       if (d.canal) {
         Motor.cambiarEnvio(e.migracion.enviaPorcentaje, d.canal); Motor.guardar(); render();
         if (d.canal === 'app') {
-          tarjetaEducativa('canalapp', '📲', T('Cambiaste de canal'),
+          tarjetaEducativa('canalapp', 'celular-app', T('Cambiaste de canal'),
             T('Mandar por app cuesta 1% en vez de 4.5%. Sobre cada Q1,000 son Q35 que ya no se pierden.'),
             T('Suena a poco. En veinte años de mandar dinero cada mes, esa diferencia es el enganche de una casa.'));
         }
@@ -1482,7 +2594,7 @@ var UI = (function () {
         var rg = Motor.regresar();
         if (!rg.ok) return aviso(T('Todavía no'), rg.razon);
         Motor.guardar(); render();
-        return tarjetaEducativa('regreso', '🛬', T('Volviste a Guatemala'),
+        return tarjetaEducativa('regreso', 'avion-baja', T('Volviste a Guatemala'),
           T('Estuviste {0} meses fuera y trajiste {1}.', rg.meses, Q(rg.traido)),
           T('El dinero volvió contigo. Los años de historial crediticio local, no: tu puntaje se enfrió a la mitad y hay que reconstruirlo.'));
       }
@@ -1504,8 +2616,8 @@ var UI = (function () {
 
       if (el.id === 'cerrar-turno') {
         latirBarra = true;
-        if (Motor.espaciosLibres() === CONFIG.espaciosPorMes) {
-          return aviso(T('No has hecho nada'), T('Asigna al menos una semana antes de cerrar.'));
+        if (Motor.espaciosLibres() === CONFIG.jornadasPorMes) {
+          return aviso(T('No has hecho nada'), T('Reparte al menos una jornada antes de cerrar.'));
         }
         return procesarTurno(Motor.cerrarTurno());
       }
@@ -1520,7 +2632,7 @@ var UI = (function () {
     var e = Motor.get();
     if (!req.ok && !req.necesitaGarantia) return aviso(T('No calificas'), req.razon);
 
-    var h = '<span class="icono">🏦</span><h2>' + T('Préstamo personal') + '</h2>';
+    var h = '<span class="icono">' + Ico('banco') + '</span><h2>' + T('Préstamo personal') + '</h2>';
     h += fila(T('Tasa'), T('{0}% anual', (CREDITOS.personal.tasaAnual * 100).toFixed(2)));
     h += fila(T('Máximo con tu historial'), Q0(maximo));
 
@@ -1559,7 +2671,7 @@ var UI = (function () {
           var r = Motor.pedirPrestamo(v, 12, true);
           if (!r.ok) return aviso(T('No se pudo'), r.razon);
           Motor.guardar();
-          tarjetaEducativa('primercredito', '🏦', T('Tu primer crédito'),
+          tarjetaEducativa('primercredito', 'banco', T('Tu primer crédito'),
             T('Dejaste {0} de tu ahorro congelado como garantía y el banco te prestó el mismo monto. Tu cuota es {1}.',
               Q0(v), Q(r.cuota)),
             T('Parece absurdo pedir prestado el dinero que ya tienes, pero es la forma más común de empezar a construir historial. Cada cuota que pagues a tiempo sube tu puntaje.'));
@@ -1606,7 +2718,7 @@ var UI = (function () {
     var casa = buscar(CASAS, casaId);
     var plazoSel = HIPOTECA.plazos[1];
 
-    var h = '<span class="icono">' + casa.icono + '</span><h2>' + esc(D(casa, 'nombre')) + '</h2>';
+    var h = '<span class="icono">' + Ico(casa.icono) + '</span><h2>' + esc(D(casa, 'nombre')) + '</h2>';
     h += fila(T('Precio'), Q0(casa.precio));
     h += fila(T('Enganche'), Q0(Motor.engancheDe(casa)) + ' · ' +
               pct(casa.apoyoFHA ? HIPOTECA.engancheFHA : HIPOTECA.engancheNormal));
@@ -1658,7 +2770,7 @@ var UI = (function () {
       d.remove();
       if (!r.ok) return aviso(T('No se pudo'), r.razon);
       Motor.guardar(); Sonido.tono('logro'); render();
-      tarjetaEducativa('hipoteca', '🔑', T('Compraste tu casa'),
+      tarjetaEducativa('hipoteca', 'llave', T('Compraste tu casa'),
         T('Pusiste {0} de enganche y el banco te prestó {1}. Tu cuota es {2} por {3} años.',
           Q0(r.enganche), Q0(r.prestado), Q(r.cuota), plazoSel),
         T('La casa no es tuya el día que te dan las llaves. Es tuya el día que terminas de pagarla. Hasta entonces, dejar de pagar significa perderla y perder lo que ya pusiste.'));
@@ -1669,7 +2781,7 @@ var UI = (function () {
     var e = Motor.get();
     var elegido = null, envio = MIGRACION.enviosSugeridos[1], canal = 'ventanilla';
 
-    var h = '<span class="icono">✈️</span><h2>' + T('Irte a Estados Unidos') + '</h2>';
+    var h = '<span class="icono">' + Ico('avion') + '</span><h2>' + T('Irte a Estados Unidos') + '</h2>';
     h += '<p>' + T('Se gana mucho más y se gasta mucho más. Mientras estés fuera no construyes historial de crédito aquí, y cada envío pierde comisión.') + '</p>';
     h += fila(T('Cuesta el viaje'), Q0(MIGRACION.costoViaje), 'neg');
     h += fila(T('Costo de vida allá'), 'US$' + MIGRACION.costoVidaDolares.toLocaleString() + T(' al mes'), 'neg');
@@ -1682,7 +2794,7 @@ var UI = (function () {
     MIGRACION.empleos.forEach(function (emp) {
       var puede = NIVELES_EDUCATIVOS.indexOf(e.educacion) >= NIVELES_EDUCATIVOS.indexOf(emp.requisito);
       h += '<div class="opcion' + (puede ? '' : ' bloqueada') + '">';
-      h += '<div class="titulo">' + emp.icono + ' ' + esc(D(emp, 'nombre')) + '</div>';
+      h += '<div class="titulo">' + Ico(emp.icono) + ' ' + esc(D(emp, 'nombre')) + '</div>';
       h += '<p class="sutil" style="margin:6px 0">' + esc(D(emp, 'descripcion')) + '</p>';
       h += fila(T('Sueldo'), 'US$' + emp.sueldoDolares.toLocaleString() + T(' al mes'), 'pos');
       if (!puede) h += '<p class="aviso">' + T('Necesitas nivel {0}.', nivel(emp.requisito)) + '</p>';
@@ -1702,7 +2814,7 @@ var UI = (function () {
         var emp = buscar(MIGRACION.empleos, elegido);
         var sobra = emp.sueldoDolares - MIGRACION.costoVidaDolares;
         var c = d.querySelector('#conf');
-        var hh = '<div class="tarjeta acento"><div class="titulo">' + emp.icono + ' ' +
+        var hh = '<div class="tarjeta acento"><div class="titulo">' + Ico(emp.icono) + ' ' +
                  esc(D(emp, 'nombre')) + '</div>';
         hh += fila(T('Te sobra al mes'), 'US$' + Math.round(sobra).toLocaleString(), 'pos');
         hh += '<label class="sutil" style="margin-top:8px;display:block">' +
@@ -1755,14 +2867,14 @@ var UI = (function () {
           Motor.guardar(); render();
           if (r.fracaso) {
             Sonido.tono('alerta');
-            return modal('<span class="icono">🚧</span><h2>' + T('No lograste llegar') + '</h2><p>' +
+            return modal('<span class="icono">' + Ico('barrera') + '</span><h2>' + T('No lograste llegar') + '</h2><p>' +
               T('Te devolvieron. Perdiste los {0} del viaje y estás de vuelta donde empezaste, con menos.',
                 Q0(MIGRACION.costoViaje)) + '</p>' +
               '<div class="aprendizaje">' +
               T('Casi uno de cada cinco intentos termina así. Es un riesgo que la gente rara vez pone en la cuenta antes de irse.') +
               '</div><button class="btn-primario" data-cerrar>' + T('Seguir') + '</button>');
           }
-          tarjetaEducativa('migrar', '✈️', T('Te fuiste'),
+          tarjetaEducativa('migrar', 'avion', T('Te fuiste'),
             T('Estás en Estados Unidos trabajando. Mandas {0} de lo que te sobra cada mes.', pct(envio)),
             T('Aquí empieza el otro lado de la remesa. Fíjate cuánto llega de verdad a tu familia y cuánto se queda en el camino.'));
         });
@@ -1772,7 +2884,7 @@ var UI = (function () {
 
   function flujoInformal() {
     var c = CREDITOS.informal;
-    var h = '<span class="icono">🚩</span><h2>' + T('Prestamista del barrio') + '</h2>';
+    var h = '<span class="icono">' + Ico('bandera') + '</span><h2>' + T('Prestamista del barrio') + '</h2>';
     h += '<p>' + T('Presta a cualquiera, hoy mismo, sin papeles. Cobra veinticinco por ciento al mes.') + '</p>';
     h += fila(T('Interés'), T('{0} mensual', pct(c.tasaMensual)));
     h += fila(T('En términos anuales'), Math.round((Math.pow(1 + c.tasaMensual, 12) - 1) * 100) + '%', 'neg');
@@ -1804,7 +2916,7 @@ var UI = (function () {
       d.remove();
       if (!r.ok) return aviso(T('No se pudo'), r.razon);
       Motor.guardar(); render();
-      tarjetaEducativa('informalcredito', '🚩', T('Le pediste al prestamista'),
+      tarjetaEducativa('informalcredito', 'bandera', T('Le pediste al prestamista'),
         T('Tienes el dinero hoy, sin papeles y sin fiador. Tu cuota es {0} por seis meses.', Q(r.cuota)),
         T('Este préstamo no construye ningún historial. Al contrario: te consume el ingreso que necesitas para calificar en el banco. Es la trampa donde cae el 26.2% del país.'));
     });
@@ -1818,10 +2930,10 @@ var UI = (function () {
 
     var h = '<main style="padding-top:36px">' +
       '<div class="centrado" style="margin-bottom:22px">' +
-        '<div style="font-size:52px">🪙</div>' +
+        '<div class="moneda-grande">' + Ico('moneda') + '</div>' +
         '<h1 style="font-size:26px;margin:8px 0 2px">Mi Primer Quetzal</h1>' +
-        '<p class="sutil">' + T('De los 18 a la jubilación') + '</p>' +
-        '<button class="btn-chico" data-idioma style="margin-top:10px">🌐 ' +
+        '<p class="sutil">' + T('De los 13 a la jubilación') + '</p>' +
+        '<button class="btn-chico" data-idioma style="margin-top:10px">' + Ico('mundo') + ' ' +
           (Idioma.actual() === 'es' ? 'English' : 'Español') + '</button></div>';
 
     if (hay) {
@@ -1852,19 +2964,19 @@ var UI = (function () {
       h += '<div class="portada">';
       h += '<p class="lema">' + T('Un simulador para aprender a usar el banco sin arriesgar dinero de verdad.') + '</p>';
       h += '<div class="pasos">';
-      h += '<div class="paso"><span class="ic">🧍</span><span class="tx"><b>' +
-           T('Empiezas con 18 años y sin cuenta') + '</b>' +
-           T('Acabas de salir de diversificado. Eliges de qué familia sales y en qué Guatemala te toca vivir.') +
+      h += '<div class="paso"><span class="paso-ic">' + Ico('mochila') + '</span><span class="tx"><b>' +
+           T('Empiezas con 13 años, saliendo de primaria') + '</b>' +
+           T('Lo primero que decides es si vas a seguir estudiando. Eliges de qué familia sales y en qué Guatemala te toca vivir.') +
            '</span></div>';
-      h += '<div class="paso"><span class="ic">🗓️</span><span class="tx"><b>' +
-           T('Cada mes reparte cuatro semanas') + '</b>' +
-           T('Trabajar, estudiar, hacer un trabajo extra o descansar. No alcanza para todo, y ahí está el juego.') +
+      h += '<div class="paso"><span class="paso-ic">' + Ico('calendario') + '</span><span class="tx"><b>' +
+           T('Cada mes reparte ocho jornadas') + '</b>' +
+           T('Cuatro semanas de mañana y tarde. El colegio te toma una jornada; la otra la decides tú: trabajar, descansar o buscarte algo extra.') +
            '</span></div>';
-      h += '<div class="paso"><span class="ic">🏦</span><span class="tx"><b>' +
+      h += '<div class="paso"><span class="paso-ic">' + Ico('banco') + '</span><span class="tx"><b>' +
            T('Usas productos bancarios de verdad') + '</b>' +
            T('Cuenta monetaria, ahorro, plazo fijo, préstamo, tarjeta, hipoteca y pensión. Con las tasas que se cobran en Guatemala.') +
            '</span></div>';
-      h += '<div class="paso"><span class="ic">🏁</span><span class="tx"><b>' +
+      h += '<div class="paso"><span class="paso-ic">' + Ico('bandera-meta') + '</span><span class="tx"><b>' +
            T('Llegas a los 65 y ves el resultado') + '</b>' +
            T('Una gráfica de toda tu vida y el recuento de lo que cada decisión te costó o te dio.') +
            '</span></div>';
@@ -1887,18 +2999,69 @@ var UI = (function () {
     };
   }
 
-  /* Dos preguntas antes de empezar: de dónde sales y en qué Guatemala te toca. */
+  /* Una pregunta antes de empezar: qué tan duro lo quieres.
+   *
+   * Eran dos preguntas seguidas —de dónde sales y en qué Guatemala te toca
+   * vivir— con cinco tarjetas largas, cada una con su párrafo y sus tres
+   * filas de datos, antes de haber tocado el juego. Para alguien de 13 años
+   * eso no es una elección, es un formulario.
+   *
+   * Ahora son tres niveles con color: fácil, medio y difícil. Cada uno empareja
+   * un origen con una economía (ver NIVELES_JUEGO en datos/origenes.js). Quien
+   * quiera la combinación exacta la sigue teniendo en "prefiero elegir yo",
+   * que es donde vive el flujo de antes.
+   */
   function flujoNuevaPartida(ranura) {
+    var h = '<h2>' + T('¿Qué tan duro lo quieres?') + '</h2>';
+    h += '<p class="sutil">' + T('No cambia las reglas. Cambia con qué familia te toca empezar.') + '</p>';
+
+    NIVELES_JUEGO.forEach(function (n) {
+      var o = buscar(ORIGENES, n.origen);
+      h += '<div class="nivel ' + n.id + '" data-nivel="' + n.id + '">';
+      h += '<div class="nivel-alto">' +
+             '<span class="nivel-ic">' + Ico(o.icono) + '</span>' +
+             '<span class="nivel-nom">' + T(n.nombre) + '</span>' +
+           '</div>';
+      h += '<p class="nivel-txt">' + esc(K('nivel_resumen', n.id, n.resumen)) + '</p>';
+      h += pastillas([
+        pastilla('moneda', o.mesada ? T('{0} de mesada', Q0(o.mesada)) : T('sin mesada')),
+        pastilla(n.economia === 'normal' ? 'edificio' : 'canasta',
+                 n.economia === 'normal' ? T('Hay trabajo formal') : T('Solo trabajo informal'))
+      ]);
+      h += '</div>';
+    });
+
+    h += '<div class="btn-fila" style="margin-top:12px">' +
+         '<button class="btn-chico" data-elegir-yo="1" style="flex:1">' +
+         T('Prefiero elegir yo') + '</button>' +
+         '<button class="btn-chico" data-cerrar>' + T('Cancelar') + '</button></div>';
+
+    var d = modal(h, function () { pantallaInicio(); });
+
+    d.querySelectorAll('[data-nivel]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var n = buscar(NIVELES_JUEGO, b.dataset.nivel);
+        Motor.iniciar(n.economia, ranura, n.origen);
+        d.remove(); app.onclick = null; arrancar();
+      });
+    });
+    var yo = d.querySelector('[data-elegir-yo]');
+    if (yo) yo.addEventListener('click', function () { d.remove(); flujoAMano(ranura); });
+  }
+
+  /* El flujo de antes, para quien quiera la combinación exacta. */
+  function flujoAMano(ranura) {
     var origenSel = null;
 
     var h = '<h2>' + T('¿De dónde sales?') + '</h2>';
-    h += '<p class="sutil">' + T('No son niveles de dificultad. Son puntos de partida distintos, cada uno con su ventaja y su carga.') + '</p>';
     ORIGENES.forEach(function (o) {
-      h += '<div class="opcion"><div class="titulo">' + o.icono + ' ' + esc(D(o, 'nombre')) + '</div>';
+      h += '<div class="opcion"><div class="titulo">' + Ico(o.icono) + ' ' + esc(D(o, 'nombre')) + '</div>';
       h += '<p class="sutil" style="margin:6px 0">' + esc(D(o, 'descripcion')) + '</p>';
-      h += fila(T('Empiezas con'), Q0(o.efectivoInicial));
-      h += fila(T('Aportas en casa'), o.aporteCasa ? Q0(o.aporteCasa) + T(' al mes') : T('nada'));
-      h += fila(T('Recibes remesas'), o.remesaActiva ? T('sí') : T('no'));
+      h += pastillas([
+        pastilla('cartera', T('empiezas con {0}', Q0(o.efectivoInicial))),
+        pastilla('moneda', o.mesada ? T('{0} de mesada', Q0(o.mesada)) : T('sin mesada')),
+        pastilla('casa', o.aporteCasa ? T('de grande aportas {0}', Q0(o.aporteCasa)) : T('no aportas en casa'))
+      ]);
       h += '<div class="letra-chica">' + esc(D(o, 'nota')) + '</div>';
       h += '<div class="btn-fila" style="margin-top:8px"><button class="btn-chico" data-o="' +
            o.id + '">' + T('Empezar así') + '</button></div></div>';
@@ -1913,11 +3076,11 @@ var UI = (function () {
         origenSel = b.dataset.o;
         d.remove();
         var d2 = modal('<h2>' + T('¿En qué Guatemala te toca vivir?') + '</h2>' +
-          '<div class="opcion"><div class="titulo">🏢 ' + T('Empleo formal urbano') + '</div>' +
+          '<div class="opcion"><div class="titulo">' + Ico('edificio') + ' ' + T('Empleo formal urbano') + '</div>' +
           '<p class="sutil" style="margin:6px 0">' +
           T('Contrato, Bono 14, aguinaldo y seguro social. Puedes construir historial de crédito.') + '</p>' +
           '<button class="btn-chico" data-d="normal">' + T('Jugar así') + '</button></div>' +
-          '<div class="opcion"><div class="titulo">🧰 ' + T('Economía informal') + '</div>' +
+          '<div class="opcion"><div class="titulo">' + Ico('canasta') + ' ' + T('Economía informal') + '</div>' +
           '<p class="sutil" style="margin:6px 0">' +
           T('Sin contrato ni prestaciones, con ingresos más bajos. Es donde vive el 65% del país.') + '</p>' +
           '<button class="btn-chico" data-d="dificil">' + T('Jugar así') + '</button></div>',
@@ -1936,16 +3099,30 @@ var UI = (function () {
     app.innerHTML = '';
     render();
     conectar();
-    tarjetaEducativa('bienvenida', '🪙', T('Cómo funciona'),
-      T('Cada mes tienes cuatro semanas y decides en qué las usas. Al terminar el mes cobras, pagas tus gastos y el juego avanza. Después de los 30 los turnos se vuelven trimestres y luego años, para que puedas llegar hasta la jubilación.'),
-      T('Empiezas guardando el dinero en efectivo. Fíjate cada mes cuánto se te va sin darte cuenta.'));
+    tarjetaEducativa('bienvenida', 'moneda', T('Cómo funciona'),
+      T('Cada mes tienes ocho jornadas: cuatro semanas de mañana y tarde. Decides en qué usas cada una. Al terminar el mes cobras, pagas tus gastos y el juego avanza; después de los 22 los turnos se vuelven trimestres y luego años, para que puedas llegar hasta la jubilación.'),
+      T('Tienes 13 años y todavía no puedes trabajar de verdad. Lo primero que hay que decidir no es dónde trabajar, es si vas a estudiar.'));
   }
 
   function iniciar() {
     app = document.querySelector('#app');
     try { document.documentElement.lang = Idioma.actual(); } catch (e) {}
+    /* El foco del tutorial va pegado a una posición de pantalla, así que al
+     * hacer scroll hay que volverlo a poner encima del objetivo. En las
+     * pruebas no hay ventana con eventos, de ahí el try. */
+    try {
+      window.addEventListener('scroll', reubicarFoco, true);
+      window.addEventListener('resize', reubicarFoco);
+    } catch (e) {}
     pantallaInicio();
   }
 
-  return { iniciar: iniciar };
+  return {
+    iniciar: iniciar,
+    /* Saca una tarjeta de decisión por su id, sin esperar a que caiga sola.
+     * Existe para pruebas/vista.html, que sirve para mirar el diseño con los
+     * ojos: una tarjeta que aparece con 10% de probabilidad al mes es
+     * imposible de revisar de otra forma. */
+    verDecision: function (ref) { mostrarDecision({ clase: 'decision', ref: ref }, render); }
+  };
 })();

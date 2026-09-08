@@ -1,6 +1,6 @@
-# Mi Primer Quetzal — de los 18 a la jubilación
+# Mi Primer Quetzal — de los 13 a la jubilación
 
-Documento de diseño, versión 1.0 — 4 de septiembre de 2026
+Documento de diseño, versión 3.0 — 7 de septiembre de 2026
 
 Simulador de vida financiera para aprender a usar productos bancarios.
 Banco ficticio: **Banco Cardamomo**. País: Guatemala. Moneda: Quetzal (Q).
@@ -12,10 +12,12 @@ Banco ficticio: **Banco Cardamomo**. País: Guatemala. Moneda: Quetzal (Q).
 
 ## 1. Qué es el juego
 
-El jugador toma a una persona de 18 años recién graduada de diversificado, sin cuenta
-bancaria y sin trabajo, y la acompaña hasta la jubilación a los 65. En el camino decide si
-estudia o trabaja, dónde vive, qué hace con las remesas que le manda su hermano desde
-Estados Unidos, cuándo abrir una cuenta, cuándo pedir prestado y a quién.
+El jugador toma a un chico de **13 años que acaba de salir de primaria**, sin cuenta
+bancaria y sin trabajo, y lo acompaña hasta la jubilación a los 65. La primera decisión del
+juego es la que decide todo lo demás: seguir estudiando o ponerse a trabajar. Después decide
+en qué reparte las ocho jornadas de cada mes, dónde vive, qué hace con las remesas que le
+manda su hermano desde Estados Unidos, cuándo abrir una cuenta, cuándo pedir prestado y a
+quién.
 
 No hay forma de perder. Hay formas de llegar a los 65 con muy poco.
 
@@ -27,7 +29,7 @@ año y le recuerda que eso era el enganche de su moto.
 
 | Aspecto | Decisión |
 |---|---|
-| Audiencia | Jóvenes de 16 a 25 años, público general |
+| Audiencia | Jóvenes de 12 a 25 años, público general |
 | Dispositivo | Celular primero, vertical, táctil |
 | Idioma | Español e inglés, con detección automática y selector |
 | Distribución | GitHub Pages, sitio estático, sin cuenta ni registro |
@@ -39,30 +41,62 @@ siendo el Quetzal. Sirve para la diáspora y para mostrar el proyecto.
 
 ## 3. Bucle de juego
 
-Un turno es un **mes** y contiene **cuatro espacios**, uno por semana. Cada espacio se
-asigna a una actividad. Al cerrar el mes se cobra el salario, se descuentan los gastos
-fijos, se aplican intereses y se resuelven los eventos.
+Un turno es un **mes** y contiene **ocho jornadas**: cuatro semanas de mañana y tarde.
+Cada jornada se asigna a una actividad. Al cerrar el mes se cobra el salario, se descuentan
+los gastos fijos, se aplican intereses y se resuelven los eventos.
 
-Actividades que consumen espacios:
+### Por qué jornadas y no semanas
 
-| Actividad | Energía por espacio |
+Durante toda la versión 1 y 2 la unidad fue la semana completa, y eso hacía imposible
+representar cómo vive la mitad del país: **los colegios de Guatemala son de jornada, no de
+día completo**. El chico que estudia por la mañana puede trabajar por la tarde, y esa es
+exactamente la decisión que el juego quiere poner enfrente.
+
+Con la semana como unidad más chica, "estudio y trabajo" era una fracción del mes; con la
+jornada, es una fila y la otra:
+
+| | Sem 1 | Sem 2 | Sem 3 | Sem 4 |
+|---|---|---|---|---|
+| **Mañana** | Colegio | Colegio | Colegio | Colegio |
+| **Tarde** | Trabajo | Trabajo | Trabajo | Descanso |
+
+Las jornadas que el colegio tiene tomadas **no se pueden vaciar**, y eso no es una
+limitación de la interfaz: es la regla. Según el nivel:
+
+| Nivel | Horario | Qué decide el jugador |
+|---|---|---|
+| Básicos | `fijo` | Nada: el instituto le toma las mañanas de las cuatro semanas |
+| Diversificado | `jornada` | Mañana o tarde al inscribirse; la otra jornada es suya |
+| Universidad | `libre` | Todo: reparte jornada por jornada |
+
+Actividades que consumen jornadas:
+
+| Actividad | Energía por jornada |
 |---|---|
-| Trabajar | -12 |
-| Estudiar | -10 |
-| Minijuego | -12 |
-| Descansar | +45 |
+| Trabajar | -6 |
+| Estudiar | -5 |
+| Minijuego | -6 |
+| Descansar | +22 |
 
-El sueldo se paga **según cuántas semanas trabajaste**, y no de forma proporcional:
+Son exactamente la mitad de lo que costaba una semana entera, así que todo el balanceo de
+la versión anterior sigue valiendo.
 
-| Semanas trabajadas | Sueldo que cobras |
-|---|---|
-| 4 | 100% |
-| 3 | 70% |
-| 2 | 45% |
-| 1 | 20% |
+El sueldo se paga **según cuántas jornadas trabajaste**, y no de forma proporcional:
+
+| Jornadas | Sueldo que cobras | | Jornadas | Sueldo que cobras |
+|---|---|---|---|---|
+| 8 | 100% | | 4 | 45% |
+| 7 | 85% | | 3 | 33% |
+| 6 | 70% | | 2 | 20% |
+| 5 | 57% | | 1 | 10% |
 
 Esta tabla es el corazón del juego. Estudiar y descansar cuestan sueldo, y la penalización
-es peor que proporcional, así que dejar de trabajar duele de verdad.
+es peor que proporcional, así que dejar de trabajar duele de verdad. Los números pares son
+los mismos de cuando esto se contaba por semanas.
+
+**La excepción son los trabajitos de niño.** Vender limonada se cobra por jornada, así que
+ahí la proporción sí es lineal: dos jornadas pagan exactamente el doble que una. Un chico de
+13 no tiene sueldo del que le descuenten.
 
 El balanceo se calibró simulando 24 meses con cinco estrategias distintas. Trabajar las
 cuatro semanas todos los meses agota la energía, provoca enfermedades y **termina peor** que
@@ -70,16 +104,18 @@ trabajar tres y descansar una: quemarse no puede ser la estrategia ganadora.
 
 ### Compresión temporal
 
-Cuatrocientos setenta y siete meses son demasiados turnos para un celular. El juego cambia
+Seiscientos veinticuatro meses son demasiados turnos para un celular. El juego cambia
 de escala según la etapa de vida.
 
 | Edad | Escala del turno | Turnos |
 |---|---|---|
-| 18 a 30 | Mensual | 144 |
-| 30 a 45 | Trimestral | 60 |
+| 13 a 22 | Mensual | 108 |
+| 22 a 45 | Trimestral | 92 |
 | 45 a 65 | Anual | 20 |
 
-Total: **224 turnos**. Además existe un botón de **adelantar** que salta hasta el próximo
+Total: **220 turnos**. Los años mensuales son los de las decisiones que definen todo
+—estudiar o no, qué diversificado, el primer empleo, la primera cuenta— y bajar el
+corte de los 30 a los 22 hizo sitio a los nueve años de niñez sin alargar la partida. Además existe un botón de **adelantar** que salta hasta el próximo
 evento o decisión pendiente. Adelantar cinco años y ver el salto del saldo es la
 demostración más contundente del interés compuesto que puede dar el juego.
 
@@ -97,13 +133,37 @@ No hay ánimo ni felicidad. El juego trata de dinero.
 
 | Concepto | Valor |
 |---|---|
-| Edad | 18 años, recién graduado de diversificado |
-| Efectivo | Q1,200 de regalo de graduación |
-| Vivienda | Casa familiar, aporta Q400 al mes |
-| Cuenta bancaria | Ninguna |
-| Trabajo | Ninguno |
+| Edad | **13 años, recién salido de primaria** |
+| Educación | Primaria terminada. Básicos sin empezar |
+| Efectivo | Entre Q60 y Q200 según el origen: lo que trae guardado un chico |
+| Mesada | Entre Q0 y Q120 al mes según el origen |
+| Vivienda | Casa familiar. Siendo menor, solo gasta Q20 al mes de su bolsa |
+| Cuenta bancaria | Ninguna. Siendo menor la abre con un adulto y con Q50 |
+| Trabajo | Ninguno. A su edad solo existen tres trabajitos de calle |
 | Puntaje de crédito | 0, sin historial y sin fiador |
-| Remesa | Un hermano en Estados Unidos manda entre US$150 y US$200 cada dos o tres meses, irregular |
+| Remesa | Llega a la casa, no a él: la administran sus papás hasta los 18 |
+
+### Por qué a los 13 y no a los 18
+
+Arrancar a los 18 con el diversificado en la mano significaba que **el juego ya había
+tomado por el jugador la decisión financiera más importante de su vida**. En Guatemala la
+tasa neta de cobertura del ciclo básico anda por el 46%: más de la mitad de los chicos no
+llega ahí. Y la diferencia de ingreso entre quien termina básicos y quien no es de por vida.
+
+Empezar a los 13 pone esa decisión en la primera pantalla, sin adorno: estudias básicos o te
+pones a trabajar. El juego no marca ninguna de las dos como correcta, y la pregunta vuelve
+cada vez que el jugador se gradúa de algo.
+
+### El salto de los 18
+
+Mientras es menor de edad, el gasto de la casa no es suyo: en su casa lo cubren, y lo único
+que sale de su bolsa son Q20 de pasaje y refacción. El mes que cumple 18 pasa a pagar su
+parte completa —Q2,200 con la casa familiar del origen de remesas— y el juego saca una
+ventana comparando las dos cifras.
+
+Ese salto le pasa a todo el mundo y a casi nadie le avisan. Quien llega a los 18 con algo
+guardado lo absorbe; quien llega en cero empieza pidiendo prestado. Es la lección más
+barata de dar y la más caras de aprender afuera.
 
 La remesa es deliberadamente irregular. Enseña que un ingreso que no controlas no sirve
 para comprometer gastos fijos, que es justo el error de quien las recibe.
@@ -147,37 +207,81 @@ abandona a mitad pierde cinco años y no gana casi nada.
 
 ### Rutas de estudio
 
-| Ruta | Duración | Costo público | Costo privado |
-|---|---|---|---|
-| Ninguna | — | — | — |
-| Técnico | 2 años | Q0 (USAC) | Q13,726 al año |
-| Licenciatura administrativa | 5 años | Q0 (USAC) | Q29,200 al año [V-sec] |
-| Licenciatura en ingeniería | 5 años | Q0 (USAC) | Q77,054 al año |
-| Maestría | 2 años, requiere licenciatura | Q40,000 total [E] | Q48,000 total [V] |
+La escalera completa, desde que el jugador sale de primaria a los 13:
 
-La universidad pública es **gratuita desde 2026**, sin inscripción ni matrícula. El dilema
-del estudio no es de dinero, es de **tiempo**: cada espacio en la universidad es un espacio
-que no trabajas.
+```
+primaria → básicos → diversificado → técnico       → (fin)
+                                   → licenciatura  → maestría
+```
+
+| Ruta | Duración | Horario | Costo público | Costo privado |
+|---|---|---|---|---|
+| Básicos | 3 años | `fijo` (mañanas) | Q0 | Q5,000 al año [E] |
+| Bachillerato en ciencias y letras | 2 años | `jornada` | Q0 | Q9,000 al año [E] |
+| Perito contador | 3 años | `jornada` | Q0 | Q10,000 al año [E] |
+| Técnico | 2 años | `libre` | Q0 (USAC) | Q13,726 al año |
+| Licenciatura administrativa | 5 años | `libre` | Q0 (USAC) | Q29,200 al año [V-sec] |
+| Licenciatura en ingeniería | 5 años | `libre` | Q0 (USAC) | Q77,054 al año |
+| Maestría | 2 años, requiere licenciatura | `libre` | Q40,000 total [E] | Q48,000 total [V] |
+
+Cada **jornada** dedicada avanza un cuarto de mes de carrera, así que cuatro jornadas al
+mes (dos semanas) es el ritmo normal y toma exactamente la duración oficial.
+
+El instituto público y la universidad pública son **gratuitos** —la USAC desde 2026, sin
+inscripción ni matrícula—. El dilema del estudio no es de dinero, es de **tiempo**: cada
+jornada en el colegio es una jornada que no trabajas.
+
+Las dos opciones de diversificado están a propósito: el bachillerato es un año más corto y
+el perito contador sale con oficio y con más demanda. Es la primera vez que el jugador
+compara dos rutas y ninguna es obviamente mejor.
 
 ### Empleos
 
-| # | Empleo | Requisito | Salario base | Varianza |
-|---|---|---|---|---|
-| 1 | Repartidor en moto | Ninguno | Q2,800 | Baja |
-| 2 | Dependiente de tienda | Ninguno | Q3,000 | Baja |
-| 3 | Ayudante de construcción | Ninguno | Q2,600 | Media |
-| 4 | Vendedor por comisión | Ninguno | Q1,800 más comisión | **Alta** |
-| 5 | Agente de call center bilingüe | Inglés | Q4,500 | Baja |
-| 6 | Tienda propia | Capital Q8,000 | Variable | **Muy alta** |
-| 7 | Auxiliar contable | Técnico | Q4,000 | Baja |
-| 8 | Técnico en refrigeración | Técnico | Q4,800 | Media |
-| 9 | Soporte de sistemas | Técnico | Q5,200 | Baja |
-| 10 | Docente | Licenciatura | Q4,200 | Baja |
-| 11 | Contador | Licenciatura | Q6,000 | Media |
-| 12 | Ingeniero junior | Licenciatura | Q7,500 | Media |
-| 13 | Gerente o especialista | Maestría | Q12,000 | Media |
+Cada empleo pide una **edad mínima** y un **nivel educativo**. Lo que el jugador no
+alcanza no se le esconde: sale abajo, en una línea, con lo que le falta.
+
+| # | Empleo | Edad | Requisito | Paga | Varianza |
+|---|---|---|---|---|---|
+| 1 | Vender limonada | 12 | Primaria | **Q5 por jornada** | Media |
+| 2 | Vender periódico | 12 | Primaria | **Q4 por jornada** | Baja |
+| 3 | Vender dulces | 12 | Primaria | **Q6 por jornada** | **Alta** |
+| 4 | Repartidor en moto | 16 | Básicos | Q2,800 | Baja |
+| 5 | Dependiente de tienda | 16 | Básicos | Q3,000 | Baja |
+| 6 | Ayudante de construcción | 16 | Primaria | Q2,600 | Media |
+| 7 | Vendedor por comisión | 16 | Primaria | Q1,800 más comisión | **Alta** |
+| 8 | Agente de call center bilingüe | 18 | Diversificado | Q4,500 | Baja |
+| 9 | Tienda propia | 18 | Básicos y Q8,000 de capital | Variable | **Muy alta** |
+| 10 | Auxiliar contable | 18 | Técnico | Q4,000 | Baja |
+| 11 | Técnico en refrigeración | 18 | Técnico | Q4,800 | Media |
+| 12 | Soporte de sistemas | 18 | Técnico | Q5,200 | Baja |
+| 13 | Docente | 18 | Licenciatura | Q4,200 | Baja |
+| 14 | Contador | 18 | Licenciatura | Q6,000 | Media |
+| 15 | Ingeniero junior | 18 | Licenciatura | Q7,500 | Media |
+| 16 | Gerente o especialista | 18 | Maestría | Q12,000 | Media |
 
 Salarios base [E], calibrados sobre las medianas por nivel educativo.
+
+### Los tres trabajitos de niño
+
+Los primeros tres existen para una sola cosa: que la comparación se vea. Ocho jornadas
+vendiendo limonada son **Q40 al mes**. El mismo mes de un dependiente de tienda son
+Q3,000. Nadie tiene que explicárselo al jugador; lo ve en la misma lista.
+
+También son la única manera honesta de que un chico de 13 tenga qué llevar al banco. Con la
+apertura mínima de adulto (Q200) el tutorial le pedía a alguien que gana Q40 al mes que
+abriera cuenta, y no se podía. Por eso las cuentas tienen un **mínimo de menor de edad** de
+Q25 y Q50, que es lo que cobran de verdad las cuentas infantiles guatemaltecas, y el juego
+explica de paso que un menor abre cuenta con un adulto.
+
+Un contrato **formal** tampoco se le ofrece a un menor: aparece a los 18. Los trabajitos de
+niño son informales siempre, porque en la vida real también lo son.
+
+### Comprar una herramienta
+
+Las tarjetas de decisión son la única forma de subir lo que se gana por hora sin cambiar de
+empleo: una bicicleta usada de Q250 deja **Q3 más por cada jornada trabajada, para siempre**,
+y un celular de segunda mano deja Q1. Es el concepto de inversión productiva metido en algo
+que un chico de 13 puede comprar, y la lección es que hay gastos que se pagan solos.
 
 ### Eje de formalidad
 
@@ -352,6 +456,278 @@ Las decisiones aparecen como tarjetas superpuestas cuando hay un evento.
 El banco tiene que ser consultable en todo momento, porque revisar el saldo antes de
 decidir *es* el hábito que el juego quiere enseñar.
 
+### 14.1 La ruta que se va abriendo
+
+El juego **no** abre con las seis pestañas y los once productos bancarios a la vista. Al
+empezar solo existe el estudio, y cada cosa aparece cuando el jugador hace algo que la
+justifica. La lista de peldaños vive en `datos/progreso.js` y se edita sin programar.
+
+| Se abre | Cuándo |
+|---|---|
+| El trabajo | contestaste si vas a estudiar o no |
+| El banco, con la cuenta monetaria | aceptaste un trabajo |
+| La cuenta de ahorro y mover dinero | abriste la monetaria |
+| Los trabajos extra | cerraste el primer mes |
+| Las noticias | cerraste el segundo mes |
+| El préstamo del banco **y** el prestamista del barrio | 18 años, con empleo (o 19 sin él) |
+| El depósito a plazo | medio mínimo en ahorro, o 18 años |
+| La tarjeta de crédito | 18 años y puntaje 20, o 20 años |
+| Irse del país | 20 años |
+| El plan de pensiones | 23 años |
+| La casa propia con hipoteca | puntaje 45, o 25 años |
+
+**Lo primero que se abre es el estudio, no el trabajo.** Estaba al revés: el trabajo nacía
+abierto y el estudio se ganaba al segundo mes, lo cual enseñaba exactamente lo contrario de
+lo que el juego quiere enseñar —que primero se busca trabajo y luego, si sobra tiempo, se
+estudia—. Ahora la primera pantalla es la pregunta, y el trabajo se abre en cuanto el
+jugador la contesta, diga lo que diga. Decir "no, a trabajar" abre lo mismo que decir "sí":
+la ruta pacea el descubrimiento, no premia una respuesta.
+
+**Y el crédito ya no llega por meses jugados, sino por edad.** A nadie le presta un banco a
+los 13. Todo lo que antes se medía en meses de partida y ahora depende de ser mayor de edad
+está atado a `CONFIG.mayoriaDeEdad`, no a un número suelto.
+
+Tres decisiones dentro de esto:
+
+1. **El préstamo del banco y el prestamista del barrio se abren juntos, en el mismo
+   peldaño.** Verlos lado a lado es la lección: el banco te cobra al año lo que el
+   prestamista te cobra al mes. Separados, el jugador conoce uno primero y el otro le
+   parece una variante.
+2. **El motor no prohíbe nada.** Un peldaño cerrado es algo que la interfaz todavía no
+   dibuja, no una acción que el motor rechace. Así las suites de balanceo siguen jugando
+   vidas completas llamando al motor directo, sin pelear con la ruta.
+3. **Todo peldaño que dependa de una conducta opcional lleva una segunda salida por tiempo
+   o por edad.** La ruta pacea el descubrimiento; no esconde contenido para siempre. Quien
+   nunca ahorra y nunca pide prestado igual conoce el plazo fijo, la tarjeta y la hipoteca,
+   y es el propio trámite el que le explica qué le falta. Al medirlo, las dos condiciones
+   que faltaban por esto dejaban la casa propia y el reparto del mes inalcanzables.
+
+El tutorial no es una pantalla aparte: son los primeros once peldaños de esa misma lista,
+los que llevan `guia: true`. Salen en una cinta abajo que señala dónde tocar y avanza sola
+según lo que el jugador ya hizo, no con un botón de siguiente. Tener una sola lista es lo
+que evita que el tutorial diga una cosa y el juego abra otra. Después de esos once la cinta
+desaparece y la meta siguiente pasa a una tarjeta discreta en la pestaña del mes.
+
+**Un toque por paso.** La primera versión tenía cuatro pasos gruesos ("consigue empleo",
+"reparte el mes", "abre una cuenta", "cierra el mes") y no guiaba: decía el objetivo y
+dejaba al jugador buscando dónde tocar. Ahora hay once, y cinco de ellos no desbloquean
+nada, solo enseñan un movimiento: entra a Estudio, entra a Trabajo, vuelve al Mes, toca una
+jornada, entra al Banco. Los peldaños sin `titulo` se abren en silencio, porque sacar una
+ventana de felicitación por tocar una pestaña sería insoportable.
+
+**Se oscurece todo menos lo que hay que tocar, y se le pone una flecha.** El aro ámbar
+alrededor del objetivo no bastaba: en una pantalla llena de tarjetas y botones un aro es un
+detalle más, y alguien que abre el juego por primera vez no sabe dónde mirar. El foco es un
+rectángulo con una sombra enorme alrededor, así que el hueco no se dibuja y lo que hay
+debajo se ve con su color de siempre mientras el resto queda bajo una capa oscura. **No
+recibe clics**: se le señala el camino al jugador, no se le cierran las otras puertas.
+
+**Y salirse del tutorial dejó de competir con seguirlo.** El botón de "Ya sé jugar" estaba
+del mismo tamaño y al lado del botón principal, o sea que era la salida más cómoda de la
+pantalla: invitaba a saltárselo en vez de hacerlo. Ahora es un enlace chiquito arriba a la
+derecha de la cinta. Sigue estando —quien ya entiende tiene derecho a irse en un toque—
+pero ya no es lo primero que se ve.
+
+Cuatro detalles que solo se vieron al probarlo:
+
+- **Los pasos del tutorial no se pueden comprobar mirando solo el estado de la partida.**
+  "Toca la pestaña Trabajo" depende de dónde está el jugador, así que la condición recibe
+  también la vista (`{ pestana, espacioSel }`).
+- **Un peldaño que abre algo NO puede encadenarse a otro.** La primera versión encadenó
+  los pasos con `requiere` para que salieran en orden. El efecto: abrir la cuenta
+  monetaria antes de repartir el mes dejaba la cuenta de ahorro cerrada para siempre,
+  porque su peldaño esperaba a un paso del tutorial que el jugador ya se había saltado. El
+  `requiere` quedó solo en los pasos silenciosos, y `pruebas/ruta.js` vigila la regla.
+- **La flecha no cabía donde tenía que ir.** Cuando el paso señala una pestaña, el objetivo
+  está abajo y la cinta se sienta justo encima: la flecha se dibujaba detrás de la cinta y
+  no se veía. Ahora la flecha vive fuera del foco, por encima de la cinta, y si le cae
+  encima la cinta se levanta lo que haga falta. Se mide en el momento, no se adivina.
+- **Un peldaño del tutorial que no abre nada no es una meta.** Al saltarse el tutorial, la
+  tarjeta de "Lo que sigue" seguía pidiendo "toca la pestaña Estudio" a un jugador de 24
+  años con empleo. Los pasos silenciosos ya no se persiguen cuando la cinta está apagada.
+
+### 14.2 El mes dibujado, y lo que el colegio no negocia
+
+El reparto del mes es la pantalla que el jugador ve más veces en toda la partida, así que
+es la que más se ganó con el cambio a jornadas. Son dos filas —mañanas y tardes— con las
+semanas como columnas y un sol y un atardecer en el eje. Las jornadas que el colegio tiene
+tomadas salen rayadas, apagadas y **no se seleccionan**: al tocarlas el juego explica por
+qué en una línea, en vez de quedarse callado o de sacar una ventana.
+
+Debajo, lo que era una lista de doce filas de texto ("Casa familiar y gastos… -Q2,200",
+"Colegiatura… -Q0", "Se te irá del efectivo… -Q112") son ahora **tres cifras**: entra, sale
+y queda. El detalle no se borró, se guardó detrás de un toque. Un chico de catorce años no
+lee doce filas; lee tres números y, si le interesa, abre el resto.
+
+### 14.3 Lo que se hace y lo que se lee
+
+La pestaña de Trabajo era la pantalla más larga del juego: el empleo actual, el mercado
+laboral, las trece ofertas y la decisión de irse del país, todo seguido. La decisión que
+de verdad importa —aceptar una oferta— quedaba a dos pantallazos de scroll.
+
+Se partió en dos ejes distintos:
+
+- **Apartados dentro de la pestaña**, en un riel arriba: *Mi empleo*, *Ofertas* y, cuando
+  la ruta lo abre, *Irme del país*. El apartado que abre por omisión depende del estado:
+  sin empleo lo útil son las ofertas, no una tarjeta que dice que no tienes nada. Cambiar
+  de pestaña olvida el apartado elegido, para que al volver se vea lo que corresponde y no
+  lo último que se tocó hace veinte turnos.
+- **Una pestaña de Noticias** para lo que se lee y no se hace: el mercado laboral, las
+  promociones del banco que están vigentes y la bitácora de lo que ha pasado. El mercado
+  laboral es información de contexto —dice qué carrera está pidiendo el país— y entre dos
+  decisiones estorbaba. Las promociones, además, eran invisibles en cuanto se cerraba la
+  ventana que las ofrecía: ahora se puede volver a leer su letra chica mientras duran.
+
+Y el banco se partió igual: **Cuentas**, **Crédito** y **Vivienda**. Era la pantalla más
+larga del juego con diferencia —siete pantallazos con el estado de cuenta, el historial, las
+cuentas, el plazo, los préstamos, la tarjeta, el prestamista, la pensión, las casas en venta
+y el alquiler, todo seguido—. La vivienda solo aparece cuando el jugador ya es mayor de
+edad: mudarse a los 14 no es una decisión, es un error de la interfaz.
+
+Lo que salió de ahí es todo lo que era **información del jugador y no un producto**: el
+patrimonio, el historial de crédito y el nivel educativo se fueron a una pantalla de **"Yo"**
+que se abre tocando el muñeco de la barra de arriba. Mezclar "cuánto tengo" con "qué
+contrato" era la mitad de por qué el banco resultaba ilegible.
+
+### 14.4 Un personaje que se viste de lo que hace
+
+Hasta la versión 2, todo lo que pasaba en pantalla estaba escrito. "Eres dependiente de
+tienda" era una línea de texto entre otras diez líneas de texto, y el juego lo va a jugar
+alguien de 12 a 18 años.
+
+`js/personaje.js` dibuja un muñeco armado por piezas: cuerpo, cara y encima lo que le toca
+según lo que esté haciendo. Casco y chaleco en la construcción, audífonos en el call center,
+mandil en la tienda, casco de moto en el reparto, birrete si ya se graduó, mochila mientras
+estudia, y en la mano la jarra de limonada, el periódico, el ladrillo o la tableta.
+
+Sale en tres tamaños: chico en la decisión de estudiar, mediano en "Mi empleo" —donde es lo
+único que le dice al jugador qué hace, sin que tenga que leerlo— y grande en la pantalla de
+"Yo". Sigue siendo SVG propio, sin librería ni imágenes que cargar, y **sus colores salen de
+las mismas cuatro variables de la paleta**: el uniforme de cada oficio se arma con el verde,
+el azul, el ámbar y el rojo que ya existían.
+
+### 14.5 Tarjetas de decisión
+
+Los eventos de `datos/eventos.js` son cosas que **pasan**: se quiebra el celular, duele una
+muela, cae el Bono 14. El jugador las lee y cierra la ventana.
+
+Las doce tarjetas de `datos/decisiones.js` son cosas que hay que **decidir**, y son el único
+lugar del juego donde la lección no la explica un párrafo: la explica la consecuencia. La
+feria del pueblo cuesta Q60, que es casi todo lo que el chico lleva juntado. La bicicleta
+usada cuesta Q250 y deja Q3 más por jornada para siempre. La moto en cuotas son Q650 al mes
+por tres años, o sea Q23,400 por una moto de Q14,000. Un amigo pide Q1,200 prestados sin
+papel.
+
+Tres reglas al escribirlas:
+
+1. **Ninguna opción se marca como correcta.** Dos o tres botones del mismo tamaño, y la
+   lección sale *después* de elegir. Si se lee antes, deja de ser una decisión y es un examen.
+2. **La opción de no hacer nada tiene que ser defendible.** Si una de las dos es obviamente
+   la buena, no es una decisión, es un peaje. Y si las dos cobran, al jugador que no tiene
+   nada no le queda ninguna: `pruebas/decisiones.js` comprueba que siempre haya una salida
+   que no cueste dinero.
+3. **Con enfriamiento.** Doce tarjetas con 10% de probabilidad cada una son casi tres de
+   cada cuatro meses con una pregunta encima, y una decisión que llega todos los meses deja
+   de ser una decisión y se vuelve un formulario. `MESES_ENTRE_DECISIONES` las separa.
+
+Las de niño y las de adulto están separadas por ventanas de edad, y a un menor de edad
+tampoco le caen los golpes de dinero de `eventos.js`: la cuenta del dentista, a los 13, la
+paga la casa.
+
+### 14.6 La capa de tycoon
+
+El juego pedía repartir jornadas y mirar cómo bajaba el saldo. Es fiel a la vida y es
+aburrido: no había nada que construir, nada que subiera de nivel, nada que se viera crecer.
+Para alguien de doce años eso es un juego sin premio.
+
+`datos/mejoras.js` son cuatro cadenas de mejoras, y son **genéricas a propósito**: no son
+mejoras "de vendedor de dulces" ni "de ingeniero", son cuatro ejes que sirven en todas las
+etapas de la vida, y en cada etapa el siguiente escalón cuesta más y da más.
+
+| Cadena | Qué hace | Escalones |
+|---|---|---|
+| **Tu negocio** | Produce dinero **sin gastar jornadas** | canasta → carreta → puesto → local |
+| **Tus herramientas** | Suben lo que ganas por jornada trabajada | herramienta → ropa → transporte |
+| **Tu estudio** | Suben lo que avanzas por jornada estudiada | útiles → libros → internet |
+| **Tu descanso** | Sube la energía que recupera una jornada de descanso | rincón → cama |
+
+El chico de 13 mejora su canasta de dulces y sus útiles escolares; el ingeniero de 30
+mejora su taller y su certificación. Es la misma pantalla y la misma decisión.
+
+**Sigue siendo educación financiera, y sin trampa.** El dinero de las mejoras es el mismo
+dinero de todo lo demás, así que comprar una es no tener eso. Y lo que la pantalla enseña a
+leer es el número que aparece en cada tarjeta: **en cuántos meses se paga sola**. Es el
+único cálculo que hay que hacer antes de comprar una herramienta, y sirve igual para una
+canasta de Q180 que para un camión.
+
+Tres decisiones dentro de esto:
+
+1. **El negocio produce sin gastar tiempo, y por eso es lo que más enseña.** Es la única
+   entrada del juego que no cuesta jornadas: a partir de cierto punto, lo que trabaja es el
+   capital y no la persona. Con su variación mes a mes, porque un negocio tiene meses malos.
+2. **El negocio puede quebrar.** Sin esto, cualquier ingreso pasivo positivo compuesto
+   durante cuarenta años se vuelve una máquina de dinero y el juego deja de parecerse a la
+   vida: la mayoría de los negocios chicos no llega a los cinco años. El riesgo es del 0.6%
+   mensual **y se puede evitar**: un negocio con tres meses de venta guardados aguanta los
+   meses malos. Eso es capital de trabajo, y es justo la lección que un negocio propio tiene
+   que enseñar.
+3. **Los dos escalones grandes del negocio piden nivel educativo terminado.** Un puesto en
+   el mercado pide básicos y un local pide diversificado, y no es un adorno: es lo que evita
+   que la capa de tycoon se coma el mensaje del juego. Sin básicos se llega a la carreta y
+   ahí se para.
+
+Ese tercer punto salió de medirlo. La primera versión de las mejoras dejaba a un jugador que
+**nunca estudia** en el 80% del patrimonio de uno que sube la escalera completa, o sea que
+el juego estaba a punto de enseñar que el colegio es una pérdida de tiempo. Con la puerta
+educativa y los números recalibrados quedó así, medido sobre once semillas:
+
+| Ruta | Patrimonio mediano a los 65 |
+|---|---|
+| Negocio sin estudiar nunca | Q1.4 millones |
+| Escalera completa con mejoras | Q3.0 millones |
+
+El negocio vale casi la mitad de la ruta larga —tiene que valer la pena, si no nadie lo
+toca— pero no gana. `pruebas/mejoras.js` falla si ese orden se invierte.
+
+**Y se ve crecer.** Las cadenas subían de nivel y cambiaban los números, pero el jugador
+leía "Nivel 2 de 4" y tenía que imaginarse el resto. `js/escena.js` lo dibuja: el terreno
+vacío con su contorno punteado, la canasta, la carreta con sus ruedas, el puesto con su
+toldo a rayas y el local con puerta, ventana y rótulo. Alrededor van apareciendo las otras
+cadenas —la caja de herramientas, el rótulo colgado, la bicicleta, la mochila, los libros,
+la antena, el banquito, la lámpara— hasta que la escena de alguien con veinte niveles
+comprados está llena de cosas. Que se vea llena es todo el premio.
+
+Está dibujado en el estilo de los paquetes de arte de juego: formas macizas, esquinas
+redondas y contorno gordo del color de la tinta, **con los colores de la paleta**. Y
+encima, tres cosas que hacen que la pantalla se sienta viva: monedas que suben del negocio
+mientras produce, un saltito del escenario al comprar una mejora, y una barra de cuánto le
+falta para la siguiente, porque en un tycoon el jugador tiene que ver que se acerca.
+
+### 14.7 Iconos propios, no emoji
+
+La interfaz usaba emoji. El emoji tiene dos problemas que no se arreglan con CSS: cada
+sistema lo dibuja distinto, así que la cara del juego cambiaba según el teléfono, y viene
+con su propio color, así que nunca combinaba con la paleta.
+
+`js/iconos.js` los reemplaza con **setenta dibujos propios**: SVG de trazo sobre una
+cuadrícula de 24×24, sin relleno, con el color heredado del texto. Eso significa que un
+icono se ve igual en todos los sistemas, toma el color de donde esté puesto y mide `1em`,
+así que crece con la letra que lo rodea. Sin librería externa: el juego sigue abriéndose
+con doble clic, sin internet.
+
+### 14.8 Relieve, no plano
+
+El diseño era plano —un borde de 1px y nada más— y parecía un formulario. Ahora cada cosa
+que se puede tocar se apoya sobre un labio inferior más oscuro y tiene un brillo arriba, y
+al presionarla baja hasta comérselo. **La paleta no cambió**: los tonos de relieve se
+calculan con `color-mix` a partir de las mismas nueve variables, mezclándolas con negro o
+con blanco, así que cambiar `--verde` mueve todo el relieve verde con él.
+
+Al cambiar de pestaña la vista entra deslizándose por el lado del que vino el jugador, y la
+marca de la pestaña activa viaja de su posición anterior a la nueva. Como la barra se
+redibuja entera en cada render, una transición de CSS no serviría —el elemento es nuevo
+cada vez—; se hace con una animación que lleva las dos posiciones en variables.
+
 ## 15. Persistencia, sonido y privacidad
 
 - **Guardado** automático en el navegador, hasta **tres partidas** en ranuras separadas.
@@ -375,29 +751,90 @@ localmente que publicado, y alguien de negocio puede corregir una tasa sin saber
   index.html
   css/estilo.css
   datos/
-    config.js       economía, tiempo, energía, vivienda, productos
-    trabajos.js     los trece empleos
-    carreras.js     rutas de estudio y mercado laboral
+    config.js       economía, tiempo, energía, jornadas, vivienda, productos
+    trabajos.js     los dieciséis empleos y la escalera de niveles educativos
+    carreras.js     rutas de estudio, su horario y el mercado laboral
     creditos.js     préstamo, tarjeta, prestamista, puntaje, fiador
     eventos.js      eventos de vida y promociones
-    glosario.js     los dieciséis términos
+    decisiones.js   las doce tarjetas de decisión
+    glosario.js     los veinte términos
+    largoplazo.js   casas, hipoteca y plan de pensiones
+    origenes.js     los tres puntos de partida
+    migracion.js    el viaje, los empleos de allá y los canales de envío
+    progreso.js     la ruta que se va abriendo, peldaño por peldaño
     textos.en.js    la traducción al inglés completa
   js/
     idioma.js       detección, selector y las funciones T, D y K
+    iconos.js       los setenta y ocho dibujos de trazo y la función Ico
+    personaje.js    el muñeco por piezas y su ropa de trabajo
+    escena.js       el escenario del negocio, que crece con las mejoras
     sonido.js       efectos generados por el navegador
     motor.js        estado, turnos, economía, estudio, crédito, reportes
-    ui.js           pantallas, pestañas y tarjetas
+    ui.js           pantallas, pestañas, apartados y tarjetas
     minijuegos/
       marco.js      cronómetro, marcador y pago
       reparto.js  tienda.js  estafas.js  presupuesto.js  caja.js
+      conciliacion.js  obra.js  inversion.js
+  vendor/
+    lucide.js       iconos de respaldo, recortados (ISC)
+    chart.js        Chart.js 4, bundle UMD (MIT)
+  herramientas/
+    traer-librerias.js   regenera vendor/. No hace falta para jugar
+  pruebas/
+    comun.js        carga el juego aislado; ayudantes trabajar() y adulto()
+    todas.js        corre las diez suites y resume
+    vista.html      vista previa para revisar el diseño con los ojos
   docs/
 ```
+
+**Las tres listas de archivos.** `index.html`, `ARCHIVOS` en `pruebas/comun.js` y la de
+`pruebas/vista.html` cargan cada una su propia lista. Olvidar una al agregar un archivo deja
+la pantalla en blanco con un `ReferenceError` en la consola, que es lo que pasó al agregar
+`progreso.js`. `pruebas/ruta.js` comprueba que las tres digan lo mismo.
+
+### Las dos librerías que sí entraron, y las cuatro que no
+
+El juego promete tres cosas: se abre con doble clic, funciona sin internet y no hay nada
+que instalar. Un `<script src="https://cdn...">` rompe las dos últimas y un `npm install`
+rompe la tercera. La salida es **vendorizar**: `herramientas/traer-librerias.js` deja
+archivos normales dentro de `vendor/`, que se suben al repositorio y se cargan como
+cualquier otro script.
+
+| Librería | Qué hace aquí |
+|---|---|
+| **Lucide** (ISC) | Respaldo de iconos. Los 78 dibujos propios de `js/iconos.js` no se tocaron: Lucide entra **detrás**, y solo se consulta cuando un nombre no está dibujado a mano. Se recortan los 66 que el juego nombra, de los 1,815 del paquete. Sirve para agregar contenido nuevo sin dibujar cada icono. |
+| **Chart.js** (MIT) | La gráfica de lo que ha producido el negocio, mes por mes. Siempre detrás de `typeof Chart !== 'undefined'` y de un `try`: si ese archivo faltara, la pantalla se dibuja igual sin la gráfica. |
+
+Y las que se decidió **no** traer, con el motivo, para no volver a preguntarlo:
+
+- **Howler.js** envuelve la reproducción de *archivos* de audio, y el juego no tiene
+  archivos de audio: `js/sonido.js` sintetiza los tonos con la Web Audio API, que es algo
+  que Howler no hace. Serían 30 KB sin una línea de uso.
+- **Day.js** sirve para fechas de verdad. El juego lleva un contador de mes (0 a 11) y un
+  año entero, y los nombres de los meses ya están traducidos en el diccionario. No hay
+  nada que formatear.
+- **DiceBear** solo publica ESM y no trae build UMD, y un `<script type="module">` sobre
+  `file://` lo bloquea el navegador por CORS: rompería el doble clic. Además genera
+  avatares a partir de una semilla, y lo que este juego necesita es lo contrario: un
+  personaje que se **vista** del oficio que eligió el jugador. Eso lo hace
+  `js/personaje.js` y DiceBear no puede.
+- **Los paquetes de Kenney** son descargas `.zip` de kenney.nl, que desde esta red no
+  responde, y son PNG: pesan y no toman el color de la paleta. Lo que sí se tomó de ahí es
+  el **estilo** —trazo gordo, formas macizas, esquinas redondas— y está dibujado a mano en
+  `js/escena.js`.
 
 ### Cómo funciona el bilingüe
 
 **La clave de cada texto es la frase en español.** `T('Banco')` devuelve `'Bank'` en inglés
 y `'Banco'` si falta la traducción, así que una traducción incompleta nunca rompe el juego.
-Las frases con números usan marcadores: `T('Trabajas {0} de 4 semanas', 3)`.
+Las frases con números usan marcadores: `T('Trabajas {0} de {1} jornadas', 3, 8)`.
+
+**Una condición dentro de `T()` rompe la comprobación de cobertura.** La prueba bilingüe
+saca del código todas las cadenas que pasan por `T('...')` y verifica que cada una esté en
+el diccionario. `T(abierto ? 'Ocultar' : 'Ver')` no lo ve, así que esas dos cadenas podían
+quedarse sin traducir sin que nada avisara. La forma correcta es
+`abierto ? T('Ocultar') : T('Ver')`, y el mismo cuidado aplica a `Ico()` con la prueba de
+iconos.
 
 Los nombres y descripciones de empleos, carreras, eventos y minijuegos se traducen por
 identificador con `D(objeto, campo)`. El glosario, las viviendas y los productos, por clave
@@ -411,6 +848,10 @@ acordó, para no duplicar trabajo a medias.
 **Versión 1**: cuenta monetaria, cuenta de ahorro, depósito a plazo, remesas, préstamo
 personal, tarjeta de crédito, prestamista informal, historial de crédito y fiador. Cinco
 minijuegos. Trece empleos, cinco rutas de estudio. Arco completo de los 18 a los 65.
+
+**Versión 3**: el arranque a los 13 con la decisión de estudiar, el mes por jornadas, tres
+trabajitos de niño, el personaje que se viste de su oficio, las tarjetas de decisión, el
+banco partido en apartados, la pantalla de "Yo" y el tutorial con foco y flecha.
 
 **Versión 2**: hipoteca, plan de pensiones, orígenes de personaje seleccionables, ruta
 migratoria como emisor de remesas, un minijuego avanzado por carrera.
@@ -462,10 +903,10 @@ cuarenta y nueve decisiones está implementado:
 
 | Sistema | Estado |
 |---|---|
-| Turno con cuatro semanas y pago según semanas trabajadas | listo |
+| Turno con ocho jornadas y pago según jornadas trabajadas | listo |
 | Compresión temporal y envejecimiento hasta los 65 | listo |
 | Energía, agotamiento y enfermedad con faltas al trabajo | listo |
-| Trece empleos con eje formal e informal y experiencia | listo |
+| Dieciséis empleos con eje formal e informal y experiencia | listo |
 | Cuatro rutas de estudio con mercado laboral cambiante | listo |
 | Cuenta monetaria, ahorro y depósito a plazo | listo |
 | Impuesto del 10% sobre intereses | listo |
@@ -512,7 +953,7 @@ prueba corren sin navegador y comprueban 65 aserciones en total:
 - **Ciclo de crédito**: diecinueve comprobaciones. Confirma que Q1,000 con el prestamista
   se devuelven como Q2,033 en seis meses, y que pagando solo el mínimo de la tarjeta una
   deuda de Q1,000 apenas baja a Q819 en doce meses.
-- **Interfaz bilingüe**: las cinco pestañas se dibujan en ambos idiomas, en todos los
+- **Interfaz bilingüe**: las seis pestañas se dibujan en ambos idiomas, en todos los
   estados del juego, y ninguna etiqueta española se cuela en la versión inglesa.
 
 ## 20. Versión 2
@@ -583,7 +1024,7 @@ Con los cinco de la versión 1 son ocho en total.
 
 ## 21. Cómo se verificó todo
 
-Siete suites de prueba corren con `node pruebas/todas.js`. Todas pasan y todas son
+Once suites de prueba corren con `node pruebas/todas.js`. Todas pasan y todas son
 deterministas, aunque dos de ellas no lo eran hasta que se revisó: **balanceo y vidas
 completas usaban azar libre**, así que sus números bailaban miles de quetzales entre
 corridas. Pasaban igual, porque solo miraban si había errores y nunca comparaban cifras.
@@ -593,21 +1034,41 @@ semillas en vez de una.
 | Suite | Qué cubre |
 |---|---|
 | Balanceo | Cinco estrategias a 24 meses, más la ventaja de bancarizarse sobre 21 semillas |
-| Vidas completas | Cuatro partidas hasta la jubilación, más la escalera educativa sobre 21 semillas |
+| Vidas completas | Cuatro partidas hasta la jubilación, más cinco rutas educativas sobre 21 semillas |
 | Ciclo de crédito | Fiador, garantía, puntaje, mora, tarjeta y prestamista |
 | Largo plazo | Hipoteca, pensión, los tres orígenes y la migración completa |
-| Interfaz bilingüe | Las cinco pestañas en ambos idiomas y en todos los estados |
-| Minijuegos | Que el trabajo extra compense la semana de trabajo que cuesta |
+| Minijuegos | Que el trabajo extra compense la jornada de trabajo que cuesta |
+| Ruta | Que ningún peldaño quede inalcanzable jugando una vida entera |
+| Decisiones | Forma, efectos, edades, traducción y enfriamiento de las tarjetas |
+| Mejoras | Que las cadenas suban, que los efectos se cobren, y que el tycoon no gane al estudio |
+| Iconos | Que todo icono pedido exista, que todo dibujo se use y que el personaje se vista |
+| Interfaz bilingüe | Las seis pestañas en ambos idiomas y en todos los estados |
 | DOM real | Una partida jugada de verdad, tocando botones en un navegador simulado |
 
-Las seis primeras usan un DOM mínimo escrito a mano, que sirve para ver que las vistas se
-dibujan pero no ejercita lo que de verdad puede romperse. La sexta carga el `index.html`
-real con jsdom y juega: elige origen, acepta un empleo, abre una cuenta, reparte las
-semanas, cierra el turno, mueve dinero en una ventana con campo numérico, cambia de idioma,
-abre el glosario y juega un minijuego esperando sus temporizadores. Es la única que
-necesita `npm install`, y si falta jsdom se salta sola.
+Las nueve primeras usan un DOM mínimo escrito a mano, que sirve para ver que las vistas se
+dibujan pero no ejercita lo que de verdad puede romperse. La última carga el `index.html`
+real con jsdom y juega: elige origen, **completa el tutorial entero tocando solo lo que la
+cinta señala**, reparte las jornadas, cierra el turno, mueve dinero en una ventana con campo
+numérico, abre la pantalla de "Yo", cambia de idioma, abre el glosario y juega un minijuego
+esperando sus temporizadores. Es la única que necesita `npm install`, y si falta jsdom se
+salta sola.
 
-### Las cinco fallas que encontraron las pruebas
+**Las suites de economía arrancan al personaje ya adulto.** El ayudante `adulto()` de
+`pruebas/comun.js` le pone 18 años, el diversificado y Q1,200 —lo mismo con que arrancaba el
+juego cuando empezaba a esa edad—, así que las corridas siguen siendo comparables con las de
+antes del cambio. El balanceo mide vida laboral: jugar cinco años de colegio antes de llegar
+ahí no mide nada y además tapa lo que se quiere medir. Las suites de la ruta y del DOM real
+**no** lo usan, porque existen justamente para comprobar que la niñez funciona.
+
+Al pasar el juego a ocho jornadas hubo que revisar las diez suites, y ahí se vio lo que
+valían: la mitad falló por razones distintas, y ninguna de esas razones era la que se
+buscaba. La ventaja de bancarizarse se volvió negativa porque las estrategias abrían la
+cuenta con Q200 y un chico de 13 no los tiene; el mejor empleo se elegía comparando el campo
+`salarioBase`, que los trabajitos de niño no tienen, así que el jugador se quedaba vendiendo
+limonada cincuenta años; y el tutorial se atascaba en el último paso porque la interfaz
+seguía pidiendo la apertura mínima de adulto.
+
+### Las nueve fallas que encontraron las pruebas
 
 Ninguna se habría visto leyendo el código.
 
@@ -621,7 +1082,22 @@ Ninguna se habría visto leyendo el código.
 5. **El hermano mandaba dinero extra a quien no tenía hermano fuera.** El evento de remesa
    extraordinaria se disparaba con cualquier origen, incluido el que no recibe remesas.
 
-Una sexta falla estaba en las pruebas y no en el juego: forzar el azar desde fuera no
+6. **La casa propia era inalcanzable** para quien no pedía crédito nunca: su peldaño
+   pedía puntaje 45 y sin crédito el puntaje no sube. Lo encontró la vida completa de
+   `ruta.js`, y de ahí salió la regla de la segunda salida por tiempo o por edad.
+7. **El tutorial no llevaba a ningún lado en tres de sus pasos.** Uno señalaba un botón que
+   estaba en otra pestaña, otro apuntaba a un contenedor que no se puede tocar y el último
+   pedía una apertura de cuenta que el jugador no podía pagar. Los tres los encontró el
+   bloque que juega el tutorial tocando solo lo que la cinta señala.
+8. **Abrir la cuenta monetaria antes de repartir el mes dejaba la de ahorro cerrada para
+   siempre**, por encadenar con `requiere` un peldaño que abría contenido.
+9. **El mejor empleo se elegía por un campo que la mitad de los empleos no tiene.** Al
+   agregar los trabajitos de niño, que se pagan por jornada y no tienen `salarioBase`, la
+   comparación de `vidas-completas.js` daba `undefined` y el jugador simulado se quedaba
+   vendiendo limonada hasta los 65. La suite no falló por un error: falló porque los cinco
+   escalones educativos dieron exactamente el mismo patrimonio.
+
+Una décima falla estaba en las pruebas y no en el juego: forzar el azar desde fuera no
 afecta al contexto aislado donde corre el motor, así que la prueba de migración fallaba el
 18% de las veces y parecía un defecto del producto. Se corrigió en el arranque compartido.
 
@@ -656,14 +1132,14 @@ Cuarenta y nueve decisiones acordadas en cinco rondas de entrevista, el 4 de sep
    el juego matemáticamente imposible de ganar. Se resolvió situando al jugador en el
    escenario formal urbano y convirtiendo el escenario mediano en el modo difícil.
 
-## 24. Dos cosas que solo se vieron al medirlas
+## 24. Tres cosas que solo se vieron al medirlas
 
 Aparecieron al revisar el efecto de la recalibración, y ninguna era visible leyendo el código.
 
 ### 24.1 Los minijuegos nunca compensaban
 
-Un espacio de minijuego cuesta una semana de trabajo, y la tabla de pago castiga cada semana
-que no trabajas: pasar de cuatro semanas a tres quita el **30 % del sueldo del mes**. Con los
+Un minijuego costaba una semana de trabajo, y la tabla de pago castiga cada semana que no
+trabajas: pasar de cuatro semanas a tres quitaba el **30 % del sueldo del mes**. Con los
 pagos que tenían, jugar era siempre una pérdida:
 
 | Situación | Cuesta la semana | Pagaba el mejor minijuego |
@@ -689,9 +1165,17 @@ Los pagos se recalibraron para que la curva tenga la forma correcta:
 | Decisión de inversión | Q420 | **Q1,600** | maestría |
 
 La forma que se buscó, y que ahora una suite entera vigila: **al que menos gana, el trabajo
-extra le tiene que rendir más que su propia semana**, porque así es como vive quien gana poco;
-y **al que más gana le tiene que seguir conviniendo su empleo**, porque si no el juego premiaría
-abandonar la carrera que costó estudiar. Entre esos dos extremos hay una decisión real.
+extra le tiene que rendir más que su propia jornada**, porque así es como vive quien gana
+poco; y **al que más gana le tiene que seguir conviniendo su empleo**, porque si no el juego
+premiaría abandonar la carrera que costó estudiar. Entre esos dos extremos hay una decisión
+real.
+
+**El paso a jornadas movió esta curva y hay que tenerlo presente.** Un minijuego ahora cuesta
+media semana, o sea el 15 % del sueldo del mes en vez del 30 %, así que los trabajos extra
+valen el doble en términos relativos sin que se les haya tocado un número. La invariante
+sigue cumpliéndose, pero por poco: al gerente el mejor minijuego le paga Q1,600 contra los
+Q1,800 que le cuesta la jornada. Si algún día se sube un pago o se baja un sueldo alto, esa
+es la comprobación que va a fallar primero, y va a estar diciendo la verdad.
 
 ### 24.2 El modo difícil es un hoyo de diez años, y está bien que lo sea
 
@@ -730,4 +1214,24 @@ salida.
 Lo que sí conviene tener claro: el número que muestra `balanceo.js` para el modo difícil
 (patrimonio negativo a 24 meses) **no es un error del juego**. Es el primer tramo de la
 escalada, visto de cerca.
+
+### 24.3 La escalera educativa, medida escalón por escalón
+
+Al empezar el juego a los 13, "¿estudiar rinde?" dejó de ser una pregunta sobre la
+universidad y pasó a ser una pregunta sobre los básicos. La suite de vidas completas corre
+ahora cinco rutas sobre veintiuna semillas, y el resultado es lo que el juego promete:
+
+| Ruta | Patrimonio mediano a los 65 |
+|---|---|
+| No estudiar nunca | Q135,000 |
+| Terminar el diversificado | Q578,000 |
+| Carrera técnica | Q685,000 |
+| Licenciatura | Q942,000 |
+| Maestría | Q1,630,000 |
+
+El escalón más grande de toda la escalera **no es la universidad: es el diversificado**. Pasar
+de no estudiar nunca a terminar el diversificado multiplica el patrimonio final por más de
+cuatro; pasar del técnico a la licenciatura lo sube un 38 %. Eso es exactamente lo que dicen
+los datos del INE sobre el ingreso mediano, y es el mensaje que un juego para chicos de 13
+años tiene que poder sostener con números y no con un párrafo.
 

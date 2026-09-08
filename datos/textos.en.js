@@ -16,7 +16,6 @@ var TEXTOS_EN = {
     '{0} {1} · {2} años': '{0} {1} · age {2}',
     'turnos por {0}': '{0} turns',
     'debe {0}': 'owes {0}',
-    'Historial: {0}': 'Credit: {0}',
     'Tu {0}': 'Your {0}',
     'Terminar el {0}': 'End the {0}',
     'Adelantar hasta que pase algo': 'Skip ahead until something happens',
@@ -24,20 +23,13 @@ var TEXTOS_EN = {
     'Este reparto se repite los {0} meses del {1}.': 'This split repeats for all {0} months of the {1}.',
 
     // week slots
-    'Cuatro semanas. Toca una y elige en qué la usas.': 'Four weeks. Tap one and choose how to spend it.',
     'Trabajo': 'Work', 'Estudio': 'School', 'Extra': 'Side gig', 'Hecho': 'Done',
     'Descanso': 'Rest', 'Libre': 'Free', 'Mes': 'Month', 'Banco': 'Bank',
     'Trabajar': 'Work', 'Estudiar': 'Study', 'Descansar': 'Rest', 'Vaciar': 'Clear',
-    'No tienes trabajo. Busca uno en la pestaña de trabajo.': 'You have no job. Find one in the Work tab.',
-    'Para estudiar, inscríbete primero.': 'To study, enroll first.',
     'Tu primer año es tranquilo. No van a caer imprevistos mientras agarras el ritmo.':
       'Your first year is calm. Nothing bad will hit you while you learn the ropes.',
 
     // month preview
-    'Lo que viene': 'What is coming',
-    'Ingreso estimado': 'Estimated income',
-    'Trabajas {0} de 4 semanas, así que cobras el {1} del sueldo.':
-      'You work {0} of 4 weeks, so you collect {1} of the salary.',
     '{0} y gastos': '{0} and expenses',
     'Colegiatura': 'Tuition',
     'Cuotas de crédito': 'Loan payments',
@@ -46,21 +38,15 @@ var TEXTOS_EN = {
     'Se te irá del efectivo': 'Will leak from your cash',
 
     // work
-    'Modalidad': 'Type', 'Formal': 'Formal', 'Informal': 'Informal',
-    'Salario estimado': 'Estimated salary',
-    'Tiempo en el puesto': 'Time in the job',
+    'Formal': 'Formal', 'Informal': 'Informal',
     '{0} meses': '{0} months',
-    'Efecto del mercado': 'Market effect',
-    '{0} del sueldo base': '{0} of base pay',
     'Renunciar': 'Quit',
     'Mercado laboral': 'Job market',
     'La demanda cambia con los años. Investiga antes de estudiar, y aun así no des nada por seguro.':
       'Demand shifts over the years. Research before you study, and still assume nothing.',
     'Ofertas': 'Openings',
     'ingreso variable': 'variable income',
-    'Sueldo estimado': 'Estimated pay',
     'Necesitas nivel {0}.': 'You need {0} level.',
-    'Necesitas {0} de capital.': 'You need {0} in capital.',
     'Aceptar formal': 'Take it formal',
     'Informal (+{0})': 'Informal (+{0})',
     'Demanda alta': 'High demand', 'Demanda media': 'Average demand',
@@ -70,19 +56,9 @@ var TEXTOS_EN = {
     'Tu nivel': 'Your level',
     'En Guatemala la licenciatura sube el ingreso mediano apenas 13% sobre un bachiller. La maestría lo sube 133%. La ruta larga paga solo si la terminas.':
       'In Guatemala a bachelor’s degree raises median income only 13% over a high school diploma. A master’s raises it 133%. The long road pays only if you finish it.',
-    'Avance': 'Progress',
-    '{0} de {1} meses': '{0} of {1} months',
     'Privada': 'Private', 'Pública': 'Public', 'gratis': 'free',
-    'Costo mensual': 'Monthly cost',
-    'Cada semana que dedicas avanza medio mes de carrera. Dos semanas al mes es el ritmo normal.':
-      'Each week you put in advances half a month of the program. Two weeks a month is the normal pace.',
-    'Abandonar': 'Drop out',
-    'Rutas disponibles': 'Available paths',
-    'Duración': 'Length',
-    '{0} meses de carrera': '{0} months of study',
     '{0} al año': '{0} per year',
     'Ya tienes ese nivel o uno mayor.': 'You already have that level or higher.',
-    'Primero necesitas nivel {0}.': 'You need {0} level first.',
 
     // bank
     'Banco Cardamomo': 'Cardamom Bank',
@@ -184,13 +160,7 @@ var TEXTOS_EN = {
 
     // side gigs
     'Trabajos extra': 'Side gigs',
-    'Cada uno consume una semana. Pagan poco comparado con un sueldo, pero algo es algo y algunos te enseñan a cuidar tu dinero.':
-      'Each one costs a week. They pay little next to a salary, but it is something, and some teach you to look after your money.',
-    'Para jugar uno, primero asigna una semana a Extra en la pestaña del mes.':
-      'To play one, first assign a week to Side gig in the Month tab.',
     'paga': 'pays', 'enseña': 'teaches', 'de tu profesión': 'your field',
-    'Enseña:': 'Teaches:',
-    'Paga hasta': 'Pays up to',
     'Jugar': 'Play',
     'Hay {0} más que se abren al subir de nivel educativo.':
       '{0} more unlock as your education level goes up.',
@@ -215,7 +185,6 @@ var TEXTOS_EN = {
     'No se pudo': 'Could not do it', 'No se puede': 'Not possible',
     'No calificas': 'You do not qualify', 'No sirvió': 'That did not work',
     'No has hecho nada': 'You have done nothing',
-    'Asigna al menos una semana antes de cerrar.': 'Assign at least one week before closing.',
 
     // graduation and reports
     'Te graduaste': 'You graduated',
@@ -265,15 +234,11 @@ var TEXTOS_EN = {
     'Sí, borrar': 'Yes, delete it',
 
     // start screen
-    'De los 18 a la jubilación': 'From 18 to retirement',
     'Tus partidas': 'Your games',
     'Ranura {0} · vacía': 'Slot {0} · empty',
     'Ranura {0} · {1} años': 'Slot {0} · age {1}',
     'Empezar aquí': 'Start here',
     'Seguir jugando': 'Continue', 'Borrar': 'Delete',
-    'Nueva partida': 'New game',
-    'Tienes 18 años, {0} de regalo de graduación y ninguna cuenta bancaria. Tu hermano manda dinero desde Estados Unidos de vez en cuando. Lo demás depende de ti.':
-      'You are 18, with {0} in graduation money and no bank account. Your brother sends money from the United States now and then. The rest is up to you.',
     '¿En qué Guatemala te toca vivir?': 'Which Guatemala do you get to live in?',
     'Empleo formal urbano': 'Formal urban employment',
     'Contrato, Bono 14, aguinaldo y seguro social. Puedes construir historial de crédito.':
@@ -285,28 +250,14 @@ var TEXTOS_EN = {
 
     // teaching cards
     'Cómo funciona': 'How it works',
-    'Cada mes tienes cuatro semanas y decides en qué las usas. Al terminar el mes cobras, pagas tus gastos y el juego avanza. Después de los 30 los turnos se vuelven trimestres y luego años, para que puedas llegar hasta la jubilación.':
-      'Every month you have four weeks and you decide how to spend them. When the month ends you get paid, your bills come out, and time moves on. After 30 the turns become quarters and then years, so you can reach retirement.',
-    'Empiezas guardando el dinero en efectivo. Fíjate cada mes cuánto se te va sin darte cuenta.':
-      'You start out keeping your money in cash. Watch how much slips away each month without you noticing.',
     'Aceptaste un trabajo informal': 'You took an informal job',
     'Vas a recibir {0} más en la mano cada mes. A cambio no tienes Bono 14 ni aguinaldo, no cotizas al seguro y el banco no puede comprobar tus ingresos.':
       'You will take home {0} more each month. In exchange you get no statutory bonuses, you pay into no social security, and the bank cannot verify your income.',
     'Dos tercios de los guatemaltecos trabajan así. Es más dinero hoy y menos toda la vida, porque sin historial nadie te presta cuando lo necesitas.':
       'Two thirds of Guatemalans work this way. It is more money today and less for a lifetime, because with no record nobody lends to you when you need it.',
     'Te inscribiste': 'You enrolled',
-    'Empiezas {0}. Cada semana que dediques avanza medio mes de carrera, y esa semana no la estás trabajando.':
-      'You are starting {0}. Every week you put in advances half a month of the program, and that is a week you are not working.',
-    'La universidad pública es gratuita desde 2026. El costo real de estudiar en Guatemala no es la colegiatura, es el sueldo que dejas de ganar.':
-      'Public university has been free since 2026. The real cost of studying in Guatemala is not tuition, it is the wages you give up.',
     'Abriste tu cuenta monetaria': 'You opened your checking account',
-    'La monetaria es para mover dinero: recibir el salario, pagar y transferir. Paga apenas 1.27% al año, así que no es para guardar.':
-      'Checking is for moving money: getting paid, paying bills, transferring. It yields barely 1.27% a year, so it is not for saving.',
-    'Desde ahora tu salario y tus remesas entran a la cuenta en vez de al bolsillo. Eso solo ya frena los gastos hormiga y te baja la comisión de la remesa a la mitad.':
-      'From now on your salary and your remittances land in the account instead of your pocket. That alone slows the leaking and halves your remittance fee.',
     'Abriste tu cuenta de ahorro': 'You opened your savings account',
-    'El ahorro paga 2.65% al año, más del doble que la monetaria, porque el banco espera que no muevas ese dinero.':
-      'Savings pays 2.65% a year, more than double checking, because the bank expects you to leave it alone.',
     'Sobre lo que ganes de intereses te retienen 10% de impuesto. El rendimiento que te prometen nunca es el que recibes.':
       'Ten percent tax is withheld on whatever interest you earn. The yield they advertise is never the yield you get.',
     'Abriste un depósito a plazo': 'You opened a term deposit',
@@ -432,7 +383,8 @@ var TEXTOS_EN = {
 
   // ---------- education levels ----------
   niveles: {
-    bachiller: 'high school', tecnico: 'technical',
+    primaria: 'primary school', basicos: 'middle school',
+    diversificado: 'high school', tecnico: 'technical',
     licenciatura: 'bachelor’s', maestria: 'master’s'
   },
 

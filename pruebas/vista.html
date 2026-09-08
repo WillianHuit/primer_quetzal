@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vista previa — Mi Primer Quetzal</title>
+<link rel="stylesheet" href="../css/estilo.css">
+</head>
+<body>
+<!--
+  Vista previa para revisar el diseño con los ojos.
+
+  Las pruebas automáticas confirman que el HTML sale completo, pero jsdom no
+  calcula estilos ni corre animaciones: nunca van a decirte si un botón se ve
+  bien. Esto abre el juego de verdad con una partida ya empezada, para no
+  tener que jugar veinte minutos cada vez que se toca el CSS.
+
+  Se abre directo desde el disco. Parámetros en la dirección:
+
+    ?p=banco        la pestaña que quieres ver (casa, estudio, trabajo, mejoras, banco, extra, noticias)
+    ?p=banco&sub=credito   un apartado dentro de una pestaña partida
+    ?perfil=1       la pantalla de "Yo", con el personaje en grande
+    ?decision=feria una tarjeta de decisión, por su id de datos/decisiones.js
+    ?nino=1         el juego tal como lo ve un chico de 13 recién empezado
+    ?p=casa&mj=1    además abre un minijuego
+    ?fin=1          cierra el mes y muestra el resumen con sus gráficas
+    ?nueva=1        partida recién empezada, con la ruta cerrada y el tutorial
+    ?nueva=1&paso=1 el primer desbloqueo de la ruta, recién anunciado
+    ?guia=5         el tutorial después de cinco toques guiados
+    ?idioma=en      en inglés
+
+  Ejemplo: pruebas/vista.html?p=banco
+-->
+
+<div id="app"></div>
+
+<script>
+  // Los mismos archivos que index.html, en el mismo orden.
+  var ARCHIVOS = [
+    'datos/config.js', 'datos/trabajos.js', 'datos/carreras.js', 'datos/creditos.js',
+    'datos/eventos.js', 'datos/largoplazo.js', 'datos/origenes.js', 'datos/migracion.js',
+    'datos/glosario.js', 'datos/decisiones.js', 'datos/mejoras.js',
+    'datos/progreso.js',
+    'datos/textos.en.js', 'datos/textos.en.v2.js',
+    'vendor/lucide.js', 'vendor/chart.js',
+    'js/idioma.js', 'js/iconos.js', 'js/personaje.js', 'js/escena.js',
+    'js/sonido.js', 'js/motor.js',
+    'js/minijuegos/marco.js', 'js/minijuegos/reparto.js', 'js/minijuegos/tienda.js',
+    'js/minijuegos/estafas.js', 'js/minijuegos/presupuesto.js', 'js/minijuegos/caja.js',
+    'js/minijuegos/conciliacion.js', 'js/minijuegos/obra.js', 'js/minijuegos/inversion.js',
+    'js/ui.js'
+  ];
+  var par = new URLSearchParams(location.search);
+  localStorage.setItem('miPrimerQuetzal.idioma', par.get('idioma') === 'en' ? 'en' : 'es');
+
+  (function cargar(i) {
+    if (i >= ARCHIVOS.length) return arrancar();
+    var s = document.createElement('script');
+    s.src = '../' + ARCHIVOS[i];
+    s.onload = function () { cargar(i + 1); };
+    document.body.appendChild(s);
+  })(0);
+
+  /* Una partida con algo de recorrido: empleo, cuentas, tarjeta y un mes
+   * cerrado. Un juego recién empezado tiene casi todo vacío y no deja ver
+   * cómo se comportan las tarjetas llenas. */
+  function arrancar() {
+    /* La pantalla de los tres niveles, que es la primera que ve alguien que
+     * abre el juego por primera vez. Se llega a ella borrando las ranuras. */
+    if (par.get('niveles')) {
+      for (var r = 1; r <= 3; r++) Motor.borrar(r);
+      UI.iniciar();
+      var nueva = document.querySelector('[data-nueva]');
+      if (nueva) nueva.click();
+      return;
+    }
+
+    /* Partida virgen: la ruta cerrada y la cinta del tutorial en el primer
+     * paso. Es lo que ve alguien que abre el juego por primera vez. */
+    if (par.get('nueva')) {
+      Motor.iniciar('normal', 1, 'remesas');
+      Motor.get().vistos.bienvenida = true;
+      Motor.guardar();
+      UI.iniciar();
+      var bn = document.querySelector('[data-seguir="1"]');
+      if (bn) bn.click();
+      if (par.get('paso')) {
+        document.querySelector('[data-pestana="trabajo"]').click();
+        document.querySelector('[data-tomar][data-formal="1"]').click();
+      }
+      /* Sigue el tutorial tocando solo lo que la cinta señala, igual que hace
+       * pruebas/dom-real.js, para poder mirar cualquier paso con los ojos. */
+      var cuantos = parseInt(par.get('guia') || '0', 10);
+      for (var g = 0; g < cuantos; g++) {
+        var obj = document.querySelector('.senala') ||
+                  document.querySelector('[data-guia-ir]');
+        if (!obj) break;
+        obj.click();
+        for (var c = 0; c < 6; c++) {
+          var cerrar = document.querySelector('.velo [data-cerrar]');
+          if (!cerrar) break;
+          cerrar.click();
+        }
+      }
+      return;
+    }
+
+    /* El juego tal como lo ve un chico de 13 que ya paso el tutorial:
+     * inscrito en basicos, con un trabajito y sin nada del banco todavia. */
+    if (par.get('nino')) {
+      Motor.iniciar('normal', 1, 'apoyo');
+      var n = Motor.get();
+      n.vistos.guiaSaltada = true;
+      n.vistos.bienvenida = true;
+      // El nivel primero: inscribirse en bachillerato exige tener basicos
+      if (par.get('nivel') === 'basicos') n.educacion = 'basicos';
+      Motor.inscribirse(par.get('nivel') === 'basicos' ? 'bachillerato' : 'basicos', false, 'am');
+      Motor.tomarTrabajo('dulces', false);
+      for (var q = 0; q < 8; q++) Motor.asignarEspacio(q, q % 2 ? 'trabajo' : 'estudio');
+      // Un mes cerrado: es lo que abre las Mejoras y los trabajos extra
+      Motor.cerrarTurno();
+      for (var q2 = 0; q2 < 8; q2++) Motor.asignarEspacio(q2, q2 % 2 ? 'trabajo' : 'estudio');
+      Motor.guardar();
+      UI.iniciar();
+      var bn2 = document.querySelector('[data-seguir="1"]');
+      if (bn2) bn2.click();
+      for (var cn = 0; cn < 6; cn++) {
+        var cc = document.querySelector('.velo [data-cerrar]');
+        if (!cc) break;
+        cc.click();
+      }
+      var pn = par.get('p');
+      if (pn) {
+        var tn = document.querySelector('[data-pestana="' + pn + '"]');
+        if (tn) tn.click();
+      }
+      if (par.get('sub')) {
+        var sn = document.querySelector('[data-sub="' + par.get('sub') + '"]');
+        if (sn) sn.click();
+      }
+      return;
+    }
+
+    Motor.iniciar('normal', 1, 'remesas');
+    /* Un adulto con recorrido. El juego empieza a los 13 saliendo de primaria,
+     * y con ese estado casi ninguna pantalla del banco existe todavía: hay que
+     * adelantar al personaje a mano para poder mirarlas. */
+    var z = Motor.get();
+    z.edad = 24;
+    z.educacion = 'diversificado';
+    z.decisionEstudio = 'si';
+    z.efectivo = 3000;
+    z.vistos.cumplio18 = true;
+    Motor.tomarTrabajo('callcenter', true);
+    Motor.abrirCuenta('monetaria', 400);
+    Motor.abrirCuenta('ahorro', 300);
+    Motor.inscribirse('tecnico', false);
+    Motor.solicitarTarjeta();
+    // Unas mejoras compradas, para poder mirar la pantalla con niveles
+    ['canasta', 'carreta', 'herramienta', 'uniforme', 'utiles'].forEach(function (id) {
+      Motor.comprarMejora(id);
+    });
+    // Dos meses cerrados: con uno solo la ruta todavía no abre las Noticias,
+    // y esta vista existe para poder mirarlas.
+    for (var v = 0; v < 2; v++) {
+      for (var i = 0; i < 8; i++) Motor.asignarEspacio(i, i < 4 ? 'trabajo' : (i < 6 ? 'estudio' : 'descanso'));
+      Motor.cerrarTurno();
+    }
+    // Sin tarjetas educativas ni cinta del tutorial encima del diseño
+    Motor.get().vistos.guiaSaltada = true;
+    Motor.guardar();
+
+    UI.iniciar();
+    var b = document.querySelector('[data-seguir="1"]');
+    if (b) b.click();
+
+    // Cierra la tarjeta educativa de bienvenida y las que vengan detrás
+    for (var k = 0; k < 6; k++) {
+      var cerrar = document.querySelector('.velo [data-cerrar]');
+      if (!cerrar) break;
+      cerrar.click();
+    }
+
+    var p = par.get('p');
+    if (p) {
+      var t = document.querySelector('[data-pestana="' + p + '"]');
+      if (t) t.click();
+    }
+    if (par.get('sub')) {
+      var sp = document.querySelector('[data-sub="' + par.get('sub') + '"]');
+      if (sp) sp.click();
+    }
+    if (par.get('perfil')) {
+      var av = document.querySelector('[data-ver-perfil]');
+      if (av) av.click();
+    }
+    if (par.get('decision')) UI.verDecision(par.get('decision'));
+    if (par.get('mj')) {
+      // Un minijuego solo se puede jugar si el mes tiene una semana en Extra
+      document.querySelector('[data-pestana="casa"]').click();
+      document.querySelector('.jornada:not(.bloqueado)').click();
+      document.querySelector('[data-poner="minijuego"]').click();
+      document.querySelector('[data-pestana="extra"]').click();
+      var j = document.querySelector('[data-jugar="' + par.get('mj') + '"]')
+           || document.querySelector('[data-jugar]');
+      if (j) j.click();
+    }
+    if (par.get('fin')) {
+      document.querySelectorAll('.jornada:not(.bloqueado)').forEach(function (jor, n) {
+        jor.click();
+        var act = document.querySelector('[data-poner="' + (n < 5 ? 'trabajo' : 'descanso') + '"]');
+        if (act) act.click();
+      });
+      var cierre = document.querySelector('#cerrar-turno');
+      if (cierre) cierre.click();
+    }
+  }
+</script>
+</body>
+</html>

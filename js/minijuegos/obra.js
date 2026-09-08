@@ -6,7 +6,7 @@
 Minijuegos.registrar({
   id: 'obra',
   nombre: 'Presupuesto de obra',
-  icono: '📐',
+  icono: 'escuadra',
   tipo: 'avanzado',
   requiereNivel: 'licenciatura',
   requiereCarrera: 'ingenieria',

@@ -12,7 +12,7 @@ var CASAS = [
   {
     id: 'afueras',
     nombre: 'Casa en las afueras',
-    icono: '🏡',
+    icono: 'casa-jardin',
     precio: 350000,        // ESTIMACION
     apoyoFHA: true,        // califica para enganche del 5%
     serviciosComida: 1100, // ESTIMACION: sale mas barato que rentar
@@ -23,7 +23,7 @@ var CASAS = [
   {
     id: 'intermedia',
     nombre: 'Casa en zona intermedia',
-    icono: '🏠',
+    icono: 'casa',
     precio: 650000,        // ESTIMACION
     apoyoFHA: false,
     serviciosComida: 1300,
@@ -34,7 +34,7 @@ var CASAS = [
   {
     id: 'apartamento',
     nombre: 'Apartamento en la ciudad',
-    icono: '🏢',
+    icono: 'edificio',
     precio: 900000,        // ESTIMACION
     apoyoFHA: false,
     serviciosComida: 1500,
@@ -79,7 +79,7 @@ var HIPOTECA = {
  */
 var PENSION = {
   nombre: 'Plan de pensiones',
-  icono: '🌴',
+  icono: 'palmera',
   // Guatemala no publica rendimientos de planes de pension privados: no hay
   // regimen obligatorio y ni bancos ni aseguradoras dan un porcentaje. Ese vacio
   // es en si mismo un dato. El 7% se ancla en lo unico publicado y comparable:

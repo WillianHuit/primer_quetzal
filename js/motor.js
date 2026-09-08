@@ -43,6 +43,7 @@ var Motor = (function () {
       jubilado: false,
 
       efectivo: origen.efectivoInicial,
+      mesada: origen.mesada || 0,
       monetaria: null,
       ahorro: null,
       plazo: null,            // { monto, mesesRestantes, tasa }
@@ -56,12 +57,15 @@ var Motor = (function () {
       comisionesEnvio: 0,
 
       educacion: CONFIG.inicio.educacion,
-      estudio: null,          // { carreraId, mesesAvanzados, privada }
+      estudio: null,          // { carreraId, mesesAvanzados, privada, jornada }
+      // null = todavia no ha decidido si estudia. Es la primera decision del
+      // juego, y vuelve a estar en null cada vez que se gradua de algo.
+      decisionEstudio: null,
       carrerasTerminadas: [],
       vivienda: CONFIG.inicio.vivienda,
 
       empleo: null,
-      espacios: ['', '', '', ''],
+      espacios: espaciosVacios(),
       deudaHogar: 0,
 
       puntaje: PUNTAJE.inicial,
@@ -75,7 +79,16 @@ var Motor = (function () {
       cargosRecurrentes: [],  // { nombre, monto }
 
       mesesParaRemesa: azarEntero(1, 2),
+      // Quetzales extra por jornada trabajada: se compran con las tarjetas de
+      // decision (una bicicleta, un celular) y no se pierden nunca.
+      bonoJornada: 0,
+      // Las mejoras compradas: { canasta: true, utiles: true, ... }
+      mejoras: {},
+      decisionesVistas: [],
+      mesesSinDecision: 0,
       vistos: {},
+      desbloqueado: llavesIniciales(),
+      peldanos: {},
       bitacora: [],
       resumenesAnuales: [],
       totales: {
@@ -96,6 +109,271 @@ var Motor = (function () {
 
   function mesesDelTurno() { return etapaActual().mesesPorTurno; }
   function enGracia() { return estado.mesesJugados < CONFIG.mesesDeGracia; }
+  function esMenor() { return estado.edad < CONFIG.mayoriaDeEdad; }
+
+  // ---------- las jornadas del mes ----------
+
+  /* El mes son cuatro semanas de dos jornadas cada una: ocho casillas.
+   * El indice 0 es la manana de la primera semana, el 1 su tarde, el 2 la
+   * manana de la segunda, y asi. Las funciones de abajo son la unica parte del
+   * juego que conoce esa cuenta. */
+
+  function espaciosVacios() {
+    var v = [];
+    for (var i = 0; i < CONFIG.jornadasPorMes; i++) v.push('');
+    return v;
+  }
+  function semanaDe(i) { return Math.floor(i / CONFIG.jornadasPorSemana); }
+  function jornadaDe(i) { return i % CONFIG.jornadasPorSemana === 0 ? 'am' : 'pm'; }
+  function indiceDe(semana, jornada) {
+    return semana * CONFIG.jornadasPorSemana + (jornada === 'pm' ? 1 : 0);
+  }
+
+  /* Una casilla bloqueada es una que el colegio ya tomo.
+   *
+   * Basicos y diversificado son de jornada: mientras estes inscrito, esa
+   * jornada de las cuatro semanas es del colegio y no se puede vaciar. La
+   * universidad no bloquea nada: ahi el jugador reparte como quiera. */
+  function espacioBloqueado(i) {
+    if (!estado || !estado.estudio || !estado.estudio.jornada) return false;
+    return jornadaDe(i) === estado.estudio.jornada;
+  }
+
+  /* Vuelve a sentar al jugador en el colegio. Se llama al inscribirse y cada
+   * vez que se limpia el mes, para que las casillas del colegio reaparezcan
+   * solas en el turno siguiente. */
+  function aplicarHorarioEstudio() {
+    if (!estado || !estado.estudio || !estado.estudio.jornada) return;
+    for (var sem = 0; sem < CONFIG.jornadasPorMes / CONFIG.jornadasPorSemana; sem++) {
+      estado.espacios[indiceDe(sem, estado.estudio.jornada)] = 'estudio';
+    }
+  }
+
+  /* Partidas guardadas de cuando el mes tenia cuatro casillas en vez de ocho.
+   * Se rehace el reparto en blanco: perder la asignacion de un mes no cuesta
+   * nada, y dejar un arreglo de largo raro rompe todo lo demas. */
+  function sanearEspacios() {
+    if (!estado) return;
+    if (!Array.isArray(estado.espacios) || estado.espacios.length !== CONFIG.jornadasPorMes) {
+      estado.espacios = espaciosVacios();
+      aplicarHorarioEstudio();
+    }
+  }
+
+  // ---------- la ruta que se va abriendo ----------
+
+  /* El juego no empieza con todo encima. Las pestañas y los productos del
+   * banco se van abriendo por peldaños, definidos en datos/progreso.js.
+   *
+   * El motor solo lleva la cuenta de qué está abierto: NO prohíbe nada. Un
+   * peldaño cerrado es algo que la interfaz todavía no dibuja, no una acción
+   * que el motor rechace. Así las pruebas de balanceo pueden seguir jugando
+   * vidas completas llamando al motor directo, sin pelear con la ruta.
+   */
+
+  function llavesIniciales() {
+    var m = {};
+    for (var i = 0; i < PROGRESO_INICIAL.length; i++) m[PROGRESO_INICIAL[i]] = true;
+    return m;
+  }
+
+  /* Rellena lo que falte. Sirve para partidas guardadas antes de que la ruta
+   * existiera: se les abre lo que ya tenían ganado en vez de esconderles
+   * medio juego de repente. */
+  function sanearProgreso() {
+    if (!estado) return;
+    if (!estado.desbloqueado) estado.desbloqueado = llavesIniciales();
+    if (!estado.peldanos) estado.peldanos = {};
+  }
+
+  function desbloqueado(llave) {
+    return !!(estado && estado.desbloqueado && estado.desbloqueado[llave]);
+  }
+
+  /* Revisa la ruta y abre los peldaños cuya condición ya se cumple. Devuelve
+   * los que se abrieron en esta llamada, para que la interfaz los anuncie de
+   * uno en uno. Nunca abre el mismo dos veces.
+   *
+   * `vista` es lo que el jugador está viendo ahora mismo: { pestana,
+   * espacioSel }. Los pasos del tutorial la necesitan, porque "toca la
+   * pestaña Trabajo" no se puede comprobar mirando solo el estado de la
+   * partida. Quien llame sin vista solo se pierde esos pasos.
+   *
+   * Se repite hasta que una pasada no abra nada: un peldaño encadenado con
+   * `requiere` puede quedar listo en el mismo instante que el anterior.
+   */
+  function revisarProgreso(vista) {
+    if (!estado) return [];
+    sanearProgreso();
+    var v = vista || {};
+    var nuevos = [];
+    var otraVuelta = true;
+
+    while (otraVuelta) {
+      otraVuelta = false;
+      for (var i = 0; i < PROGRESO.length; i++) {
+        var p = PROGRESO[i];
+        if (estado.peldanos[p.id]) continue;
+        if (p.requiere && !estado.peldanos[p.requiere]) continue;
+        var cumple = false;
+        try { cumple = !!p.cuando(estado, API, v); } catch (err) { cumple = false; }
+        if (!cumple) continue;
+        estado.peldanos[p.id] = true;
+        for (var k = 0; k < p.llaves.length; k++) estado.desbloqueado[p.llaves[k]] = true;
+        nuevos.push(p);
+        otraVuelta = true;
+      }
+    }
+    if (nuevos.length) guardar();
+    return nuevos;
+  }
+
+  /* El siguiente peldaño que se puede perseguir, con su número dentro de la
+   * ruta. Devuelve null cuando ya no queda ninguno con pista. */
+  function siguientePeldano(soloMetas) {
+    if (!estado) return null;
+    sanearProgreso();
+    for (var i = 0; i < PROGRESO.length; i++) {
+      var p = PROGRESO[i];
+      if (estado.peldanos[p.id] || !p.pista) continue;
+      // Un peldaño del tutorial que no abre nada solo tiene sentido dentro
+      // del tutorial: quien lo salto no quiere que se lo sigan pidiendo.
+      if (soloMetas && p.guia && !p.titulo) continue;
+      // Un peldaño encadenado no se persigue antes de que le toque
+      if (p.requiere && !estado.peldanos[p.requiere]) continue;
+      return { peldano: p, n: i + 1, total: PROGRESO.length };
+    }
+    return null;
+  }
+
+  /* Cuántos peldaños llevas abiertos, para la barra de avance de la ruta. */
+  function peldanosAbiertos() {
+    if (!estado || !estado.peldanos) return 0;
+    var n = 0;
+    for (var i = 0; i < PROGRESO.length; i++) if (estado.peldanos[PROGRESO[i].id]) n++;
+    return n;
+  }
+
+  // ---------- las mejoras: la capa de tycoon ----------
+
+  /* Las mejoras de datos/mejoras.js son lo único del juego que se compra una
+   * vez y rinde para siempre. El motor solo lleva la cuenta de cuáles tiene y
+   * suma sus efectos; qué hace cada efecto está en resolverMes.
+   *
+   * Igual que con la ruta, el motor NO prohíbe: comprar una mejora que no
+   * toca todavía es un error de la interfaz, no algo que el motor rechace...
+   * salvo por el dinero y por el nivel anterior, que sí son reglas del juego.
+   */
+
+  function mejorasDeCadena(cadena) {
+    return MEJORAS.filter(function (m) { return m.cadena === cadena; });
+  }
+
+  /* Cuántos escalones lleva comprados de una cadena. Es el "nivel" que ve el
+   * jugador, y sube de uno en uno porque el orden de la lista es el orden. */
+  function nivelDeCadena(cadena) {
+    if (!estado || !estado.mejoras) return 0;
+    var lista = mejorasDeCadena(cadena);
+    var n = 0;
+    for (var i = 0; i < lista.length; i++) {
+      if (!estado.mejoras[lista[i].id]) break;
+      n++;
+    }
+    return n;
+  }
+
+  /* La siguiente mejora de una cadena, o null si ya está completa. */
+  function siguienteMejora(cadena) {
+    var lista = mejorasDeCadena(cadena);
+    var n = nivelDeCadena(cadena);
+    return n < lista.length ? lista[n] : null;
+  }
+
+  function tieneMejora(id) {
+    return !!(estado && estado.mejoras && estado.mejoras[id]);
+  }
+
+  /* Por qué NO se puede comprar una mejora. Devuelve null si sí se puede.
+   * La interfaz usa el motivo para decirlo en una línea en vez de esconder
+   * el botón: saber qué te falta es la mitad de la decisión. */
+  function faltaParaMejora(id) {
+    var m = buscarPorId(MEJORAS, id);
+    if (!m) return { motivo: 'noexiste', razon: 'Esa mejora no existe.' };
+    if (tieneMejora(id)) return { motivo: 'repetida', razon: 'Ya la tienes.' };
+    var sig = siguienteMejora(m.cadena);
+    if (!sig || sig.id !== id) {
+      return { motivo: 'orden', razon: 'Primero te falta la mejora anterior.' };
+    }
+    if (m.edadMinima && estado.edad < m.edadMinima) {
+      return { motivo: 'edad', razon: 'Hasta los ' + m.edadMinima + '.' };
+    }
+    /* Los dos escalones grandes del negocio piden nivel educativo, y es lo
+     * que evita que la capa de tycoon se coma el mensaje del juego: sin
+     * básicos terminados se llega a la carreta y ahí se para. */
+    if (m.requiereNivel && nivelIndice(estado.educacion) < nivelIndice(m.requiereNivel)) {
+      return { motivo: 'nivel', razon: 'Necesitas ' + m.requiereNivel + ' terminado.' };
+    }
+    if (dineroDisponible() < m.costo) {
+      return { motivo: 'dinero', razon: 'Te faltan Q' +
+               Math.ceil(m.costo - dineroDisponible()) + '.' };
+    }
+    return null;
+  }
+
+  /* Lo que puede gastar hoy sin tocar el plazo fijo ni la pensión. */
+  function dineroDisponible() {
+    if (!estado) return 0;
+    return estado.efectivo + (estado.monetaria || 0) + (estado.ahorro || 0);
+  }
+
+  /* Baja un escalón la cadena del negocio y devuelve lo que se perdió.
+   * Se pierde la inversión, no se devuelve: eso es quebrar. */
+  function bajarUnNivelDeNegocio() {
+    var lista = mejorasDeCadena('negocio');
+    var n = nivelDeCadena('negocio');
+    if (n <= 0) return null;
+    var perdida = lista[n - 1];
+    delete estado.mejoras[perdida.id];
+    return perdida;
+  }
+
+  function comprarMejora(id) {
+    var falta = faltaParaMejora(id);
+    if (falta) return { ok: false, razon: falta.razon, motivo: falta.motivo };
+    var m = buscarPorId(MEJORAS, id);
+    var resto = cobrarDeCuentas(m.costo);
+    if (resto > 0.01) {
+      // No debería pasar (dineroDisponible ya lo comprobó), pero si pasa no
+      // se le regala la mejora ni se le deja una deuda a medias.
+      estado.deudaHogar = redondear(estado.deudaHogar + resto);
+      return { ok: false, razon: 'No alcanzó.' };
+    }
+    estado.mejoras[m.id] = true;
+    guardar();
+    return { ok: true, mejora: m };
+  }
+
+  /* La suma de todo lo que dan las mejoras compradas. */
+  function efectosDeMejoras() {
+    var t = { bonoJornada: 0, avanceEstudio: 0, ingresoPasivo: 0,
+              costoMensual: 0, energiaExtra: 0 };
+    if (!estado || !estado.mejoras) return t;
+    for (var i = 0; i < MEJORAS.length; i++) {
+      var m = MEJORAS[i];
+      if (!estado.mejoras[m.id]) continue;
+      for (var k in m.efecto) {
+        if (t[k] !== undefined) t[k] = redondear(t[k] + m.efecto[k]);
+      }
+    }
+    return t;
+  }
+
+  /* Lo que gana por jornada trabajada, por encima del sueldo: las mejoras de
+   * oficio más lo que haya comprado con una tarjeta de decisión. */
+  function bonoPorJornada() {
+    return redondear((estado ? (estado.bonoJornada || 0) : 0) +
+                     efectosDeMejoras().bonoJornada);
+  }
 
   // ---------- consultas ----------
 
@@ -131,9 +409,15 @@ var Motor = (function () {
            (MERCADO.multiplicadorMaximo - MERCADO.multiplicadorMinimo) * d;
   }
 
+  /* Lo que se ganaria trabajando el mes completo. Los trabajitos de nino no
+   * tienen sueldo mensual, tienen pago por jornada: su "mes completo" son las
+   * ocho jornadas. */
   function salarioEsperado(trabajo, formal) {
     var mult = CONFIG.dificultad[estado.dificultad].multiplicadorSalario;
-    var base = trabajo.salarioBase * mult * multiplicadorMercado(trabajo.id);
+    var mensual = trabajo.pagoPorJornada
+      ? trabajo.pagoPorJornada * CONFIG.jornadasPorMes
+      : trabajo.salarioBase;
+    var base = mensual * mult * multiplicadorMercado(trabajo.id);
     if (!formal) base = base * (1 + CONFIG.primaInformalidad);
     var anios = (estado.empleo && estado.empleo.id === trabajo.id)
       ? Math.floor(estado.empleo.mesesEnPuesto / 12) : 0;
@@ -148,6 +432,10 @@ var Motor = (function () {
   function nivelIndice(nivel) { return NIVELES_EDUCATIVOS.indexOf(nivel); }
 
   function puedeAplicar(trabajo) {
+    if (trabajo.edadMinima && estado.edad < trabajo.edadMinima) {
+      return { ok: false, motivo: 'edad',
+               razon: 'Nadie te contrata antes de los ' + trabajo.edadMinima + '.' };
+    }
     if (nivelIndice(estado.educacion) < nivelIndice(trabajo.requisito)) {
       return { ok: false, motivo: 'nivel', razon: 'Necesitas nivel ' + trabajo.requisito + '.' };
     }
@@ -171,6 +459,14 @@ var Motor = (function () {
       return c.serviciosComida + c.personal + c.mantenimiento + extra;
     }
 
+    /* Siendo menor de edad y viviendo en tu casa, el gasto de la casa no es
+     * tuyo: lo unico que sale de tu bolsa es el pasaje y la refaccion. Al
+     * cumplir los 18 se te cae encima el gasto completo de golpe, y ese golpe
+     * es la mitad de la leccion. */
+    if (esMenor() && estado.vivienda === 'familiar') {
+      return CONFIG.menor.gastoPersonal + extra;
+    }
+
     var v = CONFIG.vivienda[estado.vivienda];
     // El aporte a la casa familiar depende del origen del personaje
     var renta = estado.vivienda === 'familiar'
@@ -179,7 +475,17 @@ var Motor = (function () {
     return renta + v.serviciosComida + v.personal + extra;
   }
 
-  function proporcionPago(semanas) { return CONFIG.pagoPorSemanasTrabajadas[semanas] || 0; }
+  /* Que parte del sueldo cobras por las jornadas que trabajaste.
+   *
+   * Los trabajitos de nino se pagan por jornada, o sea que la proporcion es
+   * lineal: dos jornadas es exactamente el doble que una. Un empleo de verdad
+   * no funciona asi (medio mes de trabajo paga menos de medio sueldo), y esa
+   * diferencia esta en la tabla de CONFIG. */
+  function proporcionPago(jornadas, trabajo) {
+    if (jornadas <= 0) return 0;
+    if (trabajo && trabajo.pagoPorJornada) return jornadas / CONFIG.jornadasPorMes;
+    return CONFIG.pagoPorJornadasTrabajadas[jornadas] || 0;
+  }
 
   function espaciosUsados(tipo) {
     var n = 0;
@@ -206,6 +512,20 @@ var Motor = (function () {
 
   function tieneFiador() { return estado.reputacion >= FIADOR.umbralParaConseguirFiador; }
 
+  /* Lo que el banco cobra al mes por tener la cuenta monetaria abierta.
+   *
+   * Cero si no la tiene. Cero tambien si su sueldo lo deposita una empresa: al
+   * banco le interesa la planilla y no le cobra manejo a quien la trae. El que
+   * paga es justo el que abrio la cuenta sin necesitarla. */
+  function manejoDeCuenta() {
+    if (!estado || estado.monetaria === null) return 0;
+    var p = CONFIG.productos.monetaria;
+    if (!p.manejoMensual) return 0;
+    var conPlanilla = !!(estado.empleo && estado.empleo.formal);
+    if (p.manejoGratisConPlanilla && conPlanilla) return 0;
+    return p.manejoMensual;
+  }
+
   function tasaAhorroVigente() {
     for (var i = 0; i < estado.promosActivas.length; i++) {
       var e = estado.promosActivas[i].efecto;
@@ -216,15 +536,32 @@ var Motor = (function () {
 
   // ---------- acciones del jugador ----------
 
-  function asignarEspacio(i, tipo) { estado.espacios[i] = tipo; }
-  function limpiarEspacios() { estado.espacios = ['', '', '', '']; }
+  /* Asignar una jornada. Devuelve false si el colegio ya la tenia tomada.
+   *
+   * Esto SI es una regla del juego y no una traba de la ruta: en basicos no se
+   * puede sacar al chico del instituto para mandarlo a trabajar, y en
+   * diversificado la jornada que eligio esta ocupada. Lo que queda libre es la
+   * otra jornada, y ahi si decide el jugador. */
+  function asignarEspacio(i, tipo) {
+    if (espacioBloqueado(i)) return false;
+    /* Y tampoco se le pueden meter jornadas extra a un colegio de jornada:
+     * basicos y diversificado duran los anios que duran, no se aceleran
+     * estudiando por la tarde. La universidad si: ahi no hay jornada. */
+    if (tipo === 'estudio' && estado.estudio && estado.estudio.jornada) return false;
+    estado.espacios[i] = tipo;
+    return true;
+  }
+  function limpiarEspacios() {
+    estado.espacios = espaciosVacios();
+    aplicarHorarioEstudio();
+  }
 
   function tomarTrabajo(id, formal) {
     estado.empleo = { id: id, formal: !!formal, mesesEnPuesto: 0 };
   }
   function renunciar() { estado.empleo = null; }
 
-  function inscribirse(carreraId, privada) {
+  function inscribirse(carreraId, privada, jornada) {
     var c = buscarPorId(CARRERAS, carreraId);
     if (!c) return { ok: false, razon: 'Esa carrera no existe.' };
     if (nivelIndice(estado.educacion) < nivelIndice(c.requiere)) {
@@ -233,15 +570,55 @@ var Motor = (function () {
     if (nivelIndice(estado.educacion) >= nivelIndice(c.nivelQueOtorga)) {
       return { ok: false, razon: 'Ya tienes ese nivel o uno mayor.' };
     }
-    estado.estudio = { carreraId: carreraId, mesesAvanzados: 0, privada: !!privada };
+    /* La jornada sale del horario de la carrera: basicos siempre por la manana
+     * (es como funciona el instituto), diversificado la que elija el jugador, y
+     * la universidad ninguna, porque ahi reparte libre. */
+    var j = c.horario === 'fijo' ? 'am'
+          : c.horario === 'jornada' ? (jornada === 'pm' ? 'pm' : 'am')
+          : null;
+    estado.estudio = { carreraId: carreraId, mesesAvanzados: 0, privada: !!privada, jornada: j };
+    estado.decisionEstudio = 'si';
+    aplicarHorarioEstudio();
     return { ok: true };
   }
 
-  function abandonarEstudio() { estado.estudio = null; }
+  /* La primera decision del juego, y la unica que se vuelve a preguntar cada
+   * vez que el jugador se gradua: seguir estudiando o ponerse a trabajar.
+   *
+   * Decir que no NO cierra la puerta: la pestaña de Estudio sigue ahi y puede
+   * inscribirse el mes siguiente. Lo que hace es dejar que el juego arranque
+   * sin obligarlo a estudiar. */
+  function decidirEstudio(respuesta) {
+    estado.decisionEstudio = respuesta === 'si' ? 'si' : 'no';
+    guardar();
+    return estado.decisionEstudio;
+  }
+
+  function abandonarEstudio() {
+    estado.estudio = null;
+    estado.decisionEstudio = 'no';
+    // Las casillas que tenia tomadas el colegio quedan libres
+    for (var i = 0; i < estado.espacios.length; i++) {
+      if (estado.espacios[i] === 'estudio') estado.espacios[i] = '';
+    }
+  }
+
+  /* El minimo para abrir una cuenta.
+   *
+   * Un menor de edad abre cuenta con un adulto y con mucho menos dinero: las
+   * cuentas infantiles de los bancos guatemaltecos arrancan en Q25 o Q50. Sin
+   * esto el tutorial le pedia Q200 a un chico que gana Q40 al mes. */
+  function aperturaMinima(tipo) {
+    var p = CONFIG.productos[tipo];
+    if (!p) return 0;
+    return (esMenor() && p.aperturaMinimaMenor !== undefined)
+      ? p.aperturaMinimaMenor : p.aperturaMinima;
+  }
 
   function abrirCuenta(tipo, monto) {
     var p = CONFIG.productos[tipo];
-    if (monto < p.aperturaMinima) return { ok: false, razon: 'El mínimo de apertura es Q' + p.aperturaMinima + '.' };
+    var minimo = aperturaMinima(tipo);
+    if (monto < minimo) return { ok: false, razon: 'El mínimo de apertura es Q' + minimo + '.' };
     if (monto > estado.efectivo) return { ok: false, razon: 'No tienes ese efectivo.' };
     estado.efectivo -= monto;
     estado[tipo] = monto;
@@ -603,10 +980,13 @@ var Motor = (function () {
     var enfermedadMes = 0;
 
     // --- energia ---
+    var mej = efectosDeMejoras();
     for (var i = 0; i < estado.espacios.length; i++) {
       var tipo = estado.espacios[i];
       if (tipo && CONFIG.energia.porEspacio[tipo] !== undefined) {
         estado.energia += CONFIG.energia.porEspacio[tipo];
+        // Una cama de verdad hace que el descanso rinda más
+        if (tipo === 'descanso') estado.energia += mej.energiaExtra;
       }
     }
     estado.energia = limitar(estado.energia, 0, CONFIG.energia.maxima);
@@ -631,16 +1011,60 @@ var Motor = (function () {
     var espEstudio = espaciosUsados('estudio');
     if (estado.estudio && espEstudio > 0) {
       var carrera = buscarPorId(CARRERAS, estado.estudio.carreraId);
-      estado.estudio.mesesAvanzados += espEstudio * AVANCE_POR_SEMANA_ESTUDIO;
+      // Los útiles, los libros y el internet hacen rendir la jornada de estudio
+      estado.estudio.mesesAvanzados +=
+        espEstudio * (AVANCE_POR_JORNADA_ESTUDIO + mej.avanceEstudio);
       estado.totales.mesesEstudiando++;
       m.colegiatura += costoMensualEstudio();
       if (estado.estudio.mesesAvanzados >= carrera.mesesRequeridos) {
         estado.educacion = carrera.nivelQueOtorga;
         estado.carrerasTerminadas.push(carrera.id);
-        m.eventos.push('¡Te graduaste de ' + carrera.nombre + '!');
+        m.eventos.push('Te graduaste de ' + carrera.nombre + '.');
         m.graduacion = carrera.id;
         estado.estudio = null;
+        // Graduarse vuelve a abrir la pregunta: seguir estudiando o trabajar
+        estado.decisionEstudio = null;
+        for (var ce = 0; ce < estado.espacios.length; ce++) {
+          if (estado.espacios[ce] === 'estudio') estado.espacios[ce] = '';
+        }
       }
+    }
+
+    /* --- el negocio produce, aunque no le des jornadas ---
+     *
+     * Es la única entrada del juego que no cuesta tiempo, y por eso es la que
+     * más enseña: a partir de cierto punto, lo que trabaja es el capital y no
+     * la persona. Con su variación, porque un negocio tiene meses malos. */
+    if (mej.ingresoPasivo > 0) {
+      var vende = 1 + azar(-NEGOCIO_VARIANZA, NEGOCIO_VARIANZA);
+      var producido = redondear(mej.ingresoPasivo * vende);
+      m.negocio = (m.negocio || 0) + producido;
+      if (estado.monetaria !== null) estado.monetaria += producido;
+      else estado.efectivo += producido;
+      estado.totales.ingresos += producido;
+
+      /* Y puede quebrar. Sin esto, un ingreso pasivo compuesto cuarenta años
+       * se vuelve una máquina de dinero y el juego deja de parecerse a la
+       * vida. Se evita con colchón: un negocio con tres meses de venta
+       * guardados aguanta los meses malos, que es justo la lección que un
+       * negocio propio tiene que enseñar. */
+      var colchon = (estado.ahorro || 0) + (estado.monetaria || 0);
+      var protegido = colchon >= mej.ingresoPasivo * NEGOCIO_MESES_DE_COLCHON;
+      if (!enGracia() && !protegido && Math.random() < NEGOCIO_RIESGO_QUIEBRA) {
+        var caido = bajarUnNivelDeNegocio();
+        if (caido) {
+          m.quebro = caido.id;
+          m.eventos.push('Se te cayó el negocio: perdiste ' + caido.nombre +
+            '. No tenías con qué aguantar un mes malo.');
+        }
+      }
+    }
+
+    // --- la mesada, mientras seas menor y vivas en tu casa ---
+    if (esMenor() && estado.mesada > 0 && !estado.migracion) {
+      m.mesada = (m.mesada || 0) + estado.mesada;
+      if (estado.monetaria !== null) estado.monetaria += estado.mesada;
+      else estado.efectivo += estado.mesada;
     }
 
     // --- viviendo fuera: se gana en dólares y se manda a casa ---
@@ -675,7 +1099,10 @@ var Motor = (function () {
     if (t && espTrabajo > 0) {
       var bruto = salarioEsperado(t, estado.empleo.formal);
       var ruido = 1 + azar(-t.varianza, t.varianza);
-      var pago = redondear(bruto * ruido * proporcionPago(espTrabajo));
+      // Las herramientas —compradas en Mejoras o en una tarjeta de decisión—
+      // pagan por cada jornada trabajada
+      var extraHerramienta = bonoPorJornada() * espTrabajo;
+      var pago = redondear(bruto * ruido * proporcionPago(espTrabajo, t) + extraHerramienta);
       m.salario += pago;
       estado.empleo.mesesEnPuesto++;
       if (estado.empleo.formal) {
@@ -695,7 +1122,10 @@ var Motor = (function () {
     }
 
     // --- remesa que recibes (solo si tu origen la trae y estás en el país) ---
-    if (CONFIG.remesa.activa && estado.remesaActiva && !estado.migracion) {
+    /* La remesa llega a la casa, no al chico: hasta los 18 la administran sus
+     * papas. Antes le caia a un nino de 13 el equivalente a Q1,500 al mes y el
+     * juego entero perdia sentido. */
+    if (CONFIG.remesa.activa && estado.remesaActiva && !estado.migracion && !esMenor()) {
       estado.mesesParaRemesa--;
       if (estado.mesesParaRemesa <= 0) {
         var dolares = azarEntero(CONFIG.remesa.montoDolares[0], CONFIG.remesa.montoDolares[1]);
@@ -718,6 +1148,16 @@ var Motor = (function () {
 
     // --- eventos de vida ---
     if (!enGracia()) resolverEventos(m);
+
+    // --- cumplir la mayoria de edad ---
+    if (estado.edad >= CONFIG.mayoriaDeEdad && !estado.vistos.cumplio18) {
+      estado.vistos.cumplio18 = true;
+      m.cumpleMayoria = true;
+      if (estado.vivienda === 'familiar' && estado.aporteCasa > 0) {
+        m.eventos.push('Cumpliste ' + CONFIG.mayoriaDeEdad +
+          '. Desde este mes aportas Q' + estado.aporteCasa + ' al gasto de la casa.');
+      }
+    }
 
     // --- cuotas de crédito ---
     for (var k = estado.prestamos.length - 1; k >= 0; k--) {
@@ -835,7 +1275,13 @@ var Motor = (function () {
     // --- gastos fijos, colegiatura, enfermedad y lo que se debía ---
     var gastoVivienda = m.viviendaYaCubierta ? 0 : gastoMensualVivienda();
     m.vivienda += gastoVivienda;
-    var porPagar = gastoVivienda + costoMensualEstudio() + estado.deudaHogar;
+    var manejo = manejoDeCuenta();
+    m.manejo += manejo;
+    // El mantenimiento de lo que compró: gasolina, alquiler del puesto, internet
+    var manteni = mej.costoMensual;
+    m.mantenimiento = (m.mantenimiento || 0) + manteni;
+    var porPagar = gastoVivienda + costoMensualEstudio() + estado.deudaHogar +
+                   manejo + manteni;
     if (m.enfermedadPendiente) { porPagar += m.enfermedadPendiente; m.enfermedadPendiente = 0; }
     estado.deudaHogar = 0;
     var resto = cobrarDeCuentas(porPagar);
@@ -941,6 +1387,10 @@ var Motor = (function () {
   function resolverEventos(m) {
     for (var i = 0; i < EVENTOS.length; i++) {
       var ev = EVENTOS[i];
+      /* A un chico de 13 no le llega la cuenta del dentista: la paga su mama.
+       * Los golpes de dinero empiezan con la mayoria de edad, y hasta entonces
+       * el juego se ocupa de otra cosa. */
+      if (ev.tipo === 'malo' && estado.edad < CONFIG.menor.edadPrimerosGolpes) continue;
       if (ev.requiereEmpleo && !estado.empleo) continue;
       if (ev.requiereRemesa && !estado.remesaActiva) continue;
       if (ev.soloEfectivo && estado.efectivo < 300) continue;
@@ -970,6 +1420,40 @@ var Motor = (function () {
       break; // como maximo un evento por mes
     }
 
+    /* Y una tarjeta de decision, como maximo una por mes.
+     *
+     * Va aparte de los eventos a proposito: un evento se lee y se cierra, una
+     * decision hay que tomarla. Si compartieran el mismo tiro, los meses en
+     * que se te quiebra el celular serian meses sin decidir nada. */
+    /* Con un descanso obligatorio entre tarjeta y tarjeta.
+     *
+     * Doce tarjetas con 10% cada una son casi tres de cada cuatro meses con
+     * una pregunta encima, y una decision que llega todos los meses deja de
+     * ser una decision y se vuelve un formulario. */
+    estado.mesesSinDecision = (estado.mesesSinDecision || 0) + 1;
+    if (typeof DECISIONES !== 'undefined' && estado.mesesSinDecision > MESES_ENTRE_DECISIONES) {
+      var candidatas = [];
+      for (var di = 0; di < DECISIONES.length; di++) {
+        var dc = DECISIONES[di];
+        if (dc.edadMinima && estado.edad < dc.edadMinima) continue;
+        if (dc.edadMaxima && estado.edad > dc.edadMaxima) continue;
+        if (dc.unaVez && estado.decisionesVistas.indexOf(dc.id) >= 0) continue;
+        if (dc.requiere) {
+          var pasa = false;
+          try { pasa = !!dc.requiere(estado); } catch (err) { pasa = false; }
+          if (!pasa) continue;
+        }
+        if (Math.random() >= dc.prob) continue;
+        candidatas.push(dc.id);
+      }
+      if (candidatas.length) {
+        var elegida = candidatas[azarEntero(0, candidatas.length - 1)];
+        estado.decisionesVistas.push(elegida);
+        estado.mesesSinDecision = 0;
+        m.decisiones.push({ clase: 'decision', ref: elegida });
+      }
+    }
+
     // promociones
     for (var j = 0; j < PROMOCIONES.length; j++) {
       var pr = PROMOCIONES[j];
@@ -982,9 +1466,15 @@ var Motor = (function () {
     }
   }
 
-  // Resuelve la opcion que el jugador eligio en una tarjeta de decision.
+  /* Aplica una opcion de una tarjeta de decision.
+   *
+   * `clase` dice de donde salio: 'evento' de datos/eventos.js, 'promo' de las
+   * promociones del banco, 'decision' de datos/decisiones.js. Los efectos que
+   * entiende cada campo estan documentados en ese archivo. */
   function aplicarDecision(clase, id, indiceOpcion) {
-    var fuente = clase === 'promo' ? PROMOCIONES : EVENTOS;
+    var fuente = clase === 'promo' ? PROMOCIONES
+               : clase === 'decision' ? (typeof DECISIONES !== 'undefined' ? DECISIONES : [])
+               : EVENTOS;
     var def = buscarPorId(fuente, id);
     if (!def) return { texto: '' };
 
@@ -997,6 +1487,29 @@ var Motor = (function () {
     var op = def.opciones[indiceOpcion];
     if (!op) return { texto: '' };
     var texto = op.resultado || '';
+
+    if (op.dinero) {
+      if (op.dinero > 0) {
+        if (estado.monetaria !== null) estado.monetaria += op.dinero;
+        else estado.efectivo += op.dinero;
+      } else {
+        var falta = cobrarDeCuentas(-op.dinero);
+        if (falta > 0.01) {
+          estado.deudaHogar = redondear(estado.deudaHogar + falta);
+          texto += ' Quedaste debiendo Q' + falta.toFixed(2) + '.';
+        }
+      }
+    }
+    if (op.reputacion) {
+      estado.reputacion = limitar(estado.reputacion + op.reputacion, 0, FIADOR.maxima);
+    }
+    if (op.puntaje) estado.puntaje = limitar(estado.puntaje + op.puntaje, 0, PUNTAJE.maximo);
+    if (op.avanceEstudio && estado.estudio) {
+      estado.estudio.mesesAvanzados = Math.max(0, estado.estudio.mesesAvanzados + op.avanceEstudio);
+    }
+    if (op.bonoJornada) {
+      estado.bonoJornada = redondear((estado.bonoJornada || 0) + op.bonoJornada);
+    }
 
     if (op.perderPorcentajeCuentas) {
       var perdido = 0;
@@ -1019,8 +1532,12 @@ var Motor = (function () {
       texto += ' Tu límite subió a Q' + estado.tarjeta.limite.toLocaleString() + '.';
     }
     if (op.cargoMensual) {
-      estado.cargosRecurrentes.push({ nombre: 'Seguro de vida', monto: op.cargoMensual });
-      texto += ' Se te va a cobrar Q' + op.cargoMensual + ' cada mes.';
+      // Las promos traen un numero suelto; las decisiones traen nombre y monto
+      var cargo = typeof op.cargoMensual === 'number'
+        ? { nombre: 'Seguro de vida', monto: op.cargoMensual }
+        : { nombre: op.cargoMensual.nombre, monto: op.cargoMensual.monto };
+      estado.cargosRecurrentes.push(cargo);
+      texto += ' Se te va a cobrar Q' + cargo.monto + ' cada mes.';
     }
     guardar();
     return { texto: texto };
@@ -1032,13 +1549,15 @@ var Motor = (function () {
     return {
       mes: MESES[estado.mes], anio: estado.anio, edad: estado.edad,
       etapa: etapaActual().turno, mesesCubiertos: mesesDelTurno(),
-      salario: 0, bono: 0, remesa: 0, comisionRemesa: 0, extras: 0,
+      salario: 0, bono: 0, remesa: 0, comisionRemesa: 0, extras: 0, mesada: 0,
+      manejo: 0, negocio: 0, mantenimiento: 0,
       vivienda: 0, colegiatura: 0, fuga: 0, intereses: 0, isr: 0,
       enfermedad: 0, perdidaEfectivo: 0, imprevistos: 0,
       cuotasPagadas: 0, interesesPagados: 0, pagoTarjeta: 0,
       cuotaHipoteca: 0, aportePension: 0, rendimientoPension: 0,
       enviado: 0, comisionEnvio: 0, viviendaYaCubierta: false,
       deudaHogar: 0, mora: false, embargo: false, hipotecaLiquidada: false,
+      quebro: null,
       graduacion: null, cierreDeAnio: false,
       eventos: [], decisiones: []
     };
@@ -1063,10 +1582,18 @@ var Motor = (function () {
     var turnos = [];
     for (var i = 0; i < CONFIG.tiempo.maxTurnosAdelantar; i++) {
       if (estado.jubilado) break;
-      // repite la ultima asignacion de espacios
+      /* Repite un reparto razonable: lo que el colegio tenga tomado se
+       * queda, y de lo que sobra se trabaja todo menos dos jornadas de
+       * descanso. Sin las dos de descanso el jugador se enfermaba solo. */
       var t = trabajoActual();
-      for (var j = 0; j < CONFIG.espaciosPorMes; j++) {
-        estado.espacios[j] = (t && j < 3) ? 'trabajo' : 'descanso';
+      var libres = [];
+      for (var j = 0; j < estado.espacios.length; j++) {
+        if (espacioBloqueado(j)) estado.espacios[j] = 'estudio';
+        else libres.push(j);
+      }
+      for (var jl = 0; jl < libres.length; jl++) {
+        var trabaja = t && jl < libres.length - 2;
+        estado.espacios[libres[jl]] = trabaja ? 'trabajo' : 'descanso';
       }
       var m = cerrarTurno();
       turnos.push(m);
@@ -1153,6 +1680,23 @@ var Motor = (function () {
       if (!crudo) return false;
       estado = JSON.parse(crudo);
       ranuraActiva = n || ranuraActiva;
+      sanearProgreso();
+      sanearEspacios();
+      if (estado.bonoJornada === undefined) estado.bonoJornada = 0;
+      if (!estado.decisionesVistas) estado.decisionesVistas = [];
+      if (estado.mesesSinDecision === undefined) estado.mesesSinDecision = 0;
+      if (!estado.mejoras) estado.mejoras = {};
+      if (estado.mesada === undefined) {
+        var og = buscarPorId(ORIGENES, estado.origen);
+        estado.mesada = og && og.mesada ? og.mesada : 0;
+      }
+      if (estado.decisionEstudio === undefined) {
+        // Partida vieja: si ya estaba estudiando, es que ya habia decidido
+        estado.decisionEstudio = estado.estudio ? 'si' : null;
+      }
+      // Una partida guardada antes de que la ruta existiera no puede perder
+      // de golpe la mitad del juego: se le abre todo lo que ya se ganó.
+      revisarProgreso();
       return true;
     } catch (e) { return false; }
   }
@@ -1214,7 +1758,7 @@ var Motor = (function () {
 
   // ---------- interfaz pública ----------
 
-  return {
+  var API = {
     iniciar: iniciar, cargar: cargar, guardar: guardar, borrar: borrar,
     ranuras: ranuras, ranuraActiva: function () { return ranuraActiva; },
     archivarPartida: archivarPartida, historial: historial,
@@ -1222,6 +1766,9 @@ var Motor = (function () {
 
     cerrarTurno: cerrarTurno, adelantar: adelantar, aplicarDecision: aplicarDecision,
     asignarEspacio: asignarEspacio, limpiarEspacios: limpiarEspacios,
+    espacioBloqueado: espacioBloqueado, semanaDe: semanaDe, jornadaDe: jornadaDe,
+    indiceDe: indiceDe, esMenor: esMenor, aperturaMinima: aperturaMinima,
+    decidirEstudio: decidirEstudio,
 
     tomarTrabajo: tomarTrabajo, renunciar: renunciar,
     inscribirse: inscribirse, abandonarEstudio: abandonarEstudio,
@@ -1242,6 +1789,12 @@ var Motor = (function () {
     salarioEsperado: salarioEsperado, ingresoMensualActual: ingresoMensualActual,
     puedeAplicar: puedeAplicar, gastoMensualVivienda: gastoMensualVivienda,
     costoMensualEstudio: costoMensualEstudio, proporcionPago: proporcionPago,
+    manejoDeCuenta: manejoDeCuenta,
+    comprarMejora: comprarMejora, faltaParaMejora: faltaParaMejora,
+    nivelDeCadena: nivelDeCadena, siguienteMejora: siguienteMejora,
+    mejorasDeCadena: mejorasDeCadena, tieneMejora: tieneMejora,
+    efectosDeMejoras: efectosDeMejoras, bonoPorJornada: bonoPorJornada,
+    dineroDisponible: dineroDisponible,
     espaciosUsados: espaciosUsados, espaciosLibres: espaciosLibres,
     tramoPuntaje: tramoPuntaje, tieneFiador: tieneFiador,
     requisitoPrestamo: requisitoPrestamo, montoMaximoPersonal: montoMaximoPersonal,
@@ -1249,6 +1802,12 @@ var Motor = (function () {
     multiplicadorMercado: multiplicadorMercado, etapaActual: etapaActual,
     mesesDelTurno: mesesDelTurno, enGracia: enGracia, reporte: reporte,
     nombreMes: function (i) { return MESES[i]; },
+
+    desbloqueado: desbloqueado, revisarProgreso: revisarProgreso,
+    siguientePeldano: siguientePeldano, peldanosAbiertos: peldanosAbiertos,
+
     get: function () { return estado; }
   };
+
+  return API;
 })();

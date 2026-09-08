@@ -1,4 +1,6 @@
-# El juego no tiene dependencias. node_modules existe solo para las pruebas.
+# node_modules existe solo para las pruebas (jsdom) y para regenerar vendor/.
+# OJO: vendor/ SI se sube. Ahi viven Lucide y Chart.js como archivos normales,
+# y es lo que hace que el juego funcione con doble clic y sin internet.
 node_modules/
 package-lock.json
 

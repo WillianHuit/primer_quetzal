@@ -77,7 +77,6 @@
     'The house is not yours the day you get the keys. It is yours the day you finish paying. Until then, missing payments means losing it and losing everything you put in.';
 
   // ---------- migración ----------
-  ui['Irte del país'] = 'Leaving the country';
   ui['Migrar a Estados Unidos'] = 'Migrate to the United States';
   ui['Irte a Estados Unidos'] = 'Going to the United States';
   ui['Se gana mucho más en dólares y se gasta mucho más. No construyes historial aquí, y cada envío pierde comisión.'] =
@@ -139,17 +138,11 @@
 
   // ---------- orígenes ----------
   ui['¿De dónde sales?'] = 'Where are you starting from?';
-  ui['No son niveles de dificultad. Son puntos de partida distintos, cada uno con su ventaja y su carga.'] =
-    'These are not difficulty levels. They are different starting points, each with its own advantage and its own weight.';
   ui['Empiezas con'] = 'You start with';
-  ui['Aportas en casa'] = 'You chip in at home';
-  ui['Recibes remesas'] = 'You receive remittances';
   ui['Empezar así'] = 'Start this way';
   ui['Empezar'] = 'Start';
   ui['nada'] = 'nothing';
   ui['no'] = 'no';
-  ui['Tienes 18 años, acabas de salir de diversificado y no tienes cuenta bancaria. De aquí a los 65, todo lo decides tú.'] =
-    'You are 18, just out of high school, with no bank account. From here to 65, every call is yours.';
 
   // ---------- lecciones del reporte ----------
   ui['Terminaste de pagar tu casa y vale {0}. Es lo más grande que va a construir la mayoría de la gente, y lo lograste.'] =
@@ -233,33 +226,69 @@
     'makes it work is not how much you put in, it is how many years you leave it alone.';
 
   // ---------- tasa nominal vs efectiva en la lista de prestamos ----------
-  // ---------- primer turno guiado ----------
-  // Los textos de los pasos se pasan a T() por variable, asi que el extractor
-  // del que se ayuda la prueba bilingue no los ve. Van a mano, y si falta uno
-  // el juego lo muestra en español en vez de romperse.
+  // ---------- la ruta que se va abriendo ----------
+  // Los textos de los peldaños viven en datos/progreso.js y se traducen por
+  // clave, igual que los nombres de los productos. Si falta uno, el juego lo
+  // muestra en español en vez de romperse.
   ui['Paso {0} de {1}'] = 'Step {0} of {1}';
   ui['Llévame ahí'] = 'Take me there';
   ui['Ya sé jugar'] = 'I know how to play';
-  ui['Sin empleo no entra dinero. Entra a Trabajo y acepta uno: fíjate que el formal y el informal pagan distinto.'] =
-    'No job means no money coming in. Go to Work and take one: notice that formal and informal pay differently.';
-  ui['Ahora reparte tus cuatro semanas del mes. Toca una semana y elige qué hacer con ella.'] =
-    'Now split up your four weeks. Tap a week and choose what to do with it.';
-  ui['Llena las cuatro. Trabajar las cuatro paga completo, pero te deja sin energía y enfermarte cuesta más que una semana.'] =
-    'Fill all four. Working all four pays in full, but it drains your energy, and getting sick costs more than a week of pay.';
-  ui['Abre una cuenta en el Banco. En efectivo tu dinero se encoge solo, y sin cuenta las remesas te cobran más comisión.'] =
-    'Open an account at the Bank. Cash shrinks on its own, and without an account remittances charge you a bigger fee.';
-  ui['Listo. Cierra el mes y mira el resumen: te va a mostrar en una barra a dónde se fue cada quetzal.'] =
-    'That is it. Close the month and look at the summary: a bar will show you where every quetzal went.';
+  ui['Se abrió algo nuevo'] = 'Something new opened up';
+  ui['Lo que sigue'] = 'What comes next';
+  ui['Tu ruta'] = 'Your path';
+
+  X.progreso_pista = {
+    verTrabajo: 'No job means no money coming in. Tap the Work tab, down here.',
+    empleo: 'Pick an opening and take it. Formal pays you less in hand, but it brings Bono 14, a Christmas bonus and insurance; informal gives you 10% more and none of that.',
+    verMes: 'You have a job now. Go back to the Month tab to decide how you spend the four weeks.',
+    ponerTrabajo: 'The activities opened up. Tap Work to spend that week working.',
+    verBanco: 'Before you close the month, go into the Bank.',
+    cuenta: 'Open your checking account. That is where the pay lands and where the spending comes out of.',
+    primerMes: 'That is it. Close the month and look at the summary: a bar will show you where every quetzal went.',
+    credito: 'Keep closing months with a job. By the third the bank can start seeing you as a customer.',
+    plazo: 'Build up something in your savings account. At half the term deposit minimum I will show it to you.',
+    tarjeta: 'Build credit history. Paying a loan on time is what raises your score, and a score is what brings the card.'
+  };
+
+  X.progreso_titulo = {
+    empleo: 'The bank opened up',
+    cuenta: 'The savings account opened up',
+    primerMes: 'Side gigs opened up',
+    credito: 'Credit opened up',
+    plazo: 'The term deposit opened up',
+    tarjeta: 'The credit card opened up',
+    migrar: 'Leaving the country opened up',
+    pension: 'The pension plan opened up',
+    casa: 'Owning a home opened up'
+  };
+
+  X.progreso_texto = {
+    empleo: 'Money now has somewhere to come from. What you still need is somewhere for it to land: a checking account.',
+    cuenta: 'With two accounts you can keep what you spend apart from what you keep, and move money between them.',
+    primerMes: 'One week of the month can go to a side gig. They pay little, and several of them teach you something that saves you money later.',
+    credito: 'Both doors show up at once: the bank loan and the street lender.',
+    plazo: 'You leave an amount untouched for an agreed term and it returns quite a bit more than plain savings.',
+    tarjeta: 'Your credit history is now enough for the bank to give you a card.',
+    migrar: 'At your age you can now attempt the trip to the United States.',
+    pension: 'A small monthly contribution that is not touched until retirement.',
+    casa: 'Your credit history now reaches the minimum the bank asks for before granting a mortgage.'
+  };
+
+  X.progreso_leccion = {
+    empleo: 'In cash your money shrinks on its own, it leaks into things you do not remember. An account does not make you rich, but it stops making you poor without noticing.',
+    cuenta: 'Saving in the same account you spend from is not saving. The savings account pays more and, above all, puts a step between your impulse and your money.',
+    primerMes: 'Compare before you accept: a week of side work rarely pays what a week of your job pays. Time has a price too.',
+    credito: 'Look at them side by side before you touch either. The bank asks for history and charges you per year what the street lender charges per month. That is the whole difference, and it is enormous.',
+    plazo: 'What makes it pay is exactly what makes it inconvenient: you cannot touch it. Take it out early and you lose what it earned. Only money you truly will not need goes there.',
+    tarjeta: 'The card is not your money, it is very expensive borrowed money with a month of grace. Paid in full it is free and builds history; paying the minimum it is the most expensive debt you will ever carry.',
+    migrar: 'You earn far more in dollars and you spend far more in dollars. You build no credit history here, every transfer loses a fee, and the trip is paid for before you leave.',
+    pension: 'It is the only product in the game where arriving early is worth more than putting in a lot. What separates a decent pension from a pittance is not the size of the contribution, it is the years it spent working.',
+    casa: 'The house is yours the day you finish paying for it, not the day they hand you the keys. Until then you live in the bank house and pay for the privilege.'
+  };
 
   // ---------- portada que explica el juego ----------
   ui['Un simulador para aprender a usar el banco sin arriesgar dinero de verdad.'] =
     'A simulator for learning to use a bank without risking real money.';
-  ui['Empiezas con 18 años y sin cuenta'] = 'You start at 18 with no bank account';
-  ui['Acabas de salir de diversificado. Eliges de qué familia sales y en qué Guatemala te toca vivir.'] =
-    'You have just finished secondary school. You choose the family you come from and which Guatemala you live in.';
-  ui['Cada mes reparte cuatro semanas'] = 'Every month you split four weeks';
-  ui['Trabajar, estudiar, hacer un trabajo extra o descansar. No alcanza para todo, y ahí está el juego.'] =
-    'Work, study, take a side job or rest. There is never enough for all of it, and that is the game.';
   ui['Usas productos bancarios de verdad'] = 'You use real banking products';
   ui['Cuenta monetaria, ahorro, plazo fijo, préstamo, tarjeta, hipoteca y pensión. Con las tasas que se cobran en Guatemala.'] =
     'Checking, savings, fixed-term deposit, loan, credit card, mortgage and pension. At the rates actually charged in Guatemala.';
@@ -268,6 +297,19 @@
     'A chart of your whole life and a tally of what each decision cost you or earned you.';
   ui['Banco Cardamomo es un banco inventado. Los precios, sueldos y tasas son de Guatemala y están documentados.'] =
     'Banco Cardamomo is a made-up bank. The prices, wages and rates are Guatemalan and every one of them is sourced.';
+
+  // ---------- apartados de trabajo y pestaña de noticias ----------
+  ui['Mi empleo'] = 'My job';
+  ui['Ofertas'] = 'Openings';
+  ui['Irme del país'] = 'Leaving the country';
+  ui['En informal ganas más en la mano cada mes, pero sin Bono 14, sin aguinaldo, sin seguro y sin forma de comprobar ingresos cuando pidas un crédito.'] =
+    'Informal pays you more in hand every month, but with no Bono 14, no Christmas bonus, no insurance and no way to prove income when you apply for credit.';
+  ui['Noticias'] = 'News';
+  ui['Promociones vigentes'] = 'Offers in effect';
+  ui['Le quedan'] = 'Time left';
+  ui['Lo que ha pasado'] = 'What has happened';
+  ui['Todavía no ha pasado nada digno de contarse. Los imprevistos y las promociones van a aparecer aquí.'] =
+    'Nothing worth reporting yet. Surprises and bank offers will show up here.';
 
   // ---------- graficos y resumen visual del mes ----------
   ui['Entró'] = 'In';
@@ -283,5 +325,381 @@
   ui['Intereses pagados'] = 'Interest paid';
   ui['Tasa nominal'] = 'Nominal rate';
   ui['Tasa efectiva'] = 'Effective rate';
+
+
+  /* ==========================================================
+   * Version 3: la ninez, las jornadas, el personaje y las
+   * tarjetas de decision.
+   * ========================================================== */
+
+  // ---------- la escalera educativa nueva ----------
+  datos.basicos = { nombre: 'Middle school',
+    descripcion: 'Three years. Without middle school almost no job will look at you.' };
+  datos.bachillerato = { nombre: 'High school diploma',
+    descripcion: 'Two years. The shortest one, and the one everybody asks for.' };
+  datos.perito = { nombre: 'Accounting diploma',
+    descripcion: 'Three years. One more than high school, and you come out with a trade.' };
+
+  // ---------- los trabajitos de nino ----------
+  datos.limonada = { nombre: 'Selling lemonade',
+    descripcion: 'A jug, some ice and a table on the sidewalk.' };
+  datos.periodicos = { nombre: 'Selling newspapers',
+    descripcion: 'Early on the corner. Pays very little and pays every day.' };
+  datos.dulces = { nombre: 'Selling candy',
+    descripcion: 'On the bus or at school. One day you sell out, the next you sell nothing.' };
+
+  // ---------- pantallas nuevas ----------
+  ui['Yo'] = 'Me';
+  ui['Entra'] = 'In';
+  ui['Sale'] = 'Out';
+  ui['Queda'] = 'Left';
+  ui['Ahora'] = 'Now';
+  ui['Mesada'] = 'Allowance';
+  ui['En la mano'] = 'In hand';
+  ui['Monetaria'] = 'Checking';
+  ui['Ahorro'] = 'Savings';
+  ui['Plazo fijo'] = 'Term deposit';
+  ui['Tus gastos'] = 'What you spend';
+  ui['Antes gastabas'] = 'You used to spend';
+  ui['sin trabajo'] = 'no job';
+  ui['menor de edad'] = 'under 18';
+  ui['Ver a dónde se va'] = 'See where it goes';
+  ui['Ocultar el detalle'] = 'Hide the detail';
+  ui['¿Por qué?'] = 'Why?';
+  ui['Sí, hazlo'] = 'Yes, do it';
+  ui['Mejor no'] = 'Never mind';
+  ui['Tienes que decidir'] = 'You have to decide';
+
+  // ---------- las jornadas del mes ----------
+  ui['Sem {0}'] = 'Wk {0}';
+  ui['Mañana'] = 'Morning';
+  ui['Tarde'] = 'Afternoon';
+  ui['mañana'] = 'morning';
+  ui['tarde'] = 'afternoon';
+  ui['Mañana o tarde'] = 'Morning or afternoon';
+  ui['Toma tus mañanas'] = 'Takes your mornings';
+  ui['Jornada de la mañana'] = 'Morning shift';
+  ui['Jornada de la tarde'] = 'Afternoon shift';
+  ui['Horario libre'] = 'Free schedule';
+  ui['Esa jornada es del colegio. Mientras estés inscrito no se puede vaciar.'] =
+    'That half-day belongs to school. While you are enrolled it cannot be cleared.';
+  ui['El colegio te toma esa jornada de las cuatro semanas y no se puede vaciar. La otra jornada es tuya.'] =
+    'School takes that half-day of all four weeks and it cannot be cleared. The other half-day is yours.';
+  ui['Cada jornada que le dedicas avanza un cuarto de mes de carrera. Cuatro al mes es el ritmo normal.'] =
+    'Each half-day you give it advances a quarter of a month of the program. Four a month is the normal pace.';
+  ui['Trabajas {0} de {1} jornadas: cobras el {2} del sueldo.'] =
+    'You work {0} of {1} half-days: you collect {2} of the pay.';
+  ui['Reparte al menos una jornada antes de cerrar.'] = 'Assign at least one half-day before closing.';
+  ui['Todavía no tienes trabajo. Búscalo en la pestaña Trabajo.'] =
+    'You have no job yet. Look for one under Work.';
+  ui['Para jugar uno, primero pon una jornada en Extra en la pestaña del mes.'] =
+    'To play one, first put a half-day into Side gigs on the month tab.';
+
+  // ---------- la decision de estudiar ----------
+  ui['Saliste de primaria. ¿Y ahora?'] = 'You finished primary school. Now what?';
+  ui['Te graduaste. ¿Sigues estudiando?'] = 'You graduated. Keep studying?';
+  ui['No, a trabajar'] = 'No, go to work';
+  ui['A trabajar'] = 'Go to work';
+  ui['Dejar de estudiar'] = 'Drop out';
+  ui['¿Dejar de estudiar?'] = 'Drop out of school?';
+  ui['Pierdes lo que llevas avanzado. Si vuelves después, empiezas de cero.'] =
+    'You lose everything you have advanced. If you come back later, you start from zero.';
+  ui['Puedes cambiar de opinión después. Esta pantalla no se cierra nunca.'] =
+    'You can change your mind later. This screen never closes.';
+  ui['Te vas a trabajar'] = 'You are going to work';
+  ui['Nadie te va a obligar. La pestaña de Estudio se queda ahí y puedes inscribirte cuando quieras.'] =
+    'Nobody is going to force you. The Study tab stays there and you can enroll whenever you want.';
+  ui['Seis de cada diez chicos guatemaltecos no terminan básicos. La mayoría no lo decidió en una pantalla: se le fue haciendo tarde.'] =
+    'Six out of ten Guatemalan kids do not finish middle school. Most of them never decided it on a screen: it just got late.';
+  ui['Ya llegaste hasta donde llega la escalera.'] = 'You have climbed as high as the ladder goes.';
+  ui['Ya llegaste hasta donde llega la escalera. Nada más que estudiar.'] =
+    'You have climbed as high as the ladder goes. Nothing left to study.';
+  ui['Qué se gana con cada nivel'] = 'What each level is worth';
+  ui['En Guatemala un trabajador sin básicos gana alrededor de Q2,400 al mes. Con diversificado, Q3,800. Con licenciatura, Q4,300, que es apenas 13% más. Con maestría, Q10,000.'] =
+    'In Guatemala a worker without middle school earns about Q2,400 a month. With high school, Q3,800. With a bachelor’s, Q4,300 — barely 13% more. With a master’s, Q10,000.';
+  ui['O sea que los saltos grandes están al principio y al final de la escalera, no en el medio.'] =
+    'Which means the big jumps are at the bottom and at the top of the ladder, not in the middle.';
+  ui['Faltan {0} meses'] = '{0} months to go';
+  ui['Pública: gratis'] = 'Public: free';
+  ui['Privada: {0}'] = 'Private: {0}';
+  ui[' al mes'] = ' a month';
+  ui['El costo real de estudiar en Guatemala no es la colegiatura: la pública es gratis. Es el sueldo que dejas de ganar mientras estudias.'] =
+    'The real cost of studying in Guatemala is not tuition — public school is free. It is the pay you give up while you study.';
+  ui['Empiezas {0}. Cada jornada que le dediques avanza un cuarto de mes de carrera, y esa jornada no la estás trabajando.'] =
+    'You are starting {0}. Each half-day you give it advances a quarter of a month, and that half-day is not being worked.';
+  ui['Empiezas {0}. El colegio te toma la jornada de la {1} de las cuatro semanas; la otra es tuya para trabajar.'] =
+    'You are starting {0}. School takes your {1} half-day of all four weeks; the other one is yours to work.';
+
+  // ---------- el trabajo ----------
+  ui['Todavía no trabajas. Mira las Ofertas.'] = 'You are not working yet. Check the Offers.';
+  ui['al mes, mes completo'] = 'a month, full month';
+  ui['{0} meses aquí'] = '{0} months here';
+  ui['Mercado: {0}'] = 'Market: {0}';
+  ui['+{0} por jornada'] = '+{0} per half-day';
+  ui['{0} por jornada'] = '{0} per half-day';
+  ui['{0} al mes'] = '{0} a month';
+  ui['capital {0}'] = '{0} capital';
+  ui['hasta {0}'] = 'up to {0}';
+  ui['a los {0}'] = 'at {0}';
+  ui['Qué te falta por ser informal'] = 'What being off the books costs you';
+
+  // ---------- el banco partido en apartados ----------
+  ui['Cuentas'] = 'Accounts';
+  ui['Crédito'] = 'Credit';
+  ui['Vivienda'] = 'Housing';
+  ui['Siendo menor de edad la abres con un adulto, y con menos dinero.'] =
+    'As a minor you open it with an adult, and with much less money.';
+
+  // ---------- cumplir la mayoria de edad ----------
+  ui['Cumpliste {0}'] = 'You turned {0}';
+  ui['Ya eres mayor de edad. Desde este mes te toca tu parte del gasto de la casa, puedes firmar un contrato formal y el banco te puede prestar.'] =
+    'You are an adult now. From this month your share of the household costs is yours, you can sign a formal contract, and the bank can lend to you.';
+  ui['Ese salto le pasa a todo el mundo y a casi nadie le avisan. El que llega a los 18 con algo guardado aguanta el golpe; el que llega en cero, empieza pidiendo prestado.'] =
+    'That jump happens to everyone and almost nobody gets warned. Whoever turns 18 with something saved absorbs the hit; whoever turns 18 with nothing starts out borrowing.';
+
+  // ---------- la portada ----------
+  ui['De los 13 a la jubilación'] = 'From 13 to retirement';
+  ui['Cada mes tienes ocho jornadas: cuatro semanas de mañana y tarde. Decides en qué usas cada una. Al terminar el mes cobras, pagas tus gastos y el juego avanza; después de los 22 los turnos se vuelven trimestres y luego años, para que puedas llegar hasta la jubilación.'] =
+    'Every month you have eight half-days: four weeks of mornings and afternoons. You decide what each one is for. When the month ends you get paid, your expenses come out and the game moves on; after 22 the turns become quarters and then years, so you can reach retirement.';
+  ui['Tienes 13 años y todavía no puedes trabajar de verdad. Lo primero que hay que decidir no es dónde trabajar, es si vas a estudiar.'] =
+    'You are 13 and you cannot really work yet. The first thing to decide is not where to work, it is whether you are going to study.';
+  ui['Empiezas con 13 años, saliendo de primaria'] = 'You start at 13, out of primary school';
+  ui['Lo primero que decides es si vas a seguir estudiando. Eliges de qué familia sales y en qué Guatemala te toca vivir.'] =
+    'The first thing you decide is whether you keep studying. You choose which family you come from and which Guatemala you live in.';
+  ui['Cada mes reparte ocho jornadas'] = 'Every month you split eight half-days';
+  ui['Cuatro semanas de mañana y tarde. El colegio te toma una jornada; la otra la decides tú: trabajar, descansar o buscarte algo extra.'] =
+    'Four weeks of mornings and afternoons. School takes one half-day; the other one is yours: work, rest or find a side gig.';
+
+  // ---------- tarjetas de decision ----------
+  datos.feria = { titulo: 'The fair came to town',
+    texto: 'All your friends are going. Admission and the rides are Q60, almost everything you have saved.',
+    leccion: 'Spending is not wrong. What is wrong is spending without knowing how much you had saved or what it was for.' };
+  datos.bicicleta = { titulo: 'A used bicycle',
+    texto: 'A neighbour is selling his bike for Q250. With it you would deliver twice as much in the same time.',
+    leccion: 'Some purchases pay for themselves. A tool that makes you more productive is not an expense — it is the only thing that really raises what you earn per hour.' };
+  datos.rifa = { titulo: 'A raffle that never fails',
+    texto: 'An acquaintance is selling Q50 tickets for a phone raffle. He swears almost nobody bought and that you are going to win.',
+    leccion: 'Nobody who guarantees you a win is telling you the truth. If it were certain, they would not be offering it to you.' };
+  datos.tareas = { titulo: 'Someone pays you to do their homework',
+    texto: 'A classmate offers you Q40 to do his homework for the month.',
+    leccion: 'Your word is an asset. It is what they will ask your neighbours about the day you need a co-signer, and it does not cost Q40.' };
+  datos.zapatos = { titulo: 'Your little brother outgrew his shoes',
+    texto: 'There is no money at home this month. You have Q150 saved.',
+    leccion: 'Helping at home is not a financial mistake. The mistake is doing it without knowing what you have left, because then the month it is your turn there will be nothing.' };
+  datos.celularusado = { titulo: 'A second-hand phone',
+    texto: 'Q400 for a used phone. Without one nobody tells you when there is work.',
+    leccion: 'Before buying something big, ask whether it will make you money or just help you spend it faster. Both feel the same the day you buy it.' };
+  datos.graduacion = { titulo: 'The graduation party',
+    texto: 'The class fee is Q700: ring, dinner and photos.',
+    leccion: 'A single night can cost what three months of saving cost. Paying for it is not wrong; paying for it without ever seeing that number is.' };
+  datos.negociodeamigo = { titulo: 'A friend asks you for a loan',
+    texto: 'He wants Q1,200 to start a business. He says he will pay you back in three months. Nothing in writing.',
+    leccion: 'Lending to a friend with nothing in writing is giving the money away with the illusion that it comes back. If you are going to do it, do it for an amount you could afford to lose.' };
+  datos.curso = { titulo: 'An English course',
+    texto: 'Six months of classes for Q900. With English the best pay you can get without a degree opens up.',
+    leccion: 'A bilingual call centre pays Q4,500 with no university needed. That is the best return per quetzal invested that the country offers.' };
+  datos.horasdomingo = { titulo: 'They offer you Sundays',
+    texto: 'Four Sundays of work, paid separately. It is a month with no rest.',
+    leccion: 'Exhaustion charges interest: in this game, getting sick costs more than the overtime that made you sick.' };
+  datos.motoencuotas = { titulo: 'A motorbike on instalments',
+    texto: 'Q650 a month for three years, no down payment. With a bike you deliver more and you arrive on time.',
+    leccion: 'A small payment for a long time is a big price. Q650 for 36 months is Q23,400 for a bike that costs Q14,000 in cash.' };
+  datos.aguinaldocompleto = { titulo: 'Your Christmas bonus just landed',
+    texto: 'It is money you were not planning to spend. It is sitting in your account, all of it.',
+    leccion: 'The Christmas bonus and the Bono 14 are the only two months of the year when a Guatemalan wage earner has money left over. What gets decided those two months is almost all the wealth of a lifetime.' };
+
+  var op = X.opciones;
+  op['feria:0'] = 'Go to the fair';            op['feria:1'] = 'Stay home';
+  op['bicicleta:0'] = 'Buy it';                op['bicicleta:1'] = 'Cannot afford it';
+  op['rifa:0'] = 'Buy a ticket';               op['rifa:1'] = 'No, thanks';
+  op['tareas:0'] = 'Take the money';           op['tareas:1'] = 'Better not';
+  op['zapatos:0'] = 'I will buy them';         op['zapatos:1'] = 'I cannot';
+  op['celularusado:0'] = 'Buy it';             op['celularusado:1'] = 'Wait';
+  op['graduacion:0'] = 'Pay the full fee';     op['graduacion:1'] = 'Just the dinner';
+  op['graduacion:2'] = 'Skip it';
+  op['negociodeamigo:0'] = 'Lend it to him';   op['negociodeamigo:1'] = 'Lend him half';
+  op['negociodeamigo:2'] = 'I do not have it';
+  op['curso:0'] = 'Sign up';                   op['curso:1'] = 'Too expensive';
+  op['horasdomingo:0'] = 'I will take them';   op['horasdomingo:1'] = 'I need to rest';
+  op['motoencuotas:0'] = 'Sign';               op['motoencuotas:1'] = 'Save up and buy it';
+  op['aguinaldocompleto:0'] = 'Into savings';  op['aguinaldocompleto:1'] = 'Buy myself something';
+
+  // ---------- los peldanos nuevos de la ruta ----------
+  var pp = X.progreso_pista, pt = X.progreso_titulo,
+      px = X.progreso_texto, pl = X.progreso_leccion;
+
+  pp.verEstudio = 'You are 13 and you just finished primary school. Tap Study: there is something to decide.';
+  pp.decidirEstudio = 'Decide: enroll in middle school or go to work. Both are possible, and both cost you something.';
+  pt.decidirEstudio = 'Work is open';
+  px.decidirEstudio = 'You decided what to do with your mornings. What you do with your afternoons is what will pay for everything else.';
+  pl.decidirEstudio = 'Studying is not free: it is paid for with the hours you could be earning. And not studying is not free either: in Guatemala a worker without middle school earns half of what one with high school earns, for life.';
+  pp.verTrabajo = 'Now tap Work. At 13 there are no salaries, but there are odd jobs.';
+  pp.empleo = 'Pick one of the three odd jobs and take it. They pay a few quetzales per half-day: that is what exists at your age.';
+  px.empleo = 'Money is coming in now, even if it is very little. What you are missing is somewhere for it to land.';
+  pp.verMes = 'Go back to the Month tab. That is where you split your time, which is the only thing you really have.';
+  pp.tocarJornada = 'Every week has a morning and an afternoon. Tap a free slot.';
+  pp.ponerTrabajo = 'The activities opened up. Tap Work to spend that half-day working.';
+  pp.jornadas = 'Fill in the slots that are left. Working everything pays more, but it leaves you with no energy, and getting sick costs more than one half-day.';
+  pt.jornadas = 'You split up the month';
+  px.jornadas = 'That is the whole game: eight half-days, and they are never enough for everything you would like to do.';
+  pl.jornadas = 'School takes one half-day of each week and that one is not for sale. What you actually decide is the other one: work, rest, or find yourself something extra.';
+  pp.primerMes = 'Close the month and look at the summary: it shows you in one bar where every quetzal went.';
+  pl.primerMes = 'Compare before you accept: one half-day of a side gig rarely pays what one half-day of your job pays. Time has a price too.';
+  px.primerMes = 'One half-day of the month can be spent on a side gig. They pay little, and several of them teach you something that saves you money later.';
+  pp.verBanco = 'Go into the Bank. With the little you have you can already open an account.';
+  pp.cuenta = 'Open your checking account. As a minor you open it with an adult and with very little money.';
+  pp.noticias = 'Close another month. With two months of running you will start to see what you can and cannot afford.';
+  pt.noticias = 'The news opened up';
+  px.noticias = 'The job market, the promotions the bank has running, and everything that has happened to you, month by month.';
+  pl.noticias = 'The job market tells you what the country is asking for NOW. Looking at it before you choose a program is the difference between studying five years for something saturated and two for something nobody can find.';
+  pp.credito = 'At 18 the bank can start looking at you as a customer. With a job, better still.';
+
+  // El banco ya no llega por tutorial, llega cuando duele no tenerlo
+  pp.banco = 'Look at how much leaks out of your cash every month in the summary. When that starts to hurt, a bank account will make sense.';
+  pt.banco = 'The bank opened up';
+  px.banco = 'You can open a savings account. As a minor you open it with an adult and with very little money, and it charges no maintenance fee.';
+  pl.banco = 'Look at the "small leaks" line in your summaries: that is your money walking off without you deciding it. An account does not make you rich; it stops making you poor without you noticing.';
+  pp.monetaria = 'With a formal job your employer is going to ask you for a checking account to pay you into.';
+  pt.monetaria = 'The checking account opened up';
+  px.monetaria = 'This is the account you operate with: a company deposits your pay here, and your spending comes out of here. With two accounts you can keep what you spend apart from what you keep.';
+  pl.monetaria = 'Watch the maintenance fee. If a company deposits your salary, the bank waives it; if not, it is Q12 a month just for having the account open. A product you do not need is not free.';
+
+
+  /* ==========================================================
+   * Version 3.1: los niveles de dificultad, el manejo de cuenta
+   * y las ofertas con dibujo.
+   * ========================================================== */
+
+  // ---------- la pantalla de inicio ----------
+  ui['¿Qué tan duro lo quieres?'] = 'How hard do you want it?';
+  ui['No cambia las reglas. Cambia con qué familia te toca empezar.'] =
+    'It does not change the rules. It changes which family you start with.';
+  ui['Prefiero elegir yo'] = 'I would rather choose myself';
+  ui['Hay trabajo formal'] = 'Formal work exists';
+  ui['Solo trabajo informal'] = 'Only informal work';
+  ui['{0} de mesada'] = '{0} allowance';
+  ui['sin mesada'] = 'no allowance';
+  ui['empiezas con {0}'] = 'start with {0}';
+  ui['de grande aportas {0}'] = 'as an adult you chip in {0}';
+  ui['no aportas en casa'] = 'you chip in nothing at home';
+
+  X.nivel_resumen = {
+    facil: 'Your parents have enough. They give you an allowance and nobody depends on you.',
+    medio: 'Your brother sends money from the United States when he can. As an adult you chip in at home.',
+    dificil: 'There is nothing to spare at home and work with a contract does not exist. You are going to be the provider.'
+  };
+  ui['Fácil'] = 'Easy';
+  ui['Medio'] = 'Medium';
+  ui['Difícil'] = 'Hard';
+
+  // ---------- el manejo de cuenta ----------
+  ui['Manejo de cuenta'] = 'Account maintenance fee';
+  ui['Qué es el manejo de cuenta'] = 'What the maintenance fee is';
+  ui['manejo {0} al mes'] = '{0} a month fee';
+  ui['sin manejo de cuenta'] = 'no maintenance fee';
+  ui['{0}% al año'] = '{0}% a year';
+  ui['abres con {0}'] = 'open it with {0}';
+  ui['El manejo de cuenta se te cobra cada mes solo por tenerla abierta. Va de Q10 a Q15 según el banco.'] =
+    'The maintenance fee is charged every month just for having the account open. It runs from Q10 to Q15 depending on the bank.';
+  ui['Si tu sueldo lo deposita una empresa no te lo cobran, porque al banco le interesa tener tu planilla. El que lo paga es justo el que abrió la cuenta sin necesitarla.'] =
+    'If a company deposits your salary they waive it, because the bank wants your payroll. The one who pays it is precisely the one who opened the account without needing it.';
+  ui['No te lo cobrarían si una empresa te depositara el sueldo.'] =
+    'They would not charge it if a company deposited your salary.';
+  ui['La monetaria es para mover dinero: recibir el salario de una empresa, pagar y transferir. Paga apenas 1.27% al año, así que no es para guardar.'] =
+    'Checking is for moving money: receiving a company salary, paying and transferring. It pays barely 1.27% a year, so it is not for saving.';
+  ui['Ojo: como nadie te deposita planilla, el banco te va a cobrar {0} de manejo cada mes. Ese cargo desaparece el día que una empresa te pague el sueldo aquí.'] =
+    'Careful: since nobody deposits payroll for you, the bank will charge you {0} a month in fees. That charge disappears the day a company pays your salary in here.';
+  ui['Tu sueldo entra aquí en vez de al bolsillo, y como te lo deposita una empresa no te cobran manejo de cuenta.'] =
+    'Your pay lands here instead of in your pocket, and since a company deposits it they waive the maintenance fee.';
+  ui['El ahorro paga 2.65% al año, más del doble que la monetaria, y no cobra manejo de cuenta.'] =
+    'Savings pays 2.65% a year, more than double checking, and charges no maintenance fee.';
+
+  // ---------- estudiar: todas las opciones a la vez ----------
+  ui['Puedes estudiar cualquiera de estas, o ponerte a trabajar. Las dos se pueden.'] =
+    'You can study any of these, or go to work. Both are possible.';
+  ui['Puedes estudiar o ponerte a trabajar. Las dos se pueden.'] =
+    'You can study or go to work. Both are possible.';
+
+  // ---------- ofertas ----------
+  ui['Ahora mismo no hay nada que puedas tomar.'] = 'There is nothing you can take right now.';
+
+
+  /* ==========================================================
+   * Version 4: las mejoras, que son la capa de tycoon.
+   * ========================================================== */
+
+  ui['Mejoras'] = 'Upgrades';
+  ui['Por jornada'] = 'Per half-day';
+  ui['Tu negocio'] = 'Your business';
+  ui['Queda limpio'] = 'Net';
+  ui['todavía nada'] = 'nothing yet';
+  ui['Nivel {0} de {1}'] = 'Level {0} of {1}';
+  ui['Al máximo. No hay nada más que mejorar aquí.'] = 'Maxed out. Nothing more to upgrade here.';
+  ui['Comprar por {0}'] = 'Buy for {0}';
+  ui['Compraste: {0}'] = 'You bought: {0}';
+  ui['Tienes {0} para invertir. Lo que compres aquí se queda contigo para siempre.'] =
+    'You have {0} to invest. Whatever you buy here stays with you forever.';
+  ui['Mantenimiento de tus mejoras'] = 'Upkeep on your upgrades';
+  ui['+{0} al mes'] = '+{0} a month';
+  ui['-{0} al mes de mantenimiento'] = '-{0} a month in upkeep';
+  ui['+{0} de energía al descansar'] = '+{0} energy when resting';
+  ui['estudias {0}% más rápido'] = 'study {0}% faster';
+  ui['se paga en {0} meses'] = 'pays for itself in {0} months';
+  ui['Te costó {0} y se paga sola en {1} meses. De ahí en adelante es ganancia.'] =
+    'It cost you {0} and pays for itself in {1} months. After that it is profit.';
+  ui['Te costó {0}. Esta no se paga en dinero: se paga en tiempo y en salud.'] =
+    'It cost you {0}. This one does not pay you back in money: it pays you back in time and health.';
+  ui['Cómo se decide una mejora'] = 'How to decide on an upgrade';
+  ui['Llevas {0} de {1}'] = '{0} of {1} saved up';
+  ui['Lo que ha producido tu negocio'] = 'What your business has produced';
+  ui['Una mejora no es un gasto: es una inversión, y una inversión se mide en cuántos meses tarda en pagarse sola.'] =
+    'An upgrade is not an expense: it is an investment, and an investment is measured in how many months it takes to pay for itself.';
+  ui['Divide lo que cuesta entre lo que te da al mes. Si el resultado es menos que los meses que la vas a usar, conviene. Ese cálculo sirve igual para una canasta de Q150 que para un camión.'] =
+    'Divide what it costs by what it gives you per month. If the result is less than the months you will use it, it is worth it. That calculation works the same for a Q150 basket and for a truck.';
+
+  // ---------- las cuatro cadenas ----------
+  X.cadena_nombre = {
+    negocio: 'Your business',
+    oficio: 'Your tools',
+    escuela: 'Your studying',
+    casa: 'Your rest'
+  };
+
+  X.mejora_falta = {
+    dinero: 'Not enough money yet.',
+    edad: 'Not until you are older.',
+    orden: 'You need the previous upgrade first.',
+    repetida: 'You already have it.',
+    noexiste: 'That upgrade does not exist.'
+  };
+
+  // ---------- las mejoras, una por una ----------
+  datos.canasta = { nombre: 'A basket of your own' };
+  datos.carreta = { nombre: 'A pushcart' };
+  datos.puesto = { nombre: 'A stall at the market' };
+  datos.local = { nombre: 'A shop with a door' };
+  datos.herramienta = { nombre: 'Your own tools' };
+  datos.uniforme = { nombre: 'Work clothes' };
+  datos.transporte = { nombre: 'A way to get around' };
+  datos.utiles = { nombre: 'A full set of school supplies' };
+  datos.libros = { nombre: 'Books of your own' };
+  datos.internet = { nombre: 'Internet at home' };
+  datos.escritorio = { nombre: 'A corner of your own' };
+  datos.cama = { nombre: 'A real bed' };
+
+  X.mejora_leccion = {
+    canasta: 'Q150 that gives you back Q35 a month pays for itself in five months. That number — how many months it takes to pay for itself — is the only one you have to work out before buying something to work with.',
+    carreta: 'Notice there is a monthly cost now. Every business has fixed costs, and what matters is not what comes in: it is what is left.',
+    puesto: 'A stall is the first time your money produces more than your time. From here on, every quetzal you put into the business competes with every quetzal you put into the bank.',
+    local: 'Q18,000 invested that leaves Q1,480 clean a month pays back in twelve. A term deposit with the same Q18,000 would give you Q95 a month. That is why your own business is the highest return there is, and also the one that can go under.',
+    herramienta: 'With borrowed tools you earn whatever they let you earn. It is the smallest purchase that raises what you charge per hour.',
+    uniforme: 'Showing up well is not vanity: it is what makes them call you again. In work by the job, half the income is being recommended.',
+    transporte: 'Getting around on your own opens up twice the work, and adds a fixed cost of fuel and maintenance. Almost every big upgrade is like that: it raises the income and it raises the floor.',
+    utiles: 'Studying without supplies is studying halfway. It is the cheapest investment in the game and the one fewest people make.',
+    libros: 'Books do not expire and they serve the sibling coming up behind you. Some purchases are used once and some stay.',
+    internet: 'Q230 a month forever. Before signing anything with a monthly payment, multiply it by the months you are going to pay it: that is Q2,760 a year.',
+    escritorio: 'Resting better is not a luxury: it is what lets you work one more half-day without getting sick, and getting sick costs more than any upgrade.',
+    cama: 'Health is the asset that does not show up on any bank statement, and the only one that, if it breaks, takes all the others with it.'
+  };
 
 })(typeof TEXTOS_EN !== 'undefined' ? TEXTOS_EN : undefined);

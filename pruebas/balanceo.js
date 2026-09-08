@@ -1,5 +1,5 @@
 // Prueba del motor sin navegador: simula 24 meses en varias estrategias.
-const { cargar, conAzarSemilla } = require('./comun');
+const { cargar, adulto, conAzarSemilla } = require('./comun');
 const sandbox = cargar('es');
 const { Motor, CONFIG } = sandbox;
 
@@ -14,7 +14,8 @@ function correr(nombre, dificultad, estrategia) {
 
 function correrSinSemilla(nombre, dificultad, estrategia, callado) {
   Motor.iniciar(dificultad, 1);
-  const e = Motor.get();
+  // Esta prueba mide vida laboral, no ninez: arranca a los 18 con diversificado
+  const e = adulto(sandbox);
   let errores = [];
 
   for (let mes = 0; mes < 24; mes++) {
@@ -48,16 +49,18 @@ function correrSinSemilla(nombre, dificultad, estrategia, callado) {
   return Motor.patrimonio();
 }
 
-// Reparte semanas cuidando la energia: descansa cuando anda baja.
+// Reparte las ocho jornadas cuidando la energia: descansa cuando anda baja.
+// Los descansos van en semanas completas (dos jornadas) para que los numeros
+// sigan siendo comparables con las corridas de antes.
 function semanasCuidandoEnergia(M, e) {
-  const descansos = e.energia < 45 ? 2 : (e.energia < 70 ? 1 : 0);
-  for (let i = 0; i < 4; i++) M.asignarEspacio(i, i < 4 - descansos ? 'trabajo' : 'descanso');
+  const descansos = e.energia < 45 ? 4 : (e.energia < 70 ? 2 : 0);
+  for (let i = 0; i < 8; i++) M.asignarEspacio(i, i < 8 - descansos ? 'trabajo' : 'descanso');
 }
 
 // A: nunca abre cuenta, trabaja las 4 semanas siempre, guarda todo en efectivo
 const a = correr('Todo en efectivo, sin descansar nunca', 'normal', (mes, M, e) => {
   if (!e.empleo) M.tomarTrabajo('tienda', true);
-  for (let i = 0; i < 4; i++) M.asignarEspacio(i, 'trabajo');
+  for (let i = 0; i < 8; i++) M.asignarEspacio(i, 'trabajo');
 });
 
 // B: mismo trabajo, pero abre cuentas y cuida la energia

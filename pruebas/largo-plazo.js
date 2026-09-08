@@ -1,6 +1,6 @@
 /* Prueba de la versión 2: hipoteca, pensión, orígenes y migración. */
 
-const { cargar, Marcador, trabajar, conAzarFijo } = require('./comun');
+const { cargar, Marcador, trabajar, adulto, conAzarFijo } = require('./comun');
 
 const sb = cargar('es');
 const { Motor, CONFIG, CASAS, HIPOTECA, PENSION, MIGRACION, ORIGENES, Minijuegos } = sb;
@@ -16,28 +16,28 @@ ORIGENES.forEach(function (o) {
 });
 
 // El que sostiene a su familia paga más en casa que el que tiene apoyo
-Motor.iniciar('normal', 1, 'apoyo');
+Motor.iniciar('normal', 1, 'apoyo'); adulto(sb);
 const gastoApoyo = Motor.gastoMensualVivienda();
-Motor.iniciar('normal', 1, 'sosten');
+Motor.iniciar('normal', 1, 'sosten'); adulto(sb);
 const gastoSosten = Motor.gastoMensualVivienda();
 ok(gastoSosten > gastoApoyo,
    `sostener a la familia cuesta más al mes (Q${gastoSosten} contra Q${gastoApoyo})`);
 
 // Solo el origen de remesas recibe dinero de fuera
-Motor.iniciar('normal', 1, 'apoyo');
+Motor.iniciar('normal', 1, 'apoyo'); adulto(sb);
 let a = Motor.get(); Motor.tomarTrabajo('tienda', true);
 let recibio = false;
 for (let i = 0; i < 24; i++) { const m = trabajar(Motor, 3); if (m.remesa > 0) recibio = true; }
 ok(!recibio, 'el origen con apoyo familiar no recibe remesas');
 
-Motor.iniciar('normal', 1, 'remesas');
+Motor.iniciar('normal', 1, 'remesas'); adulto(sb);
 let b = Motor.get(); Motor.tomarTrabajo('tienda', true);
 let recibio2 = false;
 for (let i = 0; i < 24; i++) { const m = trabajar(Motor, 3); if (m.remesa > 0) recibio2 = true; }
 ok(recibio2, 'el origen de remesas sí las recibe');
 
 // ---------- hipoteca ----------
-Motor.iniciar('normal', 1, 'apoyo');
+Motor.iniciar('normal', 1, 'apoyo'); adulto(sb);
 const e = Motor.get();
 Motor.tomarTrabajo('gerente', true);      // sueldo alto para poder calificar
 Motor.abrirCuenta('monetaria', 200);
@@ -82,7 +82,7 @@ ok(e.hipoteca && e.hipoteca.saldo < saldoInicial,
    `la hipoteca baja pagando (Q${Math.round(saldoInicial)} a Q${Math.round(e.hipoteca.saldo)})`);
 
 // ---------- pensión ----------
-Motor.iniciar('normal', 1, 'apoyo');
+Motor.iniciar('normal', 1, 'apoyo'); adulto(sb);
 const p = Motor.get();
 Motor.tomarTrabajo('gerente', true);
 Motor.abrirCuenta('monetaria', 200);
@@ -102,7 +102,7 @@ ok(rr.ok && (edadAntes < PENSION.edadRetiro ? rr.castigo > 0 : rr.castigo === 0)
    `retirar a los ${edadAntes} ${edadAntes < PENSION.edadRetiro ? 'penaliza Q' + Math.round(rr.castigo) : 'no penaliza'}`);
 
 // ---------- migración ----------
-Motor.iniciar('normal', 1, 'sosten');
+Motor.iniciar('normal', 1, 'sosten'); adulto(sb);
 const g = Motor.get();
 Motor.tomarTrabajo('callcenter', true);
 Motor.abrirCuenta('monetaria', 200);
@@ -147,8 +147,8 @@ ok(!Motor.estaFuera(), 'ya no estás fuera');
 
 // ---------- minijuegos por carrera ----------
 ok(Minijuegos.todos().length === 8, `hay 8 minijuegos registrados (hay ${Minijuegos.todos().length})`);
-ok(Minijuegos.disponibles('bachiller', []).length === 4,
-   'con bachillerato se abren los cuatro básicos');
+ok(Minijuegos.disponibles('diversificado', []).length === 4,
+   'con diversificado se abren los cuatro básicos');
 ok(Minijuegos.disponibles('licenciatura', ['ingenieria']).some(j => j.id === 'obra'),
    'el minijuego de ingeniería se abre al graduarse de ingeniería');
 ok(!Minijuegos.disponibles('licenciatura', ['ingenieria']).some(j => j.id === 'conciliacion'),

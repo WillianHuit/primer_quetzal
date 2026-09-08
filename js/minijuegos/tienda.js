@@ -5,7 +5,7 @@
 Minijuegos.registrar({
   id: 'tienda',
   nombre: 'Turno en la tienda',
-  icono: '🏪',
+  icono: 'tienda',
   tipo: 'generico',
   descripcion: 'Atiende clientes y da el cambio correcto.',
   ensena: 'Manejar efectivo sin equivocarte.',

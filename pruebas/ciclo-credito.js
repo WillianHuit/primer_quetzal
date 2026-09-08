@@ -1,17 +1,26 @@
 // Prueba del ciclo de credito: fiador, garantia, puntaje, tarjeta, prestamista.
-const { cargar } = require('./comun');
+const { cargar, adulto } = require('./comun');
 const sandbox = cargar('es');
 const { Motor } = sandbox;
+
+/* Todas las partidas de esta prueba son de un adulto con empleo: el ciclo de
+ * credito no existe antes de los 18. */
+function nueva(dificultad, ranura, origen) {
+  Motor.iniciar(dificultad, ranura, origen);
+  return adulto(sandbox);
+}
 
 const check = [];
 function ok(cond, msg) { check.push((cond?'  OK   ':'  FALLA ') + msg); }
 
 function trabajar(M, e, n) {
-  for (let i=0;i<4;i++) M.asignarEspacio(i, i < (n||3) ? 'trabajo' : 'descanso');
+  // n sigue siendo semanas; el mes son ocho jornadas de media semana
+  const s = n === undefined ? 3 : n;
+  for (let i=0;i<8;i++) M.asignarEspacio(i, i < s * 2 ? 'trabajo' : 'descanso');
   return M.cerrarTurno();
 }
 
-Motor.iniciar('normal', 1);
+nueva('normal', 1);
 const e = Motor.get();
 Motor.tomarTrabajo('callcenter', true);
 Motor.abrirCuenta('monetaria', 200);
@@ -27,7 +36,7 @@ req = Motor.requisitoPrestamo();
 ok(req.ok && req.conFiador, 'con reputacion alta ya te consiguen fiador');
 
 // --- credito con garantia desde cero ---
-Motor.iniciar('normal', 2);
+nueva('normal', 2);
 const g = Motor.get();
 Motor.tomarTrabajo('callcenter', true);
 Motor.abrirCuenta('monetaria', 200);
@@ -63,7 +72,7 @@ if (rt.ok) {
 }
 
 // --- prestamista informal ---
-Motor.iniciar('normal', 3);
+nueva('normal', 3);
 const p = Motor.get();
 Motor.tomarTrabajo('tienda', true);
 const ri = Motor.pedirInformal(1000, 6);
@@ -73,7 +82,7 @@ const totalInformal = ri.cuota * 6;
 ok(totalInformal > 1700, `por Q1000 devuelves Q${totalInformal.toFixed(0)} en 6 meses`);
 
 // --- mora baja el puntaje ---
-Motor.iniciar('normal', 1);
+nueva('normal', 1);
 const m = Motor.get();
 Motor.tomarTrabajo('callcenter', true);
 Motor.abrirCuenta('monetaria', 200);
@@ -89,7 +98,7 @@ for (let i=0;i<3;i++) trabajar(Motor, m, 0);
 ok(m.puntaje < antesMora, `la mora hunde el puntaje (${Math.round(antesMora)} a ${Math.round(m.puntaje)})`);
 
 // --- deposito a plazo e interes compuesto ---
-Motor.iniciar('normal', 1);
+nueva('normal', 1);
 const z = Motor.get();
 Motor.tomarTrabajo('gerente', true);   // sueldo alto para acumular rapido
 Motor.abrirCuenta('monetaria', 200);

@@ -17,7 +17,7 @@ var EVENTOS = [
   {
     id: 'diente',
     titulo: 'Te duele una muela',
-    icono: '🦷',
+    icono: 'diente',
     tipo: 'malo',
     prob: 0.035,
     monto: 900,
@@ -26,7 +26,7 @@ var EVENTOS = [
   {
     id: 'celular',
     titulo: 'Se te quebró el celular',
-    icono: '📱',
+    icono: 'celular',
     tipo: 'malo',
     prob: 0.030,
     monto: 1100,
@@ -35,7 +35,7 @@ var EVENTOS = [
   {
     id: 'familia',
     titulo: 'Emergencia en la familia',
-    icono: '🏥',
+    icono: 'hospital',
     tipo: 'malo',
     prob: 0.025,
     monto: 2200,
@@ -44,7 +44,7 @@ var EVENTOS = [
   {
     id: 'moto',
     titulo: 'Se descompuso el transporte',
-    icono: '🛠️',
+    icono: 'llave-inglesa',
     tipo: 'malo',
     prob: 0.030,
     monto: 1400,
@@ -53,7 +53,7 @@ var EVENTOS = [
   {
     id: 'robo',
     titulo: 'Te robaron en la calle',
-    icono: '😰',
+    icono: 'cartera',
     tipo: 'malo',
     prob: 0.020,
     soloEfectivo: true,
@@ -64,7 +64,7 @@ var EVENTOS = [
   {
     id: 'horas',
     titulo: 'Te ofrecen horas extra',
-    icono: '⏰',
+    icono: 'reloj',
     tipo: 'bueno',
     prob: 0.055,
     requiereEmpleo: true,
@@ -77,7 +77,7 @@ var EVENTOS = [
   {
     id: 'venta',
     titulo: 'Vendes algo que ya no usabas',
-    icono: '📦',
+    icono: 'paquete',
     tipo: 'bueno',
     prob: 0.035,
     monto: 600,
@@ -86,7 +86,7 @@ var EVENTOS = [
   {
     id: 'remesaextra',
     titulo: 'Tu hermano manda extra',
-    icono: '💵',
+    icono: 'billete',
     tipo: 'bueno',
     prob: 0.025,
     montoDolares: 300,
@@ -98,7 +98,7 @@ var EVENTOS = [
   {
     id: 'estafa',
     titulo: 'Un mensaje sospechoso',
-    icono: '⚠️',
+    icono: 'alerta',
     tipo: 'trampa',
     prob: 0.045,
     texto: 'Te llega un mensaje: "Banco Cardamomo: su cuenta será bloqueada. Confirme sus datos aquí." ' +
@@ -121,7 +121,7 @@ var PROMOCIONES = [
   {
     id: 'tasaahorro',
     titulo: 'Tasa preferencial de ahorro',
-    icono: '🎉',
+    icono: 'confeti',
     honesta: true,
     prob: 0.03,
     requiereAhorro: true,
@@ -132,7 +132,7 @@ var PROMOCIONES = [
   {
     id: 'limite',
     titulo: '¡Felicidades! Subimos tu límite',
-    icono: '🎈',
+    icono: 'globo-fiesta',
     honesta: false,
     prob: 0.05,
     requiereTarjeta: true,
@@ -147,7 +147,7 @@ var PROMOCIONES = [
   {
     id: 'mesessin',
     titulo: 'Doce meses sin intereses',
-    icono: '🏷️',
+    icono: 'etiqueta',
     honesta: false,
     prob: 0.04,
     requiereTarjeta: true,
@@ -159,7 +159,7 @@ var PROMOCIONES = [
   {
     id: 'seguro',
     titulo: 'Seguro de vida incluido',
-    icono: '📄',
+    icono: 'documento',
     honesta: false,
     prob: 0.035,
     requiereCuenta: true,
@@ -174,7 +174,7 @@ var PROMOCIONES = [
   {
     id: 'plazo',
     titulo: 'Depósito a plazo con tasa especial',
-    icono: '📈',
+    icono: 'tendencia',
     honesta: true,
     prob: 0.03,
     requiereAhorro: true,

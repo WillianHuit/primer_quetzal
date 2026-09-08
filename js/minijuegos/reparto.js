@@ -6,7 +6,7 @@
 Minijuegos.registrar({
   id: 'reparto',
   nombre: 'Reparto en moto',
-  icono: '🛵',
+  icono: 'moto',
   tipo: 'generico',
   descripcion: 'Esquiva el tráfico y entrega los pedidos a tiempo.',
   ensena: null,
@@ -28,7 +28,7 @@ Minijuegos.registrar({
       var html = '<p class="mj-instruccion">Toca el carril libre</p><div class="mj-carriles">';
       for (var i = 0; i < CARRILES; i++) {
         html += '<button class="mj-carril" data-carril="' + i + '">' +
-                (i === libre ? '🛣️' : '🚗') + '</button>';
+                Ico(i === libre ? 'carretera' : 'auto') + '</button>';
       }
       html += '</div><div class="mj-barra"><div class="mj-barra-relleno" style="animation-duration:' +
               margen + 'ms"></div></div>';

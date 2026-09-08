@@ -6,7 +6,7 @@
 Minijuegos.registrar({
   id: 'caja',
   nombre: 'Cierre de caja',
-  icono: '🧮',
+  icono: 'calculadora',
   tipo: 'avanzado',
   requiereNivel: 'tecnico',
   descripcion: 'Cuadra la caja del día y encuentra el descuadre.',

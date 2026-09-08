@@ -48,7 +48,7 @@ var Minijuegos = (function () {
 
     caja.innerHTML =
       '<div class="mj-cabecera">' +
-        '<span class="mj-nombre">' + def.icono + ' ' + def.nombre + '</span>' +
+        '<span class="mj-nombre">' + Ico(def.icono) + ' ' + def.nombre + '</span>' +
         '<span class="mj-reloj" id="mj-reloj">' + duracion + 's</span>' +
       '</div>' +
       '<div class="mj-marcador"><span id="mj-puntos">0</span> puntos</div>' +

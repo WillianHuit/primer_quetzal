@@ -6,7 +6,7 @@
 Minijuegos.registrar({
   id: 'conciliacion',
   nombre: 'Conciliación bancaria',
-  icono: '📑',
+  icono: 'hojas',
   tipo: 'avanzado',
   requiereNivel: 'licenciatura',
   requiereCarrera: 'admin',

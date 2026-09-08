@@ -7,7 +7,7 @@
 Minijuegos.registrar({
   id: 'estafas',
   nombre: 'Caza-estafas',
-  icono: '🎣',
+  icono: 'anzuelo',
   tipo: 'basico',
   descripcion: 'Te llegan mensajes. Decide cuáles son fraude.',
   ensena: 'Ningún banco pide claves por mensaje, y la urgencia es la señal de alarma.',
@@ -50,8 +50,8 @@ Minijuegos.registrar({
       api.mostrar(
         '<div class="mj-mensaje">' + msg.t + '</div>' +
         '<div class="mj-opciones">' +
-          '<button class="mj-opcion peligro" data-r="1">🚩 Es estafa</button>' +
-          '<button class="mj-opcion" data-r="0">✅ Es legítimo</button>' +
+          '<button class="mj-opcion peligro" data-r="1">' + Ico('bandera') + ' Es estafa</button>' +
+          '<button class="mj-opcion" data-r="0">' + Ico('visto') + ' Es legítimo</button>' +
         '</div><div id="mj-explica"></div>'
       );
 
