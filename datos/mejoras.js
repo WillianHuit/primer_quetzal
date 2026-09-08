@@ -11,17 +11,21 @@
  * inversión, y una inversión se mide en cuántos meses se paga sola.**
  *
  * ---------------------------------------------------------------------------
- * Genéricas a propósito
+ * Estas son mejoras PARA TI. Los negocios están en datos/negocios.js
  * ---------------------------------------------------------------------------
- * No son mejoras "de vendedor de dulces" ni "de ingeniero": son cuatro cadenas
- * que sirven en TODAS las etapas de la vida, y en cada etapa el siguiente
- * escalón cuesta más y da más. El chico de 13 mejora su canasta de dulces y sus
- * útiles escolares; el ingeniero de 30 mejora su taller y su certificación. Es
- * la misma pantalla y la misma decisión.
+ * Aquí hubo una cuarta cadena, `negocio`, con cuatro escalones: canasta,
+ * carreta, puesto y local. Se fue, y con razón: era un negocio de mentira, un
+ * número que subía. El negocio de verdad —abrirlo, subirle el nivel, contratar
+ * gente, verlo quebrar— vive ahora en datos/negocios.js.
+ *
+ * Lo que queda aquí son las tres cadenas que mejoran a la PERSONA, y esas
+ * siguen teniendo todo el sentido: son genéricas a propósito, sirven en TODAS
+ * las etapas de la vida, y en cada etapa el siguiente escalón cuesta más y da
+ * más. El chico de 13 compra sus útiles; el ingeniero de 30 compra su
+ * certificación. Es la misma pantalla y la misma decisión.
  *
  *   escuela   lo que te hace estudiar más rápido
  *   oficio    lo que te hace ganar más por jornada trabajada
- *   negocio   lo que produce dinero SIN gastar jornadas
  *   casa      lo que te hace descansar mejor
  *
  * ---------------------------------------------------------------------------
@@ -31,10 +35,9 @@
  *
  *   cadena      a qué grupo pertenece (arriba). Dentro de una cadena, el orden
  *               de esta lista ES el orden de los niveles.
- *   requiereNivel  nivel educativo mínimo. Los dos escalones grandes del
- *               negocio lo piden, y no es un adorno: es lo que evita que el
- *               juego enseñe que el colegio es una pérdida de tiempo. Sin
- *               básicos se llega a la carreta y ahí se para.
+ *   requiereNivel  nivel educativo mínimo, si lo pide alguna. Ninguna de las
+ *               tres cadenas de aquí lo usa hoy; el freno educativo del juego
+ *               vive en los techos de datos/negocios.js.
  *   nombre      cómo se llama. Corto: cabe en una tarjeta.
  *   icono       el dibujo. Es lo que el jugador va a ver crecer.
  *   costo       lo que cuesta comprarla, una sola vez.
@@ -43,8 +46,7 @@
  *
  *      bonoJornada    quetzales extra por cada jornada TRABAJADA
  *      avanceEstudio  meses de carrera extra por cada jornada ESTUDIADA
- *      ingresoPasivo  quetzales al mes que entran sin gastar jornadas
- *      costoMensual   lo que cuesta mantenerla cada mes (los negocios lo tienen)
+ *      costoMensual   lo que cuesta mantenerla cada mes (el transporte)
  *      energiaExtra   energía extra por cada jornada de DESCANSO
  *
  *   leccion     lo que enseña. Sale al comprarla.
@@ -55,33 +57,7 @@
  * treinta, nadie la compra nunca. El punto dulce anda entre ocho y quince.
  */
 
-/* Cuanto varia lo que produce el negocio de un mes a otro.
- * Un negocio tiene meses buenos y meses malos, y verlo es parte de la
- * leccion: un ingreso variable no sirve para comprometer gastos fijos. */
-var NEGOCIO_VARIANZA = 0.25;
-
-/* ---------------------------------------------------------------------------
- * El negocio puede quebrar
- * ---------------------------------------------------------------------------
- * Sin esto, cualquier ingreso pasivo positivo compuesto durante cuarenta anios
- * se vuelve una maquina de dinero y el juego deja de parecerse a la vida: la
- * mayoria de los negocios chicos no llega a los cinco anios.
- *
- * La probabilidad es por mes y solo aplica al negocio ya montado. Y se puede
- * evitar: un negocio con colchon de capital de trabajo aguanta los meses
- * malos. Eso es exactamente la leccion que un negocio propio tiene que
- * enseniar, y es la unica forma honesta de poner un techo.
- */
-var NEGOCIO_RIESGO_QUIEBRA = 0.006;      // ESTIMACION: uno cada 14 anios
-var NEGOCIO_MESES_DE_COLCHON = 3;        // meses de venta guardados que lo protegen
-
 var CADENAS = [
-  {
-    id: 'negocio',
-    nombre: 'Tu negocio',
-    icono: 'carrito',
-    descripcion: 'Produce dinero sin gastarte jornadas. Es lo único que trabaja cuando tú no.'
-  },
   {
     id: 'oficio',
     nombre: 'Tus herramientas',
@@ -103,49 +79,6 @@ var CADENAS = [
 ];
 
 var MEJORAS = [
-
-  // ---------- negocio: la cadena larga, la que se ve crecer ----------
-  {
-    id: 'canasta',
-    cadena: 'negocio',
-    nombre: 'Una canasta propia',
-    icono: 'canasta',
-    costo: 180,
-    efecto: { ingresoPasivo: 30 },
-    leccion: 'Q180 que te devuelven Q30 al mes se pagan solos en seis meses. Ese número —cuántos meses tarda en pagarse— es el único que hay que calcular antes de comprar algo para trabajar.'
-  },
-  {
-    id: 'carreta',
-    cadena: 'negocio',
-    nombre: 'Una carreta',
-    icono: 'carrito',
-    costo: 1000,
-    edadMinima: 15,
-    efecto: { ingresoPasivo: 120, costoMensual: 20 },
-    leccion: 'Fíjate que ahora hay un costo mensual. Todo negocio tiene gastos fijos, y lo que importa no es lo que entra: es lo que queda.'
-  },
-  {
-    id: 'puesto',
-    cadena: 'negocio',
-    nombre: 'Un puesto en el mercado',
-    icono: 'tienda',
-    costo: 4500,
-    edadMinima: 16,
-    requiereNivel: 'basicos',
-    efecto: { ingresoPasivo: 430, costoMensual: 130 },
-    leccion: 'Un puesto pide básicos terminados, y no por capricho: hay que llevar cuentas, firmar un arrendamiento y sacar una patente. Es la primera vez que el colegio se convierte en dinero de forma directa.'
-  },
-  {
-    id: 'local',
-    cadena: 'negocio',
-    nombre: 'Un local con puerta',
-    icono: 'edificio',
-    costo: 22000,
-    edadMinima: 18,
-    requiereNivel: 'diversificado',
-    efecto: { ingresoPasivo: 1350, costoMensual: 430 },
-    leccion: 'Q22,000 que dejan Q920 limpios al mes se pagan en dos años. Un depósito a plazo con los mismos Q22,000 te daría Q116 al mes. El negocio propio rinde mucho más que el banco, y a cambio puede quebrar: guarda tres meses de venta y aguanta los meses malos.'
-  },
 
   // ---------- oficio: lo que hace rendir la jornada ----------
   {

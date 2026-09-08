@@ -1,0 +1,150 @@
+{
+ "escena/moneda": [
+  96,
+  96
+ ],
+ "escena/plataforma": [
+  1024,
+  600
+ ],
+ "mejoras/casa-1": [
+  192,
+  192
+ ],
+ "mejoras/casa-2": [
+  192,
+  192
+ ],
+ "mejoras/escuela-1": [
+  192,
+  192
+ ],
+ "mejoras/escuela-2": [
+  192,
+  192
+ ],
+ "mejoras/escuela-3": [
+  192,
+  192
+ ],
+ "mejoras/oficio-1": [
+  192,
+  192
+ ],
+ "mejoras/oficio-2": [
+  192,
+  192
+ ],
+ "mejoras/oficio-3": [
+  192,
+  192
+ ],
+ "negocio/n1": [
+  256,
+  256
+ ],
+ "negocio/n2": [
+  256,
+  256
+ ],
+ "negocio/n3": [
+  256,
+  256
+ ],
+ "negocio/n4": [
+  256,
+  256
+ ],
+ "personaje/auxcontable": [
+  256,
+  384
+ ],
+ "personaje/base": [
+  256,
+  384
+ ],
+ "personaje/callcenter": [
+  256,
+  384
+ ],
+ "personaje/construccion": [
+  256,
+  384
+ ],
+ "personaje/construccion_us": [
+  256,
+  384
+ ],
+ "personaje/contador": [
+  256,
+  384
+ ],
+ "personaje/docente": [
+  256,
+  384
+ ],
+ "personaje/dulces": [
+  256,
+  384
+ ],
+ "personaje/estudiante": [
+  256,
+  384
+ ],
+ "personaje/gerente": [
+  256,
+  384
+ ],
+ "personaje/graduado": [
+  256,
+  384
+ ],
+ "personaje/ingeniero": [
+  256,
+  384
+ ],
+ "personaje/limonada": [
+  256,
+  384
+ ],
+ "personaje/limpieza_us": [
+  256,
+  384
+ ],
+ "personaje/periodicos": [
+  256,
+  384
+ ],
+ "personaje/refrigeracion": [
+  256,
+  384
+ ],
+ "personaje/repartidor": [
+  256,
+  384
+ ],
+ "personaje/restaurante_us": [
+  256,
+  384
+ ],
+ "personaje/soporte": [
+  256,
+  384
+ ],
+ "personaje/tecnico_us": [
+  256,
+  384
+ ],
+ "personaje/tienda": [
+  256,
+  384
+ ],
+ "personaje/tiendapropia": [
+  256,
+  384
+ ],
+ "personaje/vendedor": [
+  256,
+  384
+ ]
+}

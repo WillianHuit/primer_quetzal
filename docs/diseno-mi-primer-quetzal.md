@@ -602,9 +602,14 @@ estudia, y en la mano la jarra de limonada, el periódico, el ladrillo o la tabl
 
 Sale en tres tamaños: chico en la decisión de estudiar, mediano en "Mi empleo" —donde es lo
 único que le dice al jugador qué hace, sin que tenga que leerlo— y grande en la pantalla de
-"Yo". Sigue siendo SVG propio, sin librería ni imágenes que cargar, y **sus colores salen de
-las mismas cuatro variables de la paleta**: el uniforme de cada oficio se arma con el verde,
-el azul, el ámbar y el rojo que ya existían.
+"Yo". Los colores del muñeco dibujado salen de las mismas cuatro variables de la paleta: el
+uniforme de cada oficio se arma con el verde, el azul, el ámbar y el rojo que ya existían.
+
+**Y ahora, además, está ilustrado.** Entraron 23 ilustraciones del mismo chico —neutro,
+estudiante, graduado y una por cada oficio— y cuando existe la del estado que toca, se usa
+esa. El muñeco por piezas se queda detrás, y no como código muerto: es lo que hace que un
+empleo nuevo funcione el mismo día, con su uniforme, sin esperar a que alguien lo ilustre.
+Los detalles están en §14.7.
 
 ### 14.5 Tarjetas de decisión
 
@@ -634,76 +639,163 @@ Las de niño y las de adulto están separadas por ventanas de edad, y a un menor
 tampoco le caen los golpes de dinero de `eventos.js`: la cuenta del dentista, a los 13, la
 paga la casa.
 
-### 14.6 La capa de tycoon
+### 14.6 El imperio
 
 El juego pedía repartir jornadas y mirar cómo bajaba el saldo. Es fiel a la vida y es
 aburrido: no había nada que construir, nada que subiera de nivel, nada que se viera crecer.
 Para alguien de doce años eso es un juego sin premio.
 
-`datos/mejoras.js` son cuatro cadenas de mejoras, y son **genéricas a propósito**: no son
-mejoras "de vendedor de dulces" ni "de ingeniero", son cuatro ejes que sirven en todas las
-etapas de la vida, y en cada etapa el siguiente escalón cuesta más y da más.
+La primera respuesta a eso fueron cuatro cadenas de mejoras, y una de ellas se llamaba "tu
+negocio": canasta → carreta → puesto → local. No alcanzó, y el motivo es fácil de decir: era
+**un negocio de mentira**. Un número que subía. No se abría, no se atendía, no había nadie
+adentro y no se podía tener dos.
 
-| Cadena | Qué hace | Escalones |
+`datos/negocios.js` es la segunda respuesta. El jugador **abre negocios** —hasta ocho a la
+vez, según lo que haya estudiado— y cada uno tiene **plazas** que se llenan con sus propias
+jornadas o con **gente contratada**. Un negocio con cuatro personas produce cuatro veces, y
+esas cuatro personas cuestan. Ahí es donde el juego deja de ser un simulador de sueldo: es
+la frontera entre vender tu tiempo y comprar el de otros.
+
+#### Los dos números de un negocio
+
+Todo lo que hay que entender de este archivo cabe en una frase: **lo que un negocio vende no
+es lo que gana.** Un comedor que vende Q20,800 al mes gana lo que queda después de comprar
+la comida, pagar la renta y pagar la planilla. `margen` es esa fracción, y la pantalla
+muestra los dos números siempre, uno al lado del otro.
+
+De ahí sale la comparación que un chico puede hacer solo, sin que nadie le explique nada:
+
+| Negocio | Vende al mes con una persona | Le queda | Margen |
+|---|---|---|---|
+| Lavado de carros | Q5,600 | Q3,110 | 60% |
+| Tortillería | Q10,400 | Q2,620 | 30% |
+
+La tortillería vende casi el doble y gana menos. Ese es el archivo entero.
+
+#### Lo que de verdad cuesta contratar a alguien
+
+Es, probablemente, la lección más útil de todo el juego para quien algún día tenga un
+negocio. Los dos botones de contratar están uno al lado del otro con su precio completo:
+
+| | Sueldo | Te cuesta | Y además |
+|---|---|---|---|
+| **Sin contrato** | Q1,980 | **Q1,980** | se va más seguido, y hay inspección |
+| **Con contrato** | Q3,520 | **Q5,248** | se queda, y no hay multa que temer |
+
+El 1.42 no es inventado: es IGSS patronal 10.67% + IRTRA 1% + INTECAP 1% + aguinaldo 8.33% +
+Bono 14 8.33% + vacaciones 4.17% + provisión de indemnización 8.33%, más la bonificación
+incentivo de Q250 que por ley no lleva IGSS. Y el otro lado del trato también está: despedir
+a alguien con contrato cuesta un sueldo por año trabajado, así que **lo mismo que protege al
+trabajador es lo que le cuesta al patrón deshacerse de él**.
+
+Que la respuesta correcta para un negocio chico sea "sin contrato" no es un descuido: es la
+razón por la que el 65% del país trabaja así, y el juego la modela con sus dos riesgos en vez
+de esconderla.
+
+#### Los cuatro frenos, y ninguno es un "no puedes porque no"
+
+Un tycoon sin techo se vuelve una máquina de dinero y el juego deja de enseñar.
+
+| Freno | Qué hace | Por qué es honesto |
 |---|---|---|
-| **Tu negocio** | Produce dinero **sin gastar jornadas** | canasta → carreta → puesto → local |
-| **Tus herramientas** | Suben lo que ganas por jornada trabajada | herramienta → ropa → transporte |
-| **Tu estudio** | Suben lo que avanzas por jornada estudiada | útiles → libros → internet |
-| **Tu descanso** | Sube la energía que recupera una jornada de descanso | rincón → cama |
+| `TECHO_NEGOCIOS` | 2 negocios con primaria, 8 con maestría | dos negocios son dos contabilidades |
+| `TECHO_EMPLEADOS` | 1 persona con primaria, 20 con maestría | una planilla hay que saber llevarla |
+| `requiereNivel` | papelería pide básicos, taller diversificado | hay que facturar y firmar un arrendamiento |
+| `RENDIMIENTO_SIN_DUENO` | un negocio sin ninguna jornada tuya rinde 70% | delegar funciona; desaparecer, no |
 
-El chico de 13 mejora su canasta de dulces y sus útiles escolares; el ingeniero de 30
-mejora su taller y su certificación. Es la misma pantalla y la misma decisión.
+Los dos techos son también el motivo por el que esta capa no rompe el mensaje del juego. Y
+están **a la vista, arriba de la pantalla, con su barra**: el jugador ve que puede con dos
+negocios y una persona, y ve el número subir cuando se gradúa. Ninguna frase convence tanto
+como esa barra.
 
-**Sigue siendo educación financiera, y sin trampa.** El dinero de las mejoras es el mismo
-dinero de todo lo demás, así que comprar una es no tener eso. Y lo que la pantalla enseña a
-leer es el número que aparece en cada tarjeta: **en cuántos meses se paga sola**. Es el
-único cálculo que hay que hacer antes de comprar una herramienta, y sirve igual para una
-canasta de Q180 que para un camión.
+Encima, cada negocio puede quebrar. El riesgo es del 0.6% mensual **y se puede evitar**: un
+negocio con tres meses de sus propios costos guardados aguanta los meses malos. Eso es
+capital de trabajo, y es justo la lección que un negocio propio tiene que enseñar.
 
-Tres decisiones dentro de esto:
+#### Y se ve crecer: la calle
 
-1. **El negocio produce sin gastar tiempo, y por eso es lo que más enseña.** Es la única
-   entrada del juego que no cuesta jornadas: a partir de cierto punto, lo que trabaja es el
-   capital y no la persona. Con su variación mes a mes, porque un negocio tiene meses malos.
-2. **El negocio puede quebrar.** Sin esto, cualquier ingreso pasivo positivo compuesto
-   durante cuarenta años se vuelve una máquina de dinero y el juego deja de parecerse a la
-   vida: la mayoría de los negocios chicos no llega a los cinco años. El riesgo es del 0.6%
-   mensual **y se puede evitar**: un negocio con tres meses de venta guardados aguanta los
-   meses malos. Eso es capital de trabajo, y es justo la lección que un negocio propio tiene
-   que enseñar.
-3. **Los dos escalones grandes del negocio piden nivel educativo terminado.** Un puesto en
-   el mercado pide básicos y un local pide diversificado, y no es un adorno: es lo que evita
-   que la capa de tycoon se coma el mensaje del juego. Sin básicos se llega a la carreta y
-   ahí se para.
+`js/escena.js` dibuja **una calle**, con un local por cada negocio abierto y su gente parada
+enfrente. Y la calle **se alarga** conforme el imperio crece: con un negocio la escena cabe
+en la tarjeta; con cinco hay que arrastrar para verla toda. Que no quepa es parte del premio.
 
-Ese tercer punto salió de medirlo. La primera versión de las mejoras dejaba a un jugador que
-**nunca estudia** en el 80% del patrimonio de uno que sube la escalera completa, o sea que
-el juego estaba a punto de enseñar que el colegio es una pérdida de tiempo. Con la puerta
-educativa y los números recalibrados quedó así, medido sobre once semillas:
+Lo importante del archivo es que **un negocio nuevo no necesita que nadie lo dibuje**. El
+local está dibujado una sola vez, de forma genérica, y crece con el nivel: caja, toldo,
+rótulo, segundo piso. Lo único que distingue una tortillería de un taller es el emblema de
+su fachada, y ese emblema sale de `js/iconos.js` usando el campo `icono` que el tipo de
+negocio ya tiene. Antes no era así, y era una trampa: se agregaba un nivel, el jugador lo
+compraba y la pantalla se veía igual.
+
+Alrededor siguen apareciendo las tres cadenas de mejoras que quedan —la caja de
+herramientas, el rótulo colgado, la bicicleta, la mochila, los libros, la antena, el
+banquito, la lámpara— porque esas siguen teniendo todo el sentido: son las que mejoran a la
+**persona** y no al negocio.
+
+Está dibujado en el estilo de los paquetes de arte de juego: formas macizas, esquinas
+redondas y contorno gordo del color de la tinta, **con los colores de la paleta**. Y encima,
+cuatro cosas que hacen que la pantalla se sienta viva: monedas que suben de los locales que
+produjeron, un saltito del escenario al comprar algo, una barra de cuánto le falta para lo
+siguiente, y una persona más dibujada cada vez que contrata.
+
+#### Lo que salió de medirlo
+
+Nada de esta sección se decidió a ojo. `pruebas/imperio.js` corre tres vidas completas de los
+13 a los 65 sobre once semillas y compara la mediana:
 
 | Ruta | Patrimonio mediano a los 65 |
 |---|---|
-| Negocio sin estudiar nunca | Q1.4 millones |
-| Escalera completa con mejoras | Q3.0 millones |
+| Sin estudiar y sin negocios | Q1.5 millones |
+| Sin estudiar, con negocios | Q7.1 millones |
+| Escalera completa y negocios | Q36.0 millones |
 
-El negocio vale casi la mitad de la ruta larga —tiene que valer la pena, si no nadie lo
-toca— pero no gana. `pruebas/mejoras.js` falla si ese orden se invierte.
+Las dos cosas que la prueba exige son que **estudiar siga rindiendo más** (5 a 1) y que
+**montar negocios le cambie la vida a quien no estudió** (4.7 veces). Si alguno de esos dos
+órdenes se invierte, la suite falla.
 
-**Y se ve crecer.** Las cadenas subían de nivel y cambiaban los números, pero el jugador
-leía "Nivel 2 de 4" y tenía que imaginarse el resto. `js/escena.js` lo dibuja: el terreno
-vacío con su contorno punteado, la canasta, la carreta con sus ruedas, el puesto con su
-toldo a rayas y el local con puerta, ventana y rótulo. Alrededor van apareciendo las otras
-cadenas —la caja de herramientas, el rótulo colgado, la bicicleta, la mochila, los libros,
-la antena, el banquito, la lámpara— hasta que la escena de alguien con veinte niveles
-comprados está llena de cosas. Que se vea llena es todo el premio.
+Y por el camino esa medición encontró cuatro cosas que ninguna prueba de "no lanza errores"
+habría visto. Están en §24 porque son el tipo de hallazgo que vale más que el código.
 
-Está dibujado en el estilo de los paquetes de arte de juego: formas macizas, esquinas
-redondas y contorno gordo del color de la tinta, **con los colores de la paleta**. Y
-encima, tres cosas que hacen que la pantalla se sienta viva: monedas que suben del negocio
-mientras produce, un saltito del escenario al comprar una mejora, y una barra de cuánto le
-falta para la siguiente, porque en un tycoon el jugador tiene que ver que se acerca.
+### 14.7 Ilustraciones, y el dibujo que se queda detrás
 
-### 14.7 Iconos propios, no emoji
+El juego se dibujaba entero con SVG propio: iconos de trazo, un muñeco por piezas y una
+escena hecha de formas. Eso sigue ahí. Encima entraron **37 ilustraciones** —el mismo chico
+en 23 estados, los cuatro niveles de un local, las ocho piezas de las cadenas de mejoras y
+la moneda— y ahora el juego usa las dos cosas.
+
+`js/arte.js` es lo único que sabe qué ilustraciones existen. Todo lo demás pregunta, y **si
+la respuesta es que no hay, dibuja**. Eso no es un adorno defensivo: es lo que permite
+agregar un empleo a `datos/trabajos.js` y verlo funcionar el mismo día, con su uniforme,
+sin esperar a que alguien lo ilustre. Con ilustración se ve mejor; sin ilustración se ve.
+
+**Dos carpetas, y la diferencia importa.** `assets/visuales/` son los PNG maestros tal como
+se entregaron: 37 archivos, 90 MB, a 1024×1536 y 1254×1254. El navegador no los carga
+nunca. `assets/juego/` son las copias que el juego usa: WebP, al tamaño en que se ven,
+**603 KB entre todas**. Cargar 2 MB para pintar un chico de 80 px rompería la promesa de
+que el juego abre con doble clic y funciona sin internet, y esa promesa vale más que la
+resolución.
+
+`herramientas/preparar-imagenes.py` escribe la segunda carpeta a partir de la primera, y no
+hace falta para jugar ni para programar. Hace tres cosas, y las tres salieron de problemas
+reales que están contados en `RECURSOS_VISUALES.md` §4: quita el cuadriculado de
+transparencia que el generador dejó **horneado y opaco** dentro de los huecos cerrados,
+recorta el margen vacío con una caja **común** a los 23 personajes —si cada profesión se
+recortara a su medida, el mismo chico cambiaría de tamaño al cambiar de trabajo— y
+redimensiona a los tamaños que se midieron en pantalla.
+
+**Lo que las ilustraciones cambiaron del diseño.** Un PNG es un personaje completo, así que
+los estados dejaron de sumarse: antes un chico que trabajaba y estudiaba salía con la ropa
+del trabajo *y* la mochila, y un graduado con el birrete encima del uniforme. Ahora hay que
+elegir uno, y gana lo que está haciendo ahora. Y la escena se recalibró entera, porque los
+números estaban ajustados a un muñeco que ocupaba menos de su lienzo: con la escala vieja el
+chico quedaba cinco unidades y media enterrado en la plataforma y le pasaba la cabeza a una
+tienda con puerta.
+
+**Lo que protege esto es una suite.** `pruebas/arte.js` cruza el inventario declarado en
+`js/arte.js`, los archivos del disco y lo que los datos piden, y comprueba además que
+ninguna imagen pase de 90 KB y que el código no apunte a los maestros. El fallo que existe
+para atrapar no lanza ningún error y no sale en ninguna consola: **una imagen que falta deja
+un hueco vacío**, el juego sigue funcionando y las otras doce suites siguen pasando.
+
+### 14.8 Iconos propios, no emoji
 
 La interfaz usaba emoji. El emoji tiene dos problemas que no se arreglan con CSS: cada
 sistema lo dibuja distinto, así que la cara del juego cambiaba según el teléfono, y viene
@@ -715,7 +807,7 @@ icono se ve igual en todos los sistemas, toma el color de donde esté puesto y m
 así que crece con la letra que lo rodea. Sin librería externa: el juego sigue abriéndose
 con doble clic, sin internet.
 
-### 14.8 Relieve, no plano
+### 14.9 Relieve, no plano
 
 El diseño era plano —un borde de 1px y nada más— y parecía un formulario. Ahora cada cosa
 que se puede tocar se apoya sobre un labio inferior más oscuro y tiene un brillo arriba, y
@@ -766,8 +858,9 @@ localmente que publicado, y alguien de negocio puede corregir una tasa sin saber
   js/
     idioma.js       detección, selector y las funciones T, D y K
     iconos.js       los setenta y ocho dibujos de trazo y la función Ico
-    personaje.js    el muñeco por piezas y su ropa de trabajo
-    escena.js       el escenario del negocio, que crece con las mejoras
+    arte.js         donde viven las ilustraciones y cuales existen
+    personaje.js    el muñeco: la ilustracion, y por piezas si no hay
+    escena.js       la calle: un local por negocio, y se alarga al crecer
     sonido.js       efectos generados por el navegador
     motor.js        estado, turnos, economía, estudio, crédito, reportes
     ui.js           pantallas, pestañas, apartados y tarjetas
@@ -778,10 +871,16 @@ localmente que publicado, y alguien de negocio puede corregir una tasa sin saber
   vendor/
     lucide.js       iconos de respaldo, recortados (ISC)
     chart.js        Chart.js 4, bundle UMD (MIT)
+  assets/
+    visuales/       los 37 PNG maestros, 90 MB. El navegador NO los carga
+    juego/          las copias WebP que si carga, 603 KB entre todas
   herramientas/
     traer-librerias.js   regenera vendor/. No hace falta para jugar
+    preparar-imagenes.py escribe assets/juego/ desde los maestros
   pruebas/
     comun.js        carga el juego aislado; ayudantes trabajar() y adulto()
+    imperio.js      negocios, planilla, techos y la invariante del estudio
+    arte.js         que las ilustraciones esten, cuadren y pesen poco
     todas.js        corre las diez suites y resume
     vista.html      vista previa para revisar el diseño con los ojos
   docs/
@@ -1132,7 +1231,7 @@ Cuarenta y nueve decisiones acordadas en cinco rondas de entrevista, el 4 de sep
    el juego matemáticamente imposible de ganar. Se resolvió situando al jugador en el
    escenario formal urbano y convirtiendo el escenario mediano en el modo difícil.
 
-## 24. Tres cosas que solo se vieron al medirlas
+## 24. Cuatro cosas que solo se vieron al medirlas
 
 Aparecieron al revisar el efecto de la recalibración, y ninguna era visible leyendo el código.
 
@@ -1235,3 +1334,41 @@ cuatro; pasar del técnico a la licenciatura lo sube un 38 %. Eso es exactamente
 los datos del INE sobre el ingreso mediano, y es el mensaje que un juego para chicos de 13
 años tiene que poder sostener con números y no con un párrafo.
 
+### 24.4 El imperio empobrecía al jugador, y por cuatro razones distintas
+
+Al medir la capa de negocios contra la vida sin negocios, la primera respuesta fue que
+**montar negocios dejaba al jugador MÁS POBRE**, y en una de las medidas la vida estudiada
+terminaba peor que la que dejó el colegio. Ninguna de las cuatro causas era visible leyendo
+el código, y ninguna era la misma:
+
+1. **La estrategia contrataba con contrato en todo.** En un lavado de carros una persona
+   produce Q3,360 al mes y con contrato cuesta Q5,248: contratarla es perder Q1,888 cada mes,
+   durante cuarenta años, en varios negocios a la vez. El motor estaba bien —cobrar eso es
+   justo lo que tiene que hacer— pero la prueba no hacía la cuenta que el juego enseña a
+   hacer. La cuenta ahora está escrita en `contratoQueAguanta()`, y su respuesta para los
+   negocios chicos es "sin contrato", que es exactamente por qué el 65% del país trabaja así.
+
+2. **Elegía el negocio más caro que podía pagar.** El más caro del catálogo es una
+   distribuidora, y una distribuidora atendida por su dueño solo son Q8,000 de renta contra
+   Q1,144 de margen. Abrir lo que no puedes atender es pagar dos rentas para trabajar en una.
+
+3. **Traspasaba su mejor negocio cada turno.** Este es el mejor de los cuatro. La decisión
+   de cambiar un negocio por otro comparaba contra `proyeccionDeNegocio().neto`, que mide las
+   jornadas que el negocio tiene *puestas*; pero esa decisión se toma **antes** de repartir
+   las jornadas del mes, y cerrar el turno las deja limpias. Así que todos los negocios se
+   veían con cero jornadas y neto negativo, "cámbialo por algo que deje el doble" se cumplía
+   siempre, y como traspasar devuelve la mitad de lo invertido, la vida terminó tirando
+   **Q1.1 millones en pura rotación**.
+
+4. **Un solo espacio de negocio con primaria era una trampa de diseño.** Y esta sí era del
+   juego, no de la prueba. `TECHO_NEGOCIOS.primaria` valía 1, así que un chico de trece abría
+   lo único que podía pagar —un puesto de dulces de Q450— y **ya no podía abrir nada más en
+   toda su vida**. Medido: cero contratos, cero quiebras, un puesto de dulces durante
+   cincuenta años y menos patrimonio que si no hubiera abierto nada. Ahora son dos espacios
+   desde el principio, para que siempre haya sitio para crecer sin tener que deshacer; el
+   freno educativo lo lleva `TECHO_EMPLEADOS`, que es el que de verdad decide el tamaño.
+
+Las cuatro se encontraron con la misma herramienta: una traza opcional (`TRAZA=1 node
+pruebas/imperio.js`) que imprime de dónde salió y a dónde se fue cada quetzal de una vida
+completa. Sin ella, las tres primeras eran indistinguibles entre sí, porque todas se veían
+igual: un número final más bajo de lo que debía.

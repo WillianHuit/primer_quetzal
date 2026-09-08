@@ -629,7 +629,6 @@
    * ========================================================== */
 
   ui['Mejoras'] = 'Upgrades';
-  ui['Por jornada'] = 'Per half-day';
   ui['Tu negocio'] = 'Your business';
   ui['Queda limpio'] = 'Net';
   ui['todavía nada'] = 'nothing yet';
@@ -637,10 +636,7 @@
   ui['Al máximo. No hay nada más que mejorar aquí.'] = 'Maxed out. Nothing more to upgrade here.';
   ui['Comprar por {0}'] = 'Buy for {0}';
   ui['Compraste: {0}'] = 'You bought: {0}';
-  ui['Tienes {0} para invertir. Lo que compres aquí se queda contigo para siempre.'] =
-    'You have {0} to invest. Whatever you buy here stays with you forever.';
   ui['Mantenimiento de tus mejoras'] = 'Upkeep on your upgrades';
-  ui['+{0} al mes'] = '+{0} a month';
   ui['-{0} al mes de mantenimiento'] = '-{0} a month in upkeep';
   ui['+{0} de energía al descansar'] = '+{0} energy when resting';
   ui['estudias {0}% más rápido'] = 'study {0}% faster';
@@ -649,35 +645,31 @@
     'It cost you {0} and pays for itself in {1} months. After that it is profit.';
   ui['Te costó {0}. Esta no se paga en dinero: se paga en tiempo y en salud.'] =
     'It cost you {0}. This one does not pay you back in money: it pays you back in time and health.';
-  ui['Cómo se decide una mejora'] = 'How to decide on an upgrade';
   ui['Llevas {0} de {1}'] = '{0} of {1} saved up';
-  ui['Lo que ha producido tu negocio'] = 'What your business has produced';
-  ui['Una mejora no es un gasto: es una inversión, y una inversión se mide en cuántos meses tarda en pagarse sola.'] =
-    'An upgrade is not an expense: it is an investment, and an investment is measured in how many months it takes to pay for itself.';
-  ui['Divide lo que cuesta entre lo que te da al mes. Si el resultado es menos que los meses que la vas a usar, conviene. Ese cálculo sirve igual para una canasta de Q150 que para un camión.'] =
-    'Divide what it costs by what it gives you per month. If the result is less than the months you will use it, it is worth it. That calculation works the same for a Q150 basket and for a truck.';
 
   // ---------- las cuatro cadenas ----------
   X.cadena_nombre = {
-    negocio: 'Your business',
     oficio: 'Your tools',
     escuela: 'Your studying',
     casa: 'Your rest'
   };
 
+  /* Los motivos por los que algo no se puede todavia. Los comparten las
+   * mejoras y los negocios, porque en pantalla se leen igual. */
   X.mejora_falta = {
     dinero: 'Not enough money yet.',
     edad: 'Not until you are older.',
     orden: 'You need the previous upgrade first.',
     repetida: 'You already have it.',
-    noexiste: 'That upgrade does not exist.'
+    repetido: 'You already have one.',
+    nivel: 'You need to finish school first.',
+    techo: 'You are already running all you can manage. Sell one on, or keep studying.',
+    plazas: 'Nobody else fits in here.',
+    maximo: 'It is already at the highest level.',
+    noexiste: 'That does not exist.'
   };
 
   // ---------- las mejoras, una por una ----------
-  datos.canasta = { nombre: 'A basket of your own' };
-  datos.carreta = { nombre: 'A pushcart' };
-  datos.puesto = { nombre: 'A stall at the market' };
-  datos.local = { nombre: 'A shop with a door' };
   datos.herramienta = { nombre: 'Your own tools' };
   datos.uniforme = { nombre: 'Work clothes' };
   datos.transporte = { nombre: 'A way to get around' };
@@ -688,10 +680,6 @@
   datos.cama = { nombre: 'A real bed' };
 
   X.mejora_leccion = {
-    canasta: 'Q150 that gives you back Q35 a month pays for itself in five months. That number — how many months it takes to pay for itself — is the only one you have to work out before buying something to work with.',
-    carreta: 'Notice there is a monthly cost now. Every business has fixed costs, and what matters is not what comes in: it is what is left.',
-    puesto: 'A stall is the first time your money produces more than your time. From here on, every quetzal you put into the business competes with every quetzal you put into the bank.',
-    local: 'Q18,000 invested that leaves Q1,480 clean a month pays back in twelve. A term deposit with the same Q18,000 would give you Q95 a month. That is why your own business is the highest return there is, and also the one that can go under.',
     herramienta: 'With borrowed tools you earn whatever they let you earn. It is the smallest purchase that raises what you charge per hour.',
     uniforme: 'Showing up well is not vanity: it is what makes them call you again. In work by the job, half the income is being recommended.',
     transporte: 'Getting around on your own opens up twice the work, and adds a fixed cost of fuel and maintenance. Almost every big upgrade is like that: it raises the income and it raises the floor.',
@@ -700,6 +688,171 @@
     internet: 'Q230 a month forever. Before signing anything with a monthly payment, multiply it by the months you are going to pay it: that is Q2,760 a year.',
     escritorio: 'Resting better is not a luxury: it is what lets you work one more half-day without getting sick, and getting sick costs more than any upgrade.',
     cama: 'Health is the asset that does not show up on any bank statement, and the only one that, if it breaks, takes all the others with it.'
+  };
+
+  /* ======================================================================
+   * El imperio: los negocios, la gente y los dos techos
+   * ====================================================================== */
+
+  // ---------- la pantalla ----------
+  ui['Tu imperio'] = 'Your empire';
+  ui['Montas tu propio negocio'] = 'You build your own business';
+  ui['Empiezas con un puesto de dulces de Q450 y llegas a tener varios, con gente trabajando para ti. Cada uno se ve crecer en tu calle.'] =
+    'You start with a Q450 candy stand and end up with several, with people working for you. Each one you watch grow on your street.';
+  ui['Tus negocios'] = 'Your businesses';
+  ui['Mejoras para ti'] = 'Upgrades for you';
+  ui['Abrir un negocio'] = 'Open a business';
+  ui['Venden'] = 'They sell';
+  ui['Vende'] = 'Sells';
+  ui['Le sale'] = 'Costs it';
+  ui['Le queda'] = 'Keeps';
+  ui['Tienes {0} para invertir.'] = 'You have {0} to invest.';
+  ui['Lo que han dejado tus negocios'] = 'What your businesses have left you';
+  ui['Negocios a la vez'] = 'Businesses at once';
+  ui['Gente que puedes administrar'] = 'People you can manage';
+  ui['de'] = 'of';
+  ui['al mes'] = 'a month';
+  ui['nadie todavía'] = 'nobody yet';
+  ui['Tu gente'] = 'Your people';
+  ui['{0}: {1}'] = '{0}: {1}';
+
+  // ---------- las pastillas ----------
+  ui['vende {0} al mes'] = 'sells {0} a month';
+  ui['le quedan {0}'] = 'keeps {0}';
+  ui['margen del {0}%'] = '{0}% margin';
+  ui['caben {0}'] = 'fits {0}';
+  ui['cabe una persona'] = 'fits one person';
+  ui['se paga en un mes'] = 'pays for itself in a month';
+  ui['vende {0}% más'] = 'sells {0}% more';
+  ui['+{0} plazas'] = '+{0} spots';
+  ui['{0} de {1} plazas llenas'] = '{0} of {1} spots filled';
+  ui['{0} jornadas tuyas'] = '{0} half-days of your own';
+  ui['Esas cifras son con una sola persona adentro: tú.'] =
+    'Those figures are with one single person inside: you.';
+
+  // ---------- abrir, subir, traspasar ----------
+  ui['Abrir por {0}'] = 'Open for {0}';
+  ui['Subir por {0}'] = 'Upgrade for {0}';
+  ui['Abriste: {0}'] = 'You opened: {0}';
+  ui['Ya tienes {0} negocio(s)'] = 'You now have {0} business(es)';
+  ui['Traspasarlo y recuperar {0}'] = 'Sell it on and get back {0}';
+  ui['Cerrarlo (te cuesta {0})'] = 'Close it (costs you {0})';
+  ui['¿Traspasar {0}?'] = 'Sell on {0}?';
+  ui['¿Cerrar {0}?'] = 'Close {0}?';
+  ui['Llevas {0} invertidos y recuperas {1}. Lo que ya pusiste no vuelve completo.'] =
+    'You have {0} invested and you get back {1}. What you already put in does not come back whole.';
+  ui['Ya llevas los {0} negocios que puedes administrar. Para llevar más, hay que estudiar más.'] =
+    'You are already running the {0} businesses you can manage. To run more, you have to study more.';
+  ui['Está lleno: no cabe una jornada más. Súbele el nivel.'] =
+    'It is full: not one more half-day fits. Upgrade it.';
+  ui['Te costó {0}. Ahora vende más y caben {1} personas más adentro.'] =
+    'It cost you {0}. Now it sells more and {1} more people fit inside.';
+  ui['Ponle jornadas en la pestaña del mes para que produzca. Un negocio al que nadie atiende rinde {0}% menos.'] =
+    'Give it half-days on the month tab so it produces. A business nobody minds yields {0}% less.';
+  ui['Vacío no vende nada y la renta corre igual. Ponle una jornada en la pestaña del mes, o contrata a alguien.'] =
+    'Empty it sells nothing and the rent runs all the same. Give it a half-day on the month tab, or hire somebody.';
+  ui['No le pusiste ninguna jornada este mes, así que rinde {0}% menos. Delegar funciona; desaparecer, no.'] =
+    'You gave it no half-days this month, so it yields {0}% less. Delegating works; disappearing does not.';
+
+  // ---------- la gente ----------
+  ui['Contratar'] = 'Hire';
+  ui['Contrataste a alguien'] = 'You hired someone';
+  ui['Despedir'] = 'Let go';
+  ui['Despedir ({0})'] = 'Let go ({0})';
+  ui['Planilla de tu gente'] = 'Your payroll';
+  ui['Renta y luz de tus negocios'] = 'Rent and power for your businesses';
+  ui['Le pagaste la indemnización'] = 'You paid the severance';
+  ui['Te costó {0} sacarlo.'] = 'Letting them go cost you {0}.';
+  ui['Le vas a pagar {0} de sueldo, y a ti te va a costar {1} cada mes.'] =
+    'You are going to pay them {0} in wages, and it is going to cost you {1} every month.';
+  ui['Te va a costar {0} cada mes, y es lo único que va a recibir.'] =
+    'It is going to cost you {0} every month, and that is all they are going to get.';
+  ui['Le pagas {0} de sueldo y te cuesta {1}: encima van el IGSS, el aguinaldo, el Bono 14 y las vacaciones.'] =
+    'You pay them {0} in wages and it costs you {1}: on top go social security, the Christmas bonus, the July bonus and holiday pay.';
+
+  // ---------- las lecciones ----------
+  ui['El sueldo NUNCA es lo que cuesta un empleado. Encima van el IGSS, el IRTRA, el INTECAP, el aguinaldo, el Bono 14 y las vacaciones: un 42% más. Quien no cuenta eso quiebra su negocio sin entender por qué.'] =
+    'The wage is NEVER what an employee costs. On top go social security, the workers\' recreation levy, the training levy, the Christmas bonus, the July bonus and holiday pay: 42% more. Anyone who does not count that sinks their business without understanding why.';
+  ui['Sin contrato es más barato hoy. A cambio esa persona se va a ir más pronto, no cotiza para su pensión, y si cae inspección la multa son tres sueldos.'] =
+    'No contract is cheaper today. In exchange that person is going to leave sooner, pays nothing towards their pension, and if an inspector shows up the fine is three months of wages.';
+  ui['Un sueldo por cada año trabajado. Es el otro lado del contrato: lo mismo que protege al trabajador es lo que le cuesta al patrón deshacerse de él. Por eso hay que contratar pensando, no de prisa.'] =
+    'One month of wages for every year worked. That is the other side of a contract: the very thing that protects the worker is what it costs the boss to be rid of them. That is why you hire thinking, not in a hurry.';
+  ui['Subir un negocio no sirve de nada si no tienes con qué llenar las plazas nuevas. Primero la gente, después el tamaño.'] =
+    'Upgrading a business is worth nothing if you have no way to fill the new spots. People first, size after.';
+  ui['Los dos suben cuando terminas de estudiar. Llevar dos negocios son dos contabilidades, y una planilla hay que saber llevarla.'] =
+    'Both go up when you finish studying. Running two businesses is two sets of books, and a payroll is something you have to know how to keep.';
+  ui['Cómo se lee un negocio'] = 'How you read a business';
+  ui['Un negocio se mide con dos números, no con uno: lo que vende y lo que le queda. Un negocio que vende el doble que otro puede ganar la mitad.'] =
+    'A business is measured with two numbers, not one: what it sells and what it keeps. A business that sells twice as much as another can earn half as much.';
+  ui['Y una mejora no es un gasto: es una inversión, y una inversión se mide en cuántos meses tarda en pagarse sola. Divide lo que cuesta entre lo que te deja al mes.'] =
+    'And an upgrade is not an expense: it is an investment, and an investment is measured in how many months it takes to pay for itself. Divide what it costs by what it leaves you per month.';
+
+  // ---------- los niveles de un negocio ----------
+  X.nivel_negocio = {
+    'Recién abierto': 'Just opened',
+    'Con equipo': 'With equipment',
+    'Con nombre': 'With a name',
+    'Con sucursal': 'With a branch'
+  };
+
+  // ---------- las dos formas de contratar ----------
+  X.planilla_nombre = {
+    informal: 'No contract',
+    formal: 'On contract'
+  };
+  X.planilla_nota = {
+    informal: 'Cheap today. They leave you, and if an inspector shows up the fine is three months of wages.',
+    formal: 'Costs the wage times 1.42, plus Q250. They stay, and there is no fine to fear.'
+  };
+
+  // ---------- los negocios, uno por uno ----------
+  datos.dulces = {
+    nombre: 'Candy stand',
+    descripcion: 'A box of sweets bought wholesale and a street corner.'
+  };
+  datos.refrescos = {
+    nombre: 'Cold drinks stand',
+    descripcion: 'A cooler, an awning and a spot where people walk by.'
+  };
+  datos.lavado = {
+    nombre: 'Car wash',
+    descripcion: 'Water, soap, two hoses and willingness.'
+  };
+  datos.tortilleria = {
+    nombre: 'Tortilla shop',
+    descripcion: 'Corn, a griddle and customers every single day.'
+  };
+  datos.papeleria = {
+    nombre: 'Stationery shop',
+    descripcion: 'Notebooks, photocopies and everything that runs out in January.'
+  };
+  datos.comedor = {
+    nombre: 'Lunch counter',
+    descripcion: 'Set lunches for the people who work nearby.'
+  };
+  datos.taller = {
+    nombre: 'Motorcycle shop',
+    descripcion: 'Tools, spare parts and hands that know how.'
+  };
+  datos.cafeinternet = {
+    nombre: 'Internet cafe',
+    descripcion: 'Ten machines, a printer and a good signal.'
+  };
+  datos.distribuidora = {
+    nombre: 'Wholesale distributor',
+    descripcion: 'A warehouse, a truck and a route of shops expecting you.'
+  };
+
+  X.negocio_leccion = {
+    dulces: 'Buy wholesale and sell retail: of every Q100 you sell, Q35 stays with you. That is the margin, and it is the first thing to know about any business.',
+    refrescos: 'This business, minded by you alone, leaves you almost exactly what an informal worker earns in Guatemala. The difference is that here the business is yours, and here a second person fits.',
+    lavado: 'Look at the margin: 60%, almost double the candy stand. A service does not have to buy what it sells. Selling your work leaves more than reselling things.',
+    tortilleria: 'Compare it with the car wash: the tortilla shop sells almost twice as much and earns less. Selling a lot is not earning a lot. The only thing that matters is what is left.',
+    papeleria: 'This is the first business that asks you for finished middle school, and it is no whim: you have to keep stock, get a licence and sign a lease. It is the first time school turns into money directly.',
+    comedor: 'Q2,400 a month in rent and power that you pay even if it rains and nobody comes. That is the fixed cost, and it is what sinks businesses: not selling little one month, but having to pay all the same.',
+    taller: 'Q120,000 to open it, and minded by you alone it takes two years to pay back. Full of people it takes seven months. A big business is not paid for with your work: it is paid for with everyone else\'s.',
+    cafeinternet: 'High margin and high fixed cost at the same time. The machines are already paid for, so almost everything that comes in stays; but the Q3,800 of rent and internet run whether anybody comes or not.',
+    distribuidora: 'With a single person inside this business earns almost nothing: the margin is 22% and the rent eats it. Full of people it leaves Q28,480 a month. Some businesses only exist if they are big, and that is why you have to know which is which before putting your money in.'
   };
 
 })(typeof TEXTOS_EN !== 'undefined' ? TEXTOS_EN : undefined);

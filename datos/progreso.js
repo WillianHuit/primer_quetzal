@@ -233,10 +233,10 @@ var PROGRESO = [
     guia: true,
     senala: '#cerrar-turno',
     pestana: 'casa',
-    titulo: 'Se abrieron las Mejoras',
-    texto: 'Ya puedes comprar cosas que te hacen ganar más: una canasta propia, tu herramienta, tus útiles. Y en Extra hay trabajos sueltos para una jornada.',
-    leccion: 'Una mejora no es un gasto, es una inversión, y se mide en cuántos meses tarda en pagarse sola. Divide lo que cuesta entre lo que te da al mes: ese número es el que hay que mirar antes de comprar cualquier herramienta, a los 13 y a los 40.',
-    icono: 'martillo'
+    titulo: 'Se abrió tu Imperio',
+    texto: 'Ya puedes abrir tu primer negocio y comprar cosas que te hacen ganar más: tu herramienta, tus útiles. Empieza chico: un puesto de dulces cuesta Q450. Y en Extra hay trabajos sueltos para una jornada.',
+    leccion: 'Un negocio se mide con dos números, no con uno: lo que vende y lo que le queda después de pagar el producto y la renta. Un negocio que vende el doble que otro puede ganar la mitad. Ese segundo número es el único que importa.',
+    icono: 'trending-up'
   },
 
   // ---------- de aquí en adelante, metas sin cinta ----------

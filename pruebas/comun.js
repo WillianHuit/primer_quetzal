@@ -12,11 +12,11 @@ const RAIZ = path.resolve(__dirname, '..') + '/';
 const ARCHIVOS = [
   'datos/config.js', 'datos/trabajos.js', 'datos/carreras.js', 'datos/creditos.js',
   'datos/eventos.js', 'datos/largoplazo.js', 'datos/origenes.js', 'datos/migracion.js',
-  'datos/glosario.js', 'datos/decisiones.js', 'datos/mejoras.js',
+  'datos/glosario.js', 'datos/decisiones.js', 'datos/mejoras.js', 'datos/negocios.js',
   'datos/progreso.js',
   'datos/textos.en.js', 'datos/textos.en.v2.js',
   'vendor/lucide.js', 'vendor/chart.js',
-  'js/idioma.js', 'js/iconos.js', 'js/personaje.js', 'js/escena.js',
+  'js/idioma.js', 'js/iconos.js', 'js/arte.js', 'js/personaje.js', 'js/escena.js',
   'js/sonido.js', 'js/motor.js',
   'js/minijuegos/marco.js', 'js/minijuegos/reparto.js', 'js/minijuegos/tienda.js',
   'js/minijuegos/estafas.js', 'js/minijuegos/presupuesto.js', 'js/minijuegos/caja.js',

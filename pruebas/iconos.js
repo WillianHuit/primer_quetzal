@@ -267,18 +267,49 @@ const munecoDesnudo = P.dibujar({});
 const munecoVestido = P.dibujar({ trabajo: 'construccion', estudia: true });
 ok(munecoDesnudo.indexOf('<svg class="muneco"') === 0,
    'el personaje sale como un svg propio, sin trabajo y sin nada');
-ok(munecoVestido.length > munecoDesnudo.length,
-   'vestido de un oficio y con mochila trae más piezas que en ropa de calle');
-ok(munecoVestido.indexOf('var(--ambar') > 0,
-   'y sus colores salen de la paleta del juego, no de colores nuevos');
+
+/* Con las ilustraciones puestas, un oficio ilustrado sale como imagen. */
+ok(munecoVestido.indexOf('<image href=') > 0 &&
+   munecoVestido.indexOf('personaje/construccion.webp') > 0,
+   'un oficio ilustrado sale con su ilustracion, no dibujado por piezas');
+
+/* Y el dibujo por piezas NO es codigo muerto: es lo que hace que un empleo
+ * nuevo funcione el mismo dia, con su uniforme, sin esperar a que alguien lo
+ * ilustre. Se comprueba con un oficio inventado que existe en ROPA pero no en
+ * la lista de ilustraciones. */
+const oficioSinArte = Object.keys(P.ROPA).find(
+  id => P.ROPA[id] && P.ROPA[id].playera && !sb.Arte.tienePersonaje(id));
+if (oficioSinArte) {
+  const dibujado = P.dibujar({ trabajo: oficioSinArte });
+  ok(dibujado.indexOf('<image') < 0 && dibujado.indexOf('var(--') > 0,
+     `un oficio sin ilustracion (${oficioSinArte}) se dibuja con la paleta`);
+} else {
+  /* Si algun dia estan TODOS ilustrados, el respaldo se comprueba a mano
+   * pidiendole un oficio que no existe: tiene que dibujar, no quedarse en
+   * blanco ni caer al personaje neutro. */
+  const inventado = P.dibujar({ trabajo: 'oficio-que-no-existe' });
+  ok(inventado.indexOf('<image') < 0 && inventado.indexOf('var(--') > 0,
+     'el respaldo dibujado sigue vivo: un oficio sin ilustracion se dibuja');
+}
+
+ok(P.dibujar({ estudia: true }).indexOf('personaje/estudiante.webp') > 0,
+   'estudiando sale el estudiante');
+ok(P.dibujar({ graduado: true }).indexOf('personaje/graduado.webp') > 0,
+   'graduado sale el graduado');
+/* El orden importa y esta escrito: un PNG es un personaje completo, asi que
+ * los estados no se suman y gana lo que esta haciendo ahora. */
+ok(P.dibujar({ trabajo: 'tienda', estudia: true, graduado: true })
+    .indexOf('personaje/tienda.webp') > 0,
+   'y el oficio gana sobre el estudio y la graduacion');
+
 ok(!EMOJI.test(leer('js/personaje.js')), 'el personaje no trae emoji');
 
-// ---------- 9. el escenario crece con las cadenas ----------
+// ---------- 9. la calle crece con el imperio ----------
 
-/* El escenario dibuja un nivel distinto por cada escalon de cada cadena. Si
- * alguien agrega un quinto nivel al negocio en datos/mejoras.js y no dibuja su
- * pieza, la escena deja de crecer y nadie se entera: el jugador compra el
- * nivel, le suben los numeros y la pantalla se ve igual. */
+/* Las tres cadenas de mejoras dibujan un nivel distinto por cada escalon. Si
+ * alguien agrega un cuarto escalon a una cadena de datos/mejoras.js y no
+ * dibuja su pieza, la escena deja de crecer y nadie se entera: el jugador
+ * compra el nivel, le suben los numeros y la pantalla se ve igual. */
 const cortos = sb.CADENAS.filter(function (c) {
   const escalones = sb.MEJORAS.filter(m => m.cadena === c.id).length;
   return sb.Escena.niveles[c.id] < escalones;
@@ -289,14 +320,44 @@ ok(cortos.length === 0,
      ? 'el escenario tiene un dibujo por cada escalon de cada cadena'
      : 'cadenas que crecen mas de lo que se dibuja: ' + cortos.join(' | '));
 
+/* Y lo mismo con los niveles de un negocio: NIVELES_NEGOCIO y los altos de
+ * escena.js tienen que medir igual. Si alguien agrega un quinto nivel sin
+ * dibujarlo, el local se deja de ver mas grande al subirlo. */
+ok(sb.Escena.niveles.negocio === sb.NIVELES_NEGOCIO.length,
+   'la calle sabe dibujar los ' + sb.NIVELES_NEGOCIO.length +
+   ' niveles que puede tener un negocio');
+
+/* Un tipo de negocio sin icono dibujable saldria como un local sin emblema, o
+ * sea indistinguible de los demas. */
+const sinEmblema = sb.TIPOS_NEGOCIO.filter(t => !sb.Iconos.tiene(t.icono))
+                                   .map(t => t.id + ' -> ' + t.icono);
+ok(sinEmblema.length === 0,
+   sinEmblema.length === 0
+     ? 'cada tipo de negocio tiene un emblema que se puede dibujar'
+     : 'negocios sin emblema: ' + sinEmblema.join(' | '));
+
 const vacia = sb.Escena.dibujar({});
-const llena = sb.Escena.dibujar({ negocio: 4, oficio: 3, escuela: 3, casa: 2,
-                                  produce: true, trabajo: 'construccion', estudia: true });
+const llena = sb.Escena.dibujar({
+  negocios: [{ icono: 'dulce', nivel: 4, empleados: 3, produce: true },
+             { icono: 'sarten', nivel: 2, empleados: 1, produce: true }],
+  oficio: 3, escuela: 3, casa: 2, trabajo: 'construccion', estudia: true
+});
 ok(vacia.indexOf('<svg class="escena"') === 0, 'la escena sale como un svg propio');
 ok(llena.length > vacia.length * 1.6,
-   'y con todo comprado trae bastante mas que vacia');
-ok(llena.indexOf('esc-moneda') > 0, 'con el negocio produciendo salen las monedas');
-ok(vacia.indexOf('esc-moneda') < 0, 'y sin negocio no');
+   'y con el imperio montado trae bastante mas que vacia');
+ok(llena.indexOf('esc-moneda') > 0, 'con los negocios produciendo salen las monedas');
+ok(vacia.indexOf('esc-moneda') < 0, 'y sin negocios no');
+
+/* La calle se alarga con el numero de negocios, y eso es la mitad del premio:
+ * el jugador nota que ya no le cabe lo que tiene. */
+ok(sb.Escena.anchoDe(5) > sb.Escena.anchoDe(1),
+   'la calle se alarga cuando hay mas negocios');
+
+/* El emblema de la fachada sale de js/iconos.js, no de un dibujo aparte: es
+ * lo que permite agregar un negocio nuevo sin dibujar nada. */
+ok(llena.indexOf(sb.Iconos.trazo('sarten').slice(0, 40)) > 0,
+   'el emblema del local es el icono del negocio, tomado de iconos.js');
+
 ok(llena.indexOf('var(--verde') > 0 && !EMOJI.test(leer('js/escena.js')),
    'la escena usa la paleta y no trae emoji');
 
