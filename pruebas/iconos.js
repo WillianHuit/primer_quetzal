@@ -267,10 +267,41 @@ const munecoDesnudo = P.dibujar({});
 const munecoVestido = P.dibujar({ trabajo: 'construccion', estudia: true });
 ok(munecoDesnudo.indexOf('<svg class="muneco"') === 0,
    'el personaje sale como un svg propio, sin trabajo y sin nada');
-ok(munecoVestido.length > munecoDesnudo.length,
-   'vestido de un oficio y con mochila trae más piezas que en ropa de calle');
-ok(munecoVestido.indexOf('var(--ambar') > 0,
-   'y sus colores salen de la paleta del juego, no de colores nuevos');
+
+/* Con las ilustraciones puestas, un oficio ilustrado sale como imagen. */
+ok(munecoVestido.indexOf('<image href=') > 0 &&
+   munecoVestido.indexOf('personaje/construccion.webp') > 0,
+   'un oficio ilustrado sale con su ilustracion, no dibujado por piezas');
+
+/* Y el dibujo por piezas NO es codigo muerto: es lo que hace que un empleo
+ * nuevo funcione el mismo dia, con su uniforme, sin esperar a que alguien lo
+ * ilustre. Se comprueba con un oficio inventado que existe en ROPA pero no en
+ * la lista de ilustraciones. */
+const oficioSinArte = Object.keys(P.ROPA).find(
+  id => P.ROPA[id] && P.ROPA[id].playera && !sb.Arte.tienePersonaje(id));
+if (oficioSinArte) {
+  const dibujado = P.dibujar({ trabajo: oficioSinArte });
+  ok(dibujado.indexOf('<image') < 0 && dibujado.indexOf('var(--') > 0,
+     `un oficio sin ilustracion (${oficioSinArte}) se dibuja con la paleta`);
+} else {
+  /* Si algun dia estan TODOS ilustrados, el respaldo se comprueba a mano
+   * pidiendole un oficio que no existe: tiene que dibujar, no quedarse en
+   * blanco ni caer al personaje neutro. */
+  const inventado = P.dibujar({ trabajo: 'oficio-que-no-existe' });
+  ok(inventado.indexOf('<image') < 0 && inventado.indexOf('var(--') > 0,
+     'el respaldo dibujado sigue vivo: un oficio sin ilustracion se dibuja');
+}
+
+ok(P.dibujar({ estudia: true }).indexOf('personaje/estudiante.webp') > 0,
+   'estudiando sale el estudiante');
+ok(P.dibujar({ graduado: true }).indexOf('personaje/graduado.webp') > 0,
+   'graduado sale el graduado');
+/* El orden importa y esta escrito: un PNG es un personaje completo, asi que
+ * los estados no se suman y gana lo que esta haciendo ahora. */
+ok(P.dibujar({ trabajo: 'tienda', estudia: true, graduado: true })
+    .indexOf('personaje/tienda.webp') > 0,
+   'y el oficio gana sobre el estudio y la graduacion');
+
 ok(!EMOJI.test(leer('js/personaje.js')), 'el personaje no trae emoji');
 
 // ---------- 9. la calle crece con el imperio ----------

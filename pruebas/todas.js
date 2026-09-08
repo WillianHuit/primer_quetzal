@@ -14,6 +14,7 @@ const SUITES = [
   ['mejoras.js',            'Las mejoras que te mejoran a ti'],
   ['imperio.js',            'El imperio: negocios, planilla y techos'],
   ['iconos.js',             'Iconos y transiciones de pestaña'],
+  ['arte.js',              'Las ilustraciones y su peso'],
   ['interfaz-bilingue.js',  'Interfaz en español e inglés'],
   ['dom-real.js',           'Interacción real en el navegador']
 ];

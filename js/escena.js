@@ -84,11 +84,20 @@ var Escena = (function () {
 
   // ---------- el fondo ----------
 
+  /* El suelo sigue dibujado y no usa `assets/visuales/escena/plataforma.png`.
+   *
+   * Esa imagen es una plataforma OVALADA, hecha para un objeto centrado. Aqui
+   * el suelo es una calle que se alarga con el numero de locales, y estirar un
+   * ovalo de 1647x955 a cuatrocientos y pico de ancho por dieciocho de alto lo
+   * deja irreconocible. Vale mas un suelo dibujado que uno deformado.
+   *
+   * El contorno se bajo de 2.4 a 1.6 al entrar las ilustraciones: al lado de
+   * un dibujo con sombra suave, una linea gorda de tinta se veia pegada. */
   function suelo(w) {
-    return '<rect x="2" y="' + SUELO + '" width="' + (w - 4) + '" height="18" rx="7" fill="' +
-             C.claro + '"' + T() + '/>' +
+    return '<rect x="2" y="' + SUELO + '" width="' + (w - 4) + '" height="18" rx="8" fill="' +
+             C.claro + '"' + T(1.6) + '/>' +
            '<path d="M14 105h20M52 108h16M100 105h16M150 108h18"' +
-             ' stroke="' + C.verde + '" stroke-width="2" stroke-linecap="round" opacity=".55"/>';
+             ' stroke="' + C.verde + '" stroke-width="2" stroke-linecap="round" opacity=".45"/>';
   }
 
   function sol(w) {
@@ -133,14 +142,54 @@ var Escena = (function () {
              ' fill="none" stroke="' + C.linea + '" stroke-width="2.4" stroke-dasharray="5 4"/>';
   }
 
-  /* Un local completo. Genérico: lo único propio del negocio es el emblema.
+  /* Un local: la ilustración si hay una para ese nivel, y si no el dibujo.
    *
-   *   x0        dónde empieza su hueco en la calle
-   *   nivel     1 a 4. Sube el techo y le agrega toldo, rótulo y segundo piso
-   *   icono     el emblema de la fachada
-   *   color     índice del color de techo
-   */
+   * Las cuatro ilustraciones se hicieron para la cadena vieja de mejoras
+   * —canasta, carreta, puesto, local— que ya no existe. Encajan igual, y
+   * mejor: son exactamente los cuatro niveles que puede tener CUALQUIER
+   * negocio, y puestas en fila cuentan el crecimiento sin una palabra. Una
+   * canasta es un negocio recién abierto; un local con puerta es uno con
+   * sucursal.
+   *
+   * El lado crece con el nivel además de lo que ya cuenta el dibujo, porque en
+   * una calle de cinco locales el tamaño es lo que se lee de lejos.
+   *
+   * Y encima va el SELLO con el emblema del tipo de negocio, que es lo único
+   * que distingue una tortillería de un taller: las cuatro ilustraciones son
+   * las mismas para los nueve tipos. */
+  /* Lo que mide un local segun su nivel, en unidades de la escena. El tope,
+   * 48, esta elegido contra el personaje: mide 50, asi que una tienda con
+   * puerta le llega al hombro y una canasta a la rodilla. */
+  var LADO_POR_NIVEL = [30, 36, 42, 48];
+
   function local(x0, nivel, icono, color) {
+    var n = Math.max(1, Math.min(nivel || 1, LADO_POR_NIVEL.length));
+    var img = (typeof Arte !== 'undefined') ? Arte.local(n) : null;
+    if (!img) return localDibujado(x0, nivel, icono, color);
+
+    var lado = LADO_POR_NIVEL[n - 1];
+    var x = x0 + (ANCHO_LOCAL - lado) / 2;
+    var y = SUELO + 1 - lado;
+    return '<image href="' + img + '" x="' + x + '" y="' + y +
+             '" width="' + lado + '" height="' + lado +
+             '" preserveAspectRatio="xMidYMax meet"/>' +
+           sello(icono, x0 + ANCHO_LOCAL - 8, y + 5);
+  }
+
+  /* El sello redondo con el emblema del negocio, arriba a la derecha del
+   * local. Es un recurso de juego de toda la vida: el rótulo de la tienda. */
+  function sello(nombre, cx, cy) {
+    if (typeof Iconos === 'undefined' || !Iconos.trazo(nombre)) return '';
+    /* El contorno va FINO a proposito. Con el grosor normal de la escena
+     * (1.6) el anillo negro se comia el relleno crema y el sello se veia como
+     * una bolita oscura pegada al toldo: a veintiocho pixeles de pantalla, un
+     * anillo de tres y medio sobre un circulo de catorce no deja ver nada. */
+    return '<circle cx="' + cx + '" cy="' + cy + '" r="7" fill="' + C.lona +
+             '" stroke="' + C.tinta + '" stroke-width="0.9"/>' +
+           emblema(nombre, cx, cy, 9);
+  }
+
+  function localDibujado(x0, nivel, icono, color) {
     var n = Math.max(1, Math.min(nivel || 1, ALTO_POR_NIVEL.length));
     var alto = altoDe(n);
     var x = x0 + 7;
@@ -187,26 +236,37 @@ var Escena = (function () {
     return h;
   }
 
-  /* La gente que trabaja adentro, parada enfrente.
+  /* La gente que trabaja adentro, contada sobre la plataforma.
    *
-   * Es la pieza que más se nota al contratar: el jugador paga la planilla y
-   * ve aparecer una persona. Se dibujan hasta cuatro y el resto se cuenta con
-   * un número, porque a la quinta ya no caben en el hueco. */
+   * Es la pieza que más se nota al contratar: el jugador paga la planilla y ve
+   * aparecer una persona más.
+   *
+   * La primera versión los dibujaba como muñequitos parados delante del local,
+   * y con las ilustraciones puestas eso dejó de funcionar por dos motivos: se
+   * quedaban CORTADOS por el borde de la plataforma —dos cabecitas asomando
+   * que parecían un par de ojos— y, al lado de un dibujo con sombra, una
+   * figura de palo de catorce unidades no se lee como una persona.
+   *
+   * Así que ahora es una fila de siluetas sobre el suelo, del ancho del local,
+   * como una cuenta. Se leen a cualquier tamaño y no compiten con el dibujo.
+   * Hasta cuatro; de ahí en adelante, un número. */
   function gente(x0, cuantos) {
     if (!cuantos) return '';
-    var h = '';
+    if (typeof Iconos === 'undefined' || !Iconos.trazo('persona')) return '';
     var caben = Math.min(cuantos, 4);
+    var lado = 9;
+    var paso = 9.5;
+    // Centrada bajo el local, y apoyada en la cara de la plataforma
+    var ancho = caben * paso + (cuantos > caben ? 9 : 0);
+    var x = x0 + (ANCHO_LOCAL - ancho) / 2 + paso / 2;
+    var y = SUELO + 9;
+    var h = '';
     for (var i = 0; i < caben; i++) {
-      var x = x0 + 8 + i * 8;
-      h += '<g>' +
-             '<circle cx="' + x + '" cy="' + (SUELO - 8) + '" r="2.7" fill="' + C.lona + '"' + T(1.4) + '/>' +
-             '<path d="M' + (x - 2.6) + ' ' + SUELO + 'v-4a2.6 2.6 0 0 1 5.2 0v4z" fill="' +
-               C.azul + '" opacity=".85"' + T(1.4) + '/>' +
-           '</g>';
+      h += emblema('persona', x + i * paso, y, lado);
     }
     if (cuantos > caben) {
-      h += '<text x="' + (x0 + 8 + caben * 8) + '" y="' + (SUELO - 1) +
-             '" font-size="9" font-weight="700" fill="' + C.tinta + '">+' +
+      h += '<text x="' + (x + caben * paso - 2) + '" y="' + (y + 3.4) +
+             '" font-size="8.5" font-weight="800" fill="' + C.tinta + '">+' +
              (cuantos - caben) + '</text>';
     }
     return h;
@@ -214,16 +274,27 @@ var Escena = (function () {
 
   /* Las monedas que suben de un local que produjo.
    * Es lo único que se mueve sin que el jugador toque nada. */
-  function monedas(x0, cuantas) {
+  /* Las monedas suben DESDE EL TECHO del local, no desde una altura fija.
+   * Con una altura fija, las de una canasta de treinta unidades salían a medio
+   * cielo y no se entendía de dónde venían. */
+  function monedas(x0, cuantas, alto) {
+    var img = (typeof Arte !== 'undefined') ? Arte.moneda() : null;
     var h = '';
-    var sitios = [[x0 + 10, 56], [x0 + 23, 46], [x0 + 34, 58]];
+    var techo = SUELO - (alto || 34);
+    var sitios = [[x0 + 11, techo - 8], [x0 + 23, techo - 18], [x0 + 34, techo - 6]];
     for (var i = 0; i < Math.min(cuantas, 3); i++) {
-      h += '<g class="esc-moneda esc-moneda-' + (i + 1) + '">' +
-             '<circle cx="' + sitios[i][0] + '" cy="' + sitios[i][1] + '" r="5.4" fill="' +
-               C.ambar + '"' + T(1.8) + '/>' +
-             '<path d="M' + (sitios[i][0] - 2.2) + ' ' + sitios[i][1] +
-               'h4.4" stroke="' + C.tinta + '" stroke-width="1.6"/>' +
-           '</g>';
+      var cx = sitios[i][0], cy = sitios[i][1];
+      h += '<g class="esc-moneda esc-moneda-' + (i + 1) + '">';
+      if (img) {
+        h += '<image href="' + img + '" x="' + (cx - 4.5) + '" y="' + (cy - 4.5) +
+             '" width="9" height="9"/>';
+      } else {
+        h += '<circle cx="' + cx + '" cy="' + cy + '" r="5.4" fill="' + C.ambar + '"' +
+               T(1.8) + '/>' +
+             '<path d="M' + (cx - 2.2) + ' ' + cy + 'h4.4" stroke="' + C.tinta +
+               '" stroke-width="1.6"/>';
+      }
+      h += '</g>';
     }
     return h;
   }
@@ -309,15 +380,46 @@ var Escena = (function () {
     if (typeof Personaje === 'undefined') return '';
     var muneco = Personaje.dibujar(op).replace('<svg class="muneco"',
       '<svg x="0" y="0" width="64" height="96" viewBox="0 0 64 96"');
-    /* La escala y el desplazamiento estan calculados para que los pies caigan
-     * justo sobre el suelo (y = 100) y el muneco quepa entero: a 0.78 salia
-     * enorme y con las piernas cortadas por la plataforma. */
-    return '<g transform="translate(28, 42) scale(0.62)">' + muneco + '</g>';
+    /* La escala y el desplazamiento estan calculados para que los PIES caigan
+     * sobre el suelo (y = 96) y para que el chico mida lo que tiene que medir
+     * al lado de un local.
+     *
+     * Los dos numeros se recalcularon al entrar las ilustraciones, y los dos
+     * estaban mal. Con 0.62 el muneco medía 59.5 unidades y empezaba en y=42,
+     * o sea que los pies caían en 101.5: cinco unidades y media ENTERRADO en
+     * la plataforma. Y era demasiado grande: el dibujo por piezas ocupaba
+     * menos de su lienzo, la ilustración lo llena entero, así que el mismo
+     * 0.62 daba un chico que le pasaba la cabeza a una tienda con puerta.
+     *
+     * A 0.52 mide 50 unidades y el local más grande mide 48: una persona al
+     * lado de su tienda. Y 46 + 50 = 96, los pies justo en el suelo. */
+    return '<g transform="translate(30, 46) scale(0.52)">' + muneco + '</g>';
   }
 
   function pieza(lista, nivel) {
     var i = Math.max(0, Math.min(nivel || 0, lista.length - 1));
     return lista[i]();
+  }
+
+  /* Las zonas donde se apoyan las piezas de las tres cadenas de mejoras.
+   * Son las mismas del mapa de arriba, escritas una sola vez para que la
+   * ilustración caiga exactamente donde caía el dibujo. */
+  var ZONA = { casa: [2, 24], escuela: [70, 94], oficio: [96, 120] };
+
+  /* Una pieza del margen: la ilustración si existe, y si no el dibujo.
+   *
+   * Hay una diferencia que conviene saber. El dibujo ACUMULA —al comprar los
+   * libros seguía saliendo la mochila— y las ilustraciones no: cada nivel es
+   * un objeto y se ve el último. No caben tres cosas en veinte unidades de
+   * ancho, y ver el objeto mejorar es lo que un tycoon enseña de todos modos. */
+  function piezaDe(cadena, lista, nivel) {
+    var img = (typeof Arte !== 'undefined') ? Arte.mejora(cadena, nivel) : null;
+    if (!img) return pieza(lista, nivel);
+    var z = ZONA[cadena];
+    var lado = z[1] - z[0];
+    return '<image href="' + img + '" x="' + z[0] + '" y="' + (SUELO + 1 - lado) +
+           '" width="' + lado + '" height="' + lado +
+           '" preserveAspectRatio="xMidYMax meet"/>';
   }
 
   /* Dibuja la calle completa.
@@ -341,9 +443,9 @@ var Escena = (function () {
             ' aria-hidden="true" focusable="false">';
     h += sol(w);
     h += suelo(w);
-    h += pieza(ESCUELA, o.escuela);
-    h += pieza(CASA, o.casa);
-    h += pieza(OFICIO, o.oficio);
+    h += piezaDe('escuela', ESCUELA, o.escuela);
+    h += piezaDe('casa', CASA, o.casa);
+    h += piezaDe('oficio', OFICIO, o.oficio);
 
     if (!negs.length) {
       h += terrenoVacio(X_CALLE);
@@ -353,7 +455,7 @@ var Escena = (function () {
         var x0 = X_CALLE + i * ANCHO_LOCAL;
         h += local(x0, n.nivel, n.icono, i);
         h += gente(x0, n.empleados || 0);
-        if (n.produce) h += monedas(x0, (n.nivel || 1));
+        if (n.produce) h += monedas(x0, (n.nivel || 1), LADO_POR_NIVEL[Math.max(0, Math.min((n.nivel || 1) - 1, 3))]);
       }
     }
 

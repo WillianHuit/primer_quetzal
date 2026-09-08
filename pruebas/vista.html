@@ -35,6 +35,11 @@
 <div id="app"></div>
 
 <script>
+  /* Esta pagina vive en pruebas/, asi que las imagenes de assets/ le quedan un
+   * nivel arriba. js/arte.js respeta esta variable si esta declarada, que es la
+   * misma idea que ya usaban los src de aqui abajo, escrita una sola vez. */
+  var RUTA_ASSETS = '../assets/juego/';
+
   // Los mismos archivos que index.html, en el mismo orden.
   var ARCHIVOS = [
     'datos/config.js', 'datos/trabajos.js', 'datos/carreras.js', 'datos/creditos.js',
@@ -43,7 +48,7 @@
     'datos/progreso.js',
     'datos/textos.en.js', 'datos/textos.en.v2.js',
     'vendor/lucide.js', 'vendor/chart.js',
-    'js/idioma.js', 'js/iconos.js', 'js/personaje.js', 'js/escena.js',
+    'js/idioma.js', 'js/iconos.js', 'js/arte.js', 'js/personaje.js', 'js/escena.js',
     'js/sonido.js', 'js/motor.js',
     'js/minijuegos/marco.js', 'js/minijuegos/reparto.js', 'js/minijuegos/tienda.js',
     'js/minijuegos/estafas.js', 'js/minijuegos/presupuesto.js', 'js/minijuegos/caja.js',

@@ -140,7 +140,7 @@ de fuente verificada y están documentadas en `docs/investigacion-economia-guate
 Las pruebas corren sin navegador con Node y son deterministas.
 
 ```
-node pruebas/todas.js          # las doce suites
+node pruebas/todas.js          # las trece suites
 ```
 
 O una por una:
@@ -230,8 +230,15 @@ atasca y la prueba dice en qué paso. Ya atrapó cuatro veces un tutorial roto.
 
 **Nada que instalar, nada que descargar, sin internet.** `vendor/` trae dentro del
 repositorio las dos librerías que el juego usa —los iconos de **Lucide** recortados y
-**Chart.js**— como archivos normales que se cargan con `<script src>`. Quien juega no
-descarga nada y el doble clic sigue funcionando sin conexión.
+**Chart.js**— como archivos normales que se cargan con `<script src>`, y `assets/juego/`
+trae las 37 ilustraciones ya optimizadas. Quien juega no descarga nada y el doble clic
+sigue funcionando sin conexión.
+
+Las ilustraciones tienen dos carpetas y la diferencia importa: `assets/visuales/` son los
+**maestros** tal como se entregaron (90 MB, a 1024×1536) y el navegador **no los carga
+nunca**; `assets/juego/` son las copias WebP al tamaño en que se ven, y pesan **603 KB
+entre todas**. `herramientas/preparar-imagenes.py` escribe la segunda a partir de la
+primera. Los detalles están en `RECURSOS_VISUALES.md`.
 
 Si algún día hay que actualizarlas o agregar un icono, `herramientas/traer-librerias.js`
 las vuelve a generar (`npm install --no-save lucide-static chart.js` y correr el script).
@@ -269,6 +276,10 @@ pruebas/vista.html?mj=presupuesto   un minijuego abierto
   carrera.
 - **Un idioma**: escribe un diccionario nuevo como `textos.en.js`. La clave de cada texto
   es la frase en español, así que una traducción incompleta nunca rompe el juego.
+- **Una ilustración**: pon el PNG maestro en `assets/visuales/`, agrega su nombre a
+  `js/arte.js` y corre `python herramientas/preparar-imagenes.py`. Eso escribe la copia
+  WebP al tamaño en que se ve. Mientras no exista, el juego **dibuja** esa pieza en vez de
+  dejar un hueco, así que no urge.
 - **Un icono**: agrega una línea a `TRAZOS` en `js/iconos.js` con el interior del SVG sobre
   una cuadrícula de 24×24, sin relleno. Se usa con `Ico('nombre')` o poniendo el nombre en
   el campo `icono` de un dato. No hay librería externa: son setenta y ocho dibujos propios

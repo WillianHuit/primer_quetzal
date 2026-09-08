@@ -221,13 +221,35 @@ var Personaje = (function () {
    *   graduado  true si ya terminó una carrera: le pone el birrete.
    *   clase     clases de CSS extra para el <svg>.
    */
+  /* Devuelve el muñeco: la ilustración si hay una para este estado, y si no
+   * el dibujo por piezas de siempre.
+   *
+   * Quién decide eso es js/arte.js, no este archivo, y el dibujo NO es código
+   * muerto: es lo que hace que un empleo nuevo en datos/trabajos.js funcione
+   * el mismo día, con su uniforme, sin esperar a que alguien lo ilustre.
+   *
+   * El lienzo mide 64x96, o sea exactamente 2:3, que es la proporción en la
+   * que están hechas las ilustraciones. Así entra sin deformarse. Y va anclada
+   * abajo (`YMax`) porque el chico se para en el suelo de la escena: centrarla
+   * lo dejaba flotando. */
   function dibujar(op) {
     var o = op || {};
+
+    var envoltura = '<svg class="muneco' + (o.clase ? ' ' + o.clase : '') +
+                    '" viewBox="0 0 64 96" aria-hidden="true" focusable="false">';
+
+    if (typeof Arte !== 'undefined') {
+      var ilustracion = Arte.personaje(o);
+      if (ilustracion) {
+        return envoltura + '<image href="' + ilustracion + '" x="0" y="0" ' +
+               'width="64" height="96" preserveAspectRatio="xMidYMax meet"/></svg>';
+      }
+    }
+
     var r = ROPA[o.trabajo] || {};
     var playera = r.playera || C.claro;
 
-    var h = '<svg class="muneco' + (o.clase ? ' ' + o.clase : '') + '" viewBox="0 0 64 96" ' +
-            'aria-hidden="true" focusable="false">';
+    var h = envoltura;
 
     if (o.estudia) h += mochila();
     h += cuerpo(playera);

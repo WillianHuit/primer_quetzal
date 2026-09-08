@@ -7,6 +7,27 @@ aporta al juego, no por lo que es más fácil.
 
 ## 0. Lo que se cerró hoy
 
+### Las 37 ilustraciones, conectadas
+
+Llegaron en la rama `assets`: el mismo chico en 23 estados, los cuatro niveles de un
+local, las ocho piezas de las cadenas de mejoras y la moneda. Ya están puestas, y el
+detalle completo está en `RECURSOS_VISUALES.md`. Lo que conviene saber de aquí:
+
+- **Dos carpetas.** `assets/visuales/` son los maestros (90 MB) y el navegador **no los
+  carga**. `assets/juego/` son las copias WebP que sí carga: **603 KB entre las 37**. Las
+  escribe `herramientas/preparar-imagenes.py`.
+- **El dibujo SVG se queda detrás y no es código muerto**: un empleo nuevo funciona el
+  mismo día con su uniforme, sin esperar a que nadie lo ilustre. Quien decide es
+  `js/arte.js`.
+- **Cuatro problemas al colocarlas**, ninguno visible leyendo el código: el cuadriculado
+  de transparencia horneado y opaco dentro de los huecos cerrados (la canasta tenía el
+  5.6% de su superficie así), el limpiador comiéndose los rayos de las ruedas de la
+  bicicleta, el personaje quedando enterrado en la plataforma, y las figuritas de la gente
+  contratada cortadas por el borde del suelo. Están contados en `RECURSOS_VISUALES.md` §4.
+- **`escena/plataforma.png` no se usa**, y es a propósito: es un óvalo para un objeto
+  centrado, y el escenario es una calle que se alarga. Estirarlo lo deja irreconocible.
+
+
 ### El imperio: ahora sí es un tycoon
 
 La capa de mejoras no alcanzaba, y el motivo es fácil de decir: era **un negocio de
@@ -405,6 +426,24 @@ han buscado todavía.
   (`Formal` e `Informal`, que compartían línea con una muerta) y las atrapó la
   siguiente corrida: si se vuelve a hacer una limpieza así, correr la suite
   bilingüe justo después.
+- **El protagonista no envejece y es siempre el mismo chico.** El juego va de los
+  13 a los 65 y las 23 ilustraciones son de un adolescente. Es una decisión que
+  las imágenes tomaron por el juego y no al revés: el muñeco dibujado era
+  genérico a propósito, sin edad y sin sexo marcado. Si importa —y en el reporte
+  de jubilación se nota— hacen falta al menos dos edades más por estado.
+- **La paleta de las ilustraciones es más saturada que la de la interfaz.** Se ve
+  al ponerlas al lado de una tarjeta: el dibujo tiene amarillos y naranjas que la
+  interfaz no usa. No molesta, pero si algún día se regeneran, conviene acercarlas.
+- **Los nueve tipos de negocio comparten las cuatro ilustraciones de local.** Una
+  tortillería y un taller se ven igual y se distinguen por un sello con su icono
+  en la esquina. Funciona y no hay que dibujar nada al agregar un tipo, pero lo
+  ideal serían nueve juegos de cuatro.
+- **`herramientas/preparar-imagenes.py` es lo único del proyecto que pide Python**
+  (Pillow y numpy). No hace falta para jugar ni para programar, igual que
+  `traer-librerias.js` no hace falta salvo para regenerar `vendor/`. Si algún día
+  molesta tener dos lenguajes de herramientas, el trabajo que hace no se puede
+  hacer con Node sin instalar una librería de imágenes, que es exactamente lo que
+  se está evitando.
 - **La suite completa ya tarda más de dos minutos**, por las corridas de 21
   semillas del balanceo, la escalera educativa y la salida del modo difícil, más
   las tres vidas completas de `imperio.js`. Si molesta, se puede bajar a 11

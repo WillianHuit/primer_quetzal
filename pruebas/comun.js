@@ -16,7 +16,7 @@ const ARCHIVOS = [
   'datos/progreso.js',
   'datos/textos.en.js', 'datos/textos.en.v2.js',
   'vendor/lucide.js', 'vendor/chart.js',
-  'js/idioma.js', 'js/iconos.js', 'js/personaje.js', 'js/escena.js',
+  'js/idioma.js', 'js/iconos.js', 'js/arte.js', 'js/personaje.js', 'js/escena.js',
   'js/sonido.js', 'js/motor.js',
   'js/minijuegos/marco.js', 'js/minijuegos/reparto.js', 'js/minijuegos/tienda.js',
   'js/minijuegos/estafas.js', 'js/minijuegos/presupuesto.js', 'js/minijuegos/caja.js',

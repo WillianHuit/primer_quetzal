@@ -602,9 +602,14 @@ estudia, y en la mano la jarra de limonada, el periódico, el ladrillo o la tabl
 
 Sale en tres tamaños: chico en la decisión de estudiar, mediano en "Mi empleo" —donde es lo
 único que le dice al jugador qué hace, sin que tenga que leerlo— y grande en la pantalla de
-"Yo". Sigue siendo SVG propio, sin librería ni imágenes que cargar, y **sus colores salen de
-las mismas cuatro variables de la paleta**: el uniforme de cada oficio se arma con el verde,
-el azul, el ámbar y el rojo que ya existían.
+"Yo". Los colores del muñeco dibujado salen de las mismas cuatro variables de la paleta: el
+uniforme de cada oficio se arma con el verde, el azul, el ámbar y el rojo que ya existían.
+
+**Y ahora, además, está ilustrado.** Entraron 23 ilustraciones del mismo chico —neutro,
+estudiante, graduado y una por cada oficio— y cuando existe la del estado que toca, se usa
+esa. El muñeco por piezas se queda detrás, y no como código muerto: es lo que hace que un
+empleo nuevo funcione el mismo día, con su uniforme, sin esperar a que alguien lo ilustre.
+Los detalles están en §14.7.
 
 ### 14.5 Tarjetas de decisión
 
@@ -749,7 +754,48 @@ Las dos cosas que la prueba exige son que **estudiar siga rindiendo más** (5 a 
 Y por el camino esa medición encontró cuatro cosas que ninguna prueba de "no lanza errores"
 habría visto. Están en §24 porque son el tipo de hallazgo que vale más que el código.
 
-### 14.7 Iconos propios, no emoji
+### 14.7 Ilustraciones, y el dibujo que se queda detrás
+
+El juego se dibujaba entero con SVG propio: iconos de trazo, un muñeco por piezas y una
+escena hecha de formas. Eso sigue ahí. Encima entraron **37 ilustraciones** —el mismo chico
+en 23 estados, los cuatro niveles de un local, las ocho piezas de las cadenas de mejoras y
+la moneda— y ahora el juego usa las dos cosas.
+
+`js/arte.js` es lo único que sabe qué ilustraciones existen. Todo lo demás pregunta, y **si
+la respuesta es que no hay, dibuja**. Eso no es un adorno defensivo: es lo que permite
+agregar un empleo a `datos/trabajos.js` y verlo funcionar el mismo día, con su uniforme,
+sin esperar a que alguien lo ilustre. Con ilustración se ve mejor; sin ilustración se ve.
+
+**Dos carpetas, y la diferencia importa.** `assets/visuales/` son los PNG maestros tal como
+se entregaron: 37 archivos, 90 MB, a 1024×1536 y 1254×1254. El navegador no los carga
+nunca. `assets/juego/` son las copias que el juego usa: WebP, al tamaño en que se ven,
+**603 KB entre todas**. Cargar 2 MB para pintar un chico de 80 px rompería la promesa de
+que el juego abre con doble clic y funciona sin internet, y esa promesa vale más que la
+resolución.
+
+`herramientas/preparar-imagenes.py` escribe la segunda carpeta a partir de la primera, y no
+hace falta para jugar ni para programar. Hace tres cosas, y las tres salieron de problemas
+reales que están contados en `RECURSOS_VISUALES.md` §4: quita el cuadriculado de
+transparencia que el generador dejó **horneado y opaco** dentro de los huecos cerrados,
+recorta el margen vacío con una caja **común** a los 23 personajes —si cada profesión se
+recortara a su medida, el mismo chico cambiaría de tamaño al cambiar de trabajo— y
+redimensiona a los tamaños que se midieron en pantalla.
+
+**Lo que las ilustraciones cambiaron del diseño.** Un PNG es un personaje completo, así que
+los estados dejaron de sumarse: antes un chico que trabajaba y estudiaba salía con la ropa
+del trabajo *y* la mochila, y un graduado con el birrete encima del uniforme. Ahora hay que
+elegir uno, y gana lo que está haciendo ahora. Y la escena se recalibró entera, porque los
+números estaban ajustados a un muñeco que ocupaba menos de su lienzo: con la escala vieja el
+chico quedaba cinco unidades y media enterrado en la plataforma y le pasaba la cabeza a una
+tienda con puerta.
+
+**Lo que protege esto es una suite.** `pruebas/arte.js` cruza el inventario declarado en
+`js/arte.js`, los archivos del disco y lo que los datos piden, y comprueba además que
+ninguna imagen pase de 90 KB y que el código no apunte a los maestros. El fallo que existe
+para atrapar no lanza ningún error y no sale en ninguna consola: **una imagen que falta deja
+un hueco vacío**, el juego sigue funcionando y las otras doce suites siguen pasando.
+
+### 14.8 Iconos propios, no emoji
 
 La interfaz usaba emoji. El emoji tiene dos problemas que no se arreglan con CSS: cada
 sistema lo dibuja distinto, así que la cara del juego cambiaba según el teléfono, y viene
@@ -761,7 +807,7 @@ icono se ve igual en todos los sistemas, toma el color de donde esté puesto y m
 así que crece con la letra que lo rodea. Sin librería externa: el juego sigue abriéndose
 con doble clic, sin internet.
 
-### 14.8 Relieve, no plano
+### 14.9 Relieve, no plano
 
 El diseño era plano —un borde de 1px y nada más— y parecía un formulario. Ahora cada cosa
 que se puede tocar se apoya sobre un labio inferior más oscuro y tiene un brillo arriba, y
@@ -812,7 +858,8 @@ localmente que publicado, y alguien de negocio puede corregir una tasa sin saber
   js/
     idioma.js       detección, selector y las funciones T, D y K
     iconos.js       los setenta y ocho dibujos de trazo y la función Ico
-    personaje.js    el muñeco por piezas y su ropa de trabajo
+    arte.js         donde viven las ilustraciones y cuales existen
+    personaje.js    el muñeco: la ilustracion, y por piezas si no hay
     escena.js       la calle: un local por negocio, y se alarga al crecer
     sonido.js       efectos generados por el navegador
     motor.js        estado, turnos, economía, estudio, crédito, reportes
@@ -824,11 +871,16 @@ localmente que publicado, y alguien de negocio puede corregir una tasa sin saber
   vendor/
     lucide.js       iconos de respaldo, recortados (ISC)
     chart.js        Chart.js 4, bundle UMD (MIT)
+  assets/
+    visuales/       los 37 PNG maestros, 90 MB. El navegador NO los carga
+    juego/          las copias WebP que si carga, 603 KB entre todas
   herramientas/
     traer-librerias.js   regenera vendor/. No hace falta para jugar
+    preparar-imagenes.py escribe assets/juego/ desde los maestros
   pruebas/
     comun.js        carga el juego aislado; ayudantes trabajar() y adulto()
     imperio.js      negocios, planilla, techos y la invariante del estudio
+    arte.js         que las ilustraciones esten, cuadren y pesen poco
     todas.js        corre las diez suites y resume
     vista.html      vista previa para revisar el diseño con los ojos
   docs/
