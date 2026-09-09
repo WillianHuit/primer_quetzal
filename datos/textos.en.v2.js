@@ -531,9 +531,21 @@
 
   /* La primera tarea, que es la que abre el trabajo. */
   pp.primeraTarea = 'Put a half-day into homework: tap a free slot and pick Homework. Homework does not pay, it gives experience.';
-  pt.primeraTarea = 'Work is open';
+  pt.primeraTarea = 'You did your first homework';
   px.primeraTarea = 'That half-day did not earn you a single quetzal, and it was still the best paid of the month: experience is what will get you into the courses that ask for more.';
-  pl.primeraTarea = 'Money gets spent; what you learned does not. It is the one thing in this game that, once you have it, is yours. Now yes: go find something to live on.';
+  pl.primeraTarea = 'Money gets spent; what you learned does not. It is the one thing in this game that, once you have it, is yours.';
+
+  /* El trabajo llega despues: los primeros cuatro turnos son solo colegio. */
+  pp.primerTrabajo = 'You are in class. Close the months and do your homework: work comes later.';
+  pt.primerTrabajo = 'Work is open';
+  px.primerTrabajo = 'You have been in class a few months and can now look for something for the afternoons. At your age there are no wages: there are three odd jobs on your own, no contract and no boss.';
+  pl.primerTrabajo = 'Every half-day you give to work is one you do not give to homework. Nobody will tell you which is better, because it depends on where you want to end up.';
+
+  /* Y el imperio, cuando ya hay con que. */
+  pt.imperio = 'Your Empire is open';
+  px.imperio = 'You have enough to open something of your own. Start small: a candy stand costs Q450. And Extra has odd jobs that pay on the side.';
+  pl.imperio = 'A business is measured with two numbers, not one: what it sells and what is left after paying for the goods and the rent. A business that sells twice as much as another can earn half. That second number is the only one that matters.';
+  px.primeraTarea = 'That half-day did not earn you a single quetzal, and it was still the best paid of the month: experience is what will get you into the courses that ask for more.';
   pt.decidirEstudio = 'Work is open';
   px.decidirEstudio = 'You decided what to do with your mornings. What you do with your afternoons is what will pay for everything else.';
   pl.decidirEstudio = 'Studying is not free: it is paid for with the hours you could be earning. And not studying is not free either: in Guatemala a worker without middle school earns half of what one with high school earns, for life.';
@@ -735,6 +747,10 @@
   /* Las tareas del colegio y la experiencia: la tarea no paga, ensena, y lo
    * que ensena es lo que despues abre las carreras que piden mas. */
   ui['Las tareas'] = 'Homework';
+  ui['Las tareas son del colegio. Inscríbete en algo y aparecen.'] =
+    'Homework belongs to school. Enroll in something and it shows up.';
+  ui['{0} todavía no tiene tareas propias. La experiencia sigue subiendo por estar inscrito.'] =
+    '{0} does not have its own homework yet. Experience still goes up just by being enrolled.';
   ui['Tarea'] = 'Homework';
   ui['Hecha'] = 'Done';
   ui['clase'] = 'class';

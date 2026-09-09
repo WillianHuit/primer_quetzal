@@ -9,6 +9,7 @@ Minijuegos.registrar({
   nombre: 'Caza-estafas',
   icono: 'anzuelo',
   tipo: 'clase',
+  paraCarrera: 'basicos',
   descripcion: 'Te llegan mensajes. Decide cuáles son fraude.',
   ensena: 'Ningún banco pide claves por mensaje, y la urgencia es la señal de alarma.',
   duracion: 60,

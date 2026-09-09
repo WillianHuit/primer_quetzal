@@ -154,20 +154,20 @@ ok(Motor.revisarProgreso({ pestana: 'estudio' }).length === 0,
 Motor.decidirEstudio('no');
 const abreTrabajo = Motor.revisarProgreso({ pestana: 'estudio' });
 
-/* Decir que NO abre DOS peldaños de una, y ese es el diseño.
+/* Decir que NO abre el trabajo DE UNA, y ese es el reparto entero.
  *
- * El trabajo ya no lo abre la decisión: lo abre la primera TAREA, porque el
- * juego quiere enseñar el orden —primero el colegio, y el colegio da
- * experiencia y no dinero—. Pero quien decide no estudiar no tiene tareas que
- * hacer, así que para él ese peldaño está cumplido desde el momento en que
- * dice que no, y lo único que le queda es buscar con qué mantenerse. Si no
- * fuera así, el que no estudia se quedaría sin trabajo para siempre. */
+ * Para quien estudia, el trabajo tarda: los primeros cuatro turnos son solo
+ * colegio. Para quien no estudia no hay nada que esperar —no tiene clases a
+ * las que ir— así que se le abre en el momento en que dice que no. Esa es la
+ * diferencia entre los dos caminos, y el juego la dice sin decirla: el que
+ * estudia empieza más despacio. Si no fuera así, el que no estudia se quedaría
+ * sin trabajo para siempre. */
 const idsDecision = abreTrabajo.map(p => p.id);
-ok(abreTrabajo.length === 2 &&
-   idsDecision.indexOf('decidirEstudio') >= 0 && idsDecision.indexOf('primeraTarea') >= 0,
-   'decir que no abre la decisión Y el peldaño de la tarea, que no tiene tareas que hacer');
+ok(idsDecision.indexOf('decidirEstudio') >= 0 && idsDecision.indexOf('primerTrabajo') >= 0,
+   'a quien dice que no, decidir le abre también el trabajo: no tiene clases que esperar');
 ok(Motor.desbloqueado('trabajo'), 'y con él la pestaña de trabajo');
-ok(abreTrabajo.every(p => !!p.titulo), 'los dos se anuncian, porque los dos dicen algo');
+ok(!Motor.desbloqueado('mejoras'),
+   'pero NO el imperio: ese llega cuando tenga con qué abrir algo');
 
 Motor.revisarProgreso({ pestana: 'trabajo' });
 Motor.tomarTrabajo('limonada', false);
@@ -177,7 +177,8 @@ ok(abre.length === 1 && abre[0].id === 'empleo',
 ok(!abre[0].titulo, 'y lo hace en silencio: aceptar un trabajito no desbloquea nada');
 ok(!Motor.desbloqueado('banco'),
    'el banco NO se abre por aceptar un trabajo: a los 13 no hay razón para tener cuenta');
-ok(Motor.peldanosAbiertos() === 5, 'van cinco peldaños abiertos');
+const abiertosAqui = Motor.peldanosAbiertos();
+ok(abiertosAqui === 6, `van ${abiertosAqui} peldaños abiertos`);
 
 const segundo = Motor.siguientePeldano();
 ok(!!segundo && segundo.peldano.id === 'verMes',
@@ -230,7 +231,7 @@ ok(!!segundo && segundo.peldano.id === 'verMes',
 
 Motor.guardar();
 ok(Motor.cargar(1), 'la partida se vuelve a cargar');
-ok(Motor.desbloqueado('trabajo') && Motor.peldanosAbiertos() === 5,
+ok(Motor.desbloqueado('trabajo') && Motor.peldanosAbiertos() === abiertosAqui,
    'y la ruta quedó como estaba');
 
 /* Una partida guardada ANTES de que la ruta existiera no trae ni desbloqueado

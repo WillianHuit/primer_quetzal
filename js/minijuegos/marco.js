@@ -25,14 +25,30 @@ var Minijuegos = (function () {
     return null;
   }
 
-  /* Un minijuego avanzado se abre cuando el jugador tiene el nivel educativo
-   * necesario y, si la pide, la carrera concreta que lo enseña. */
-  function disponibles(nivelEducativo, carrerasTerminadas) {
+  /* Que puede hacer el jugador ahora mismo.
+   *
+   * Hay dos ejes y no se parecen:
+   *
+   *   requiereNivel / requiereCarrera  son de los TRABAJOS de oficio. Se
+   *       abren con el titulo ya en la mano: la conciliacion bancaria la hace
+   *       quien YA es administrador.
+   *   paraCarrera  es de las CLASES. Se abre mientras estas INSCRITO en esa
+   *       carrera, no despues: la tarea de basicos se hace en basicos. Una
+   *       clase sin `paraCarrera` es general y sale en cualquier carrera.
+   *
+   * Es la diferencia entre "ya lo aprendi" y "lo estoy aprendiendo", y por eso
+   * son dos campos y no uno.
+   */
+  function disponibles(nivelEducativo, carrerasTerminadas, carreraActual) {
     var orden = NIVELES_EDUCATIVOS;
     var hechas = carrerasTerminadas || [];
     return registro.filter(function (j) {
       if (j.requiereNivel && orden.indexOf(nivelEducativo) < orden.indexOf(j.requiereNivel)) return false;
       if (j.requiereCarrera && hechas.indexOf(j.requiereCarrera) < 0) return false;
+      if (j.paraCarrera) {
+        var para = [].concat(j.paraCarrera);
+        if (!carreraActual || para.indexOf(carreraActual) < 0) return false;
+      }
       return true;
     });
   }

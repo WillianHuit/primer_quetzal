@@ -146,9 +146,38 @@ ok(g.puntaje < puntajeAntes, `el historial local se enfría al volver (${puntaje
 ok(!Motor.estaFuera(), 'ya no estás fuera');
 
 // ---------- minijuegos por carrera ----------
-ok(Minijuegos.todos().length === 8, `hay 8 minijuegos registrados (hay ${Minijuegos.todos().length})`);
-ok(Minijuegos.disponibles('diversificado', []).length === 4,
-   'con diversificado se abren los cuatro básicos');
+
+/* Dos ejes que no se parecen, y la prueba los mira por separado.
+ *
+ * Los TRABAJOS de oficio se abren con el título ya en la mano: la conciliación
+ * bancaria la hace quien YA es administrador. Las CLASES se abren mientras
+ * estás INSCRITO en esa carrera: la tarea de básicos se hace en básicos, no
+ * después. Es la diferencia entre "ya lo aprendí" y "lo estoy aprendiendo". */
+const cuantos = Minijuegos.todos().length;
+ok(cuantos === 10, `hay ${cuantos} minijuegos registrados`);
+
+/* Sin estar inscrito en nada no hay clases: las clases son del colegio. */
+const sinColegio = Minijuegos.disponibles('diversificado', [], null);
+ok(sinColegio.every(j => j.tipo !== 'clase'),
+   'sin colegio no hay ninguna clase disponible, porque las clases son del colegio');
+ok(sinColegio.length === 2,
+   `y quedan los ${sinColegio.length} trabajos de oficio abiertos a todos`);
+
+/* En básicos salen las tres sencillas y generales, y NO la de cuadrar un
+ * sueldo entero: a los trece no hay sueldo que cuadrar. */
+const enBasicos = Minijuegos.disponibles('primaria', [], 'basicos')
+  .filter(j => j.tipo === 'clase').map(j => j.id).sort();
+ok(enBasicos.length === 3, `básicos tiene ${enBasicos.length} tareas: ${enBasicos.join(', ')}`);
+ok(enBasicos.indexOf('presupuesto') < 0,
+   'y la de cuadrar el sueldo no está: esa es de diversificado');
+
+/* Y en diversificado sale la especializada y desaparecen las de básicos. */
+const enBachillerato = Minijuegos.disponibles('basicos', ['basicos'], 'bachillerato')
+  .filter(j => j.tipo === 'clase').map(j => j.id);
+ok(enBachillerato.indexOf('presupuesto') >= 0,
+   'en bachillerato aparece la tarea especializada de cuadrar el sueldo');
+ok(enBachillerato.indexOf('cambio') < 0,
+   'y las de básicos ya no: esa clase ya se dio');
 ok(Minijuegos.disponibles('licenciatura', ['ingenieria']).some(j => j.id === 'obra'),
    'el minijuego de ingeniería se abre al graduarse de ingeniería');
 ok(!Minijuegos.disponibles('licenciatura', ['ingenieria']).some(j => j.id === 'conciliacion'),

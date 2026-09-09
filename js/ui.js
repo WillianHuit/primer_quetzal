@@ -1129,9 +1129,26 @@ var UI = (function () {
   }
 
   function estudioPracticar() {
+    var e = Motor.get();
     var lista = listaMinijuegos(esDeEstudio);
-    if (!lista) return '';
-    return '<h3>' + T('Las tareas') + '</h3>' +
+    var h = '<h3>' + T('Las tareas') + '</h3>';
+
+    /* Sin carrera en curso no hay tareas, y eso no es un hueco: es que las
+     * tareas son del colegio. Se dice, en vez de dejar la sección vacía. */
+    if (!e.estudio) {
+      return h + '<div class="vacio">' +
+        T('Las tareas son del colegio. Inscríbete en algo y aparecen.') + '</div>';
+    }
+    if (!lista) {
+      /* Y una carrera que todavía no tiene tarea propia también se dice. Es
+       * el estado honesto de un juego que se llena por partes: mejor que el
+       * jugador sepa que aquí va a haber algo que dejarle un blanco. */
+      var car = buscar(CARRERAS, e.estudio.carreraId);
+      return h + '<div class="vacio">' +
+        T('{0} todavía no tiene tareas propias. La experiencia sigue subiendo por estar inscrito.',
+          esc(D(car, 'nombre'))) + '</div>';
+    }
+    return h +
       '<p class="sutil">' +
       T('No pagan nada: dan experiencia, y la experiencia es lo que te deja entrar a las carreras que piden más. Cada una cuesta una jornada.') +
       '</p>' + lista;
@@ -2090,7 +2107,11 @@ var UI = (function () {
    * cambia es dónde se encuentran. */
   function listaMinijuegos(filtro) {
     var e = Motor.get();
-    var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas)
+    /* La carrera EN CURSO, que es lo que decide qué clases hay.
+     * Las clases van con la carrera que estás haciendo, no con el título que
+     * ya tienes: la tarea de básicos se hace en básicos. */
+    var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas,
+        e.estudio ? e.estudio.carreraId : null)
       .filter(filtro || function () { return true; });
     if (!lista.length) return '';
 

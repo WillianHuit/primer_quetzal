@@ -260,8 +260,13 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
  * es que las tareas NO sean una forma de ganar dinero: si pagaran, el jugador
  * las haría por el pago y el mensaje se perdería. */
 clic(w, w.document.querySelector('[data-pestana="estudio"]'));
-const claseUI = w.document.querySelector('[data-jugar="presupuesto"]');
-ok(!!claseUI, 'las tareas viven en Estudio, no en un cajón aparte');
+const clasesEnPantalla = w.document.querySelectorAll('[data-jugar]').length;
+ok(clasesEnPantalla > 0, `las ${clasesEnPantalla} tareas viven en Estudio, no en un cajón aparte`);
+
+/* Y son las de BÁSICOS: sencillas y generales. Cuadrar un sueldo entero es de
+ * diversificado, porque a los trece no hay sueldo que cuadrar. */
+ok(!w.document.querySelector('[data-jugar="presupuesto"]'),
+   'y la de cuadrar el sueldo no está aquí: esa es de diversificado');
 const txtEstudio = w.document.querySelector('main').textContent;
 ok(txtEstudio.indexOf('experiencia') >= 0,
    'y la pantalla habla de experiencia, no de lo que pagan');
@@ -309,19 +314,85 @@ const puerta = w.CARRERAS.find(c => c.requiere === 'primaria');
 ok(!puerta.experienciaRequerida,
    `${puerta.nombre} no pide experiencia: la puerta de entrada no se cierra`);
 
+// ---------- el que estudia empieza en clases, y nada más ----------
+
+/* La regla que este bloque existe para fijar: quien elige estudiar pasa los
+ * primeros turnos con DOS pestañas, Mes y Estudio, y el trabajo llega después.
+ * Antes se abría el mismo mes de inscribirse, así que un chico de trece salía
+ * a buscar empleo sin haber pisado un aula.
+ *
+ * Va en una partida aparte porque hay que mirarla turno por turno desde el
+ * principio, y la de arriba ya terminó el tutorial. */
+(function soloColegioAlPrincipio() {
+  const { w: w2 } = abrirJuego('es');
+  const M2 = w2.Motor;
+  M2.iniciar('normal', 1, 'apoyo');
+  M2.inscribirse('basicos', false);
+  M2.revisarProgreso({ pestana: 'estudio' });
+
+  ok(!M2.desbloqueado('trabajo'),
+     'recién inscrito en básicos, el trabajo todavía no existe');
+  ok(!M2.desbloqueado('mejoras') && !M2.desbloqueado('extra'),
+     'ni el imperio ni los trabajos extra');
+
+  /* Los primeros turnos son solo colegio. Se cierran uno por uno y en ninguno
+   * debe aparecer el trabajo, porque el chico está en clases. */
+  const MESES = w2.MESES_SOLO_COLEGIO;
+  let abrioAntes = 0;
+  for (let n = 0; n < MESES - 1; n++) {
+    M2.cerrarTurno();
+    M2.revisarProgreso({ pestana: 'casa' });
+    if (M2.desbloqueado('trabajo')) abrioAntes++;
+  }
+  ok(abrioAntes === 0,
+     `pasan ${MESES - 1} turnos de clases y el trabajo sigue cerrado`);
+
+  // Y en el último de los de colegio, se abre
+  M2.cerrarTurno();
+  M2.revisarProgreso({ pestana: 'casa' });
+  ok(M2.desbloqueado('trabajo'),
+     `al turno ${MESES} de clases se abre el trabajo`);
+
+  /* Y lo que hay ahí son los tres trabajitos por cuenta propia: sin contrato
+   * y sin patrón, que es lo único que existe a los trece. */
+  const ofrecidos = w2.TRABAJOS.filter(t => M2.puedeAplicar(t).ok);
+  ok(ofrecidos.length === 3 && ofrecidos.every(t => t.soloInformal),
+     `y son los ${ofrecidos.length} trabajitos por cuenta propia, ninguno con contrato`);
+
+  /* El imperio sigue cerrado: no es cuestión de turnos, es de tener con qué. */
+  ok(!M2.desbloqueado('mejoras'),
+     'el imperio sigue cerrado: eso no se abre con turnos, se abre con dinero');
+})();
+
 // ---------- la ruta va abriéndose ----------
 /* Al terminar el tutorial el jugador ya tiene empleo, cuenta y un mes cerrado.
  * Lo que se comprueba aquí es que la ruta fue abriendo cada cosa a su tiempo y
  * que lo que todavía no toca sigue sin aparecer. */
-ok(w.Motor.desbloqueado('trabajo'), 'decidir sobre el estudio abrió el trabajo');
-ok(!w.Motor.desbloqueado('banco'),
-   'el banco todavía no: se abre cuando el efectivo empiece a irse solo');
-ok(!w.document.querySelector('[data-pestana="banco"]'), 'ni su pestaña');
-ok(w.Motor.desbloqueado('extra'), 'cerrar el primer mes abrió los trabajos extra');
+ok(w.Motor.desbloqueado('trabajo'), 'al quinto mes de clases se abrió el trabajo');
+
+/* Y el imperio NO. Se abría al cerrar el primer mes, y eso era un cañonazo:
+ * un chico de trece en su primer mes de básicos veía aparecer un negocio y una
+ * tienda de mejoras que no puede pagar. Ahora llega cuando tiene con qué. */
+ok(!w.Motor.desbloqueado('mejoras') && !w.Motor.desbloqueado('extra'),
+   'pero el imperio no: con Q' + Math.round(w.Motor.dineroDisponible()) +
+   ' en la mano todavía no hay con qué abrir nada');
+ok(!w.document.querySelector('[data-pestana="mejoras"]'), 'ni su pestaña');
+
+/* El banco sí, y no por tutorial: cuatro meses de clases bastaron para que el
+ * efectivo se le fuera solo, y ESE es el momento en que el banco tiene
+ * sentido. La ruta no lo regala: espera a que duela. */
+ok(w.Motor.desbloqueado('banco'),
+   'el banco se abrió solo, porque ya se le fueron Q' +
+   Math.round(w.Motor.get().totales.fugaEfectivo) + ' de la bolsa');
+
+const cuantasPestanas = pestanasVisibles(w).length;
+ok(cuantasPestanas === 5, `van ${cuantasPestanas} pestañas, no las siete de golpe`);
+
+/* Y el imperio se abre con dinero, no con tutorial. */
+w.Motor.get().efectivo += 1200;
+w.Motor.revisarProgreso();
 ok(w.Motor.desbloqueado('mejoras'),
-   'y con ellos las Mejoras, que es donde los números suben');
-ok(pestanasVisibles(w).length === 5,
-   'van cinco pestañas (hay ' + pestanasVisibles(w).length + ')');
+   'y en cuanto junta con qué, el imperio se abre solo');
 
 /* El banco llega cuando duele no tenerlo. Se le adelanta la fuga de efectivo,
  * que es lo que el juego mira, y se cierra un mes para que la ruta lo vea. */
@@ -692,20 +763,28 @@ ok(!!glos && glos.querySelectorAll('.glosa').length >= 19,
    `el glosario muestra sus ${glos ? glos.querySelectorAll('.glosa').length : 0} entradas`);
 cerrarModales(w);
 
-// ---------- un minijuego, con sus temporizadores de verdad ----------
+// ---------- una TAREA, con sus temporizadores de verdad ----------
+
+/* Se juega una CLASE y no un trabajo de oficio, a propósito: es el camino
+ * nuevo entero de punta a punta —casilla de tarea, pantalla de Estudio,
+ * minijuego, experiencia— y es donde hay más que se pueda romper. */
 clic(w, w.document.querySelector('[data-pestana="casa"]'));
 clic(w, jornadasLibres(w)[0]);
-clic(w, w.document.querySelector('[data-poner="minijuego"]'));
-clic(w, w.document.querySelector('[data-pestana="extra"]'));
-const bJugar = w.document.querySelector('[data-jugar="estafas"]');
-ok(!!bJugar, 'el minijuego de estafas está disponible');
+clic(w, w.document.querySelector('[data-poner="tarea"]'));
+clic(w, w.document.querySelector('[data-pestana="estudio"]'));
+const bJugar = w.document.querySelector('[data-jugar="cambio"]');
+ok(!!bJugar, 'la tarea de dar el cambio está disponible en Estudio');
+ok(!bJugar.disabled, 'y con la jornada de tarea puesta, se puede hacer');
 
 const dineroAntes = w.Motor.patrimonio();
+const xpAntesTarea = w.Motor.experiencia();
 clic(w, bJugar);
 const mj = w.document.querySelector('.velo .modal.mj');
-ok(!!mj, 'el minijuego abre su ventana');
-ok(!!w.document.querySelector('#mj-reloj'), 'el minijuego muestra su cronómetro');
-ok(!!w.document.querySelector('.mj-mensaje'), 'el minijuego dibuja su primer mensaje');
+ok(!!mj, 'la tarea abre su ventana');
+ok(!!w.document.querySelector('#mj-reloj'), 'y muestra su cronómetro');
+ok(!!w.document.querySelector('.mj-mensaje'), 'y dibuja su primera compra');
+ok(w.document.querySelectorAll('.velo [data-v]').length === 3,
+   'con tres cifras para elegir, y solo una es el cambio correcto');
 
 function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -714,9 +793,12 @@ function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
 (async function () {
   const primerMensaje = w.document.querySelector('.mj-mensaje').textContent;
 
-  clic(w, w.document.querySelector('.velo [data-r="1"]'));
+  /* Las tres opciones de cambio son cifras: se toca la primera, acierte o no.
+   * Lo que se comprueba no es que el jugador sepa restar, es que el juego
+   * conteste. */
+  clic(w, w.document.querySelector('.velo [data-v]'));
   ok(w.document.querySelector('#mj-explica').textContent.length > 10,
-     'al responder, el minijuego explica de inmediato por qué');
+     'al responder, la tarea explica de inmediato la resta');
 
   const puntosTrasUna = w.document.querySelector('#mj-puntos').textContent;
   ok(puntosTrasUna !== '0' || true, `el marcador se actualiza (${puntosTrasUna} puntos)`);
@@ -728,22 +810,24 @@ function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
 
   // Responder unas cuantas más y dejar que se acabe el tiempo
   for (let i = 0; i < 3; i++) {
-    const b = w.document.querySelector('.velo [data-r="1"]');
+    const b = w.document.querySelector('.velo [data-v]');
     if (!b) break;
     clic(w, b);
-    await esperar(2100);
+    await esperar(1800);
   }
 
   const reloj = w.document.querySelector('#mj-reloj');
   ok(!!reloj && reloj.textContent !== '60s', `el cronómetro corre de verdad (${reloj ? reloj.textContent : '?'})`);
 
-  // Terminar el minijuego a la fuerza y comprobar el pago
-  const antesPago = w.Motor.patrimonio();
-  w.Minijuegos.porId('estafas');
   const dm = w.document.querySelector('.velo .modal.mj');
-  // Esperamos a que el cronómetro llegue a cero sería un minuto; lo cerramos
-  // llamando al final del marco a través de un juego nuevo y corto.
-  ok(!!dm, 'el minijuego sigue en pantalla mientras dura');
+  ok(!!dm, 'la tarea sigue en pantalla mientras dura');
+
+  /* Y lo que de verdad importa de todo este bloque: mientras la tarea corre,
+   * el dinero NO se ha movido un centavo. Una clase no paga. */
+  ok(Math.abs(w.Motor.patrimonio() - dineroAntes) < 0.01,
+     'y no ha entrado un solo quetzal: una clase no paga, y esa es la mecánica');
+  ok(w.Motor.experiencia() === xpAntesTarea,
+     'la experiencia se entrega al terminarla, no a media clase');
 
   // ---------- cierre ----------
   ok(errConsola.length === 0,

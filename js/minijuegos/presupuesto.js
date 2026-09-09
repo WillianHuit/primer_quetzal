@@ -8,6 +8,11 @@ Minijuegos.registrar({
   nombre: 'Cuadra el mes',
   icono: 'recibo',
   tipo: 'clase',
+  /* Cuadrar un sueldo entero es de diversificado, no de basicos: a los
+   * trece no hay sueldo que cuadrar. Es la primera clase ESPECIALIZADA,
+   * y las dos carreras de diversificado la comparten porque las dos
+   * llevan contabilidad basica. */
+  paraCarrera: ['bachillerato', 'perito'],
   descripcion: 'Reparte el sueldo. Van a caer imprevistos.',
   ensena: 'Sin un colchón, cualquier imprevisto se vuelve deuda.',
   duracion: 75,

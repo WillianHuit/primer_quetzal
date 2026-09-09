@@ -323,6 +323,12 @@ var TEXTOS_EN = {
 
     reparto: { nombre: 'Motorcycle delivery',
       descripcion: 'Dodge traffic and get the orders there on time.' },
+    cambio: { nombre: 'Give the change',
+      descripcion: 'Someone buys something and overpays. How much do you give back?',
+      ensena: 'If you do not know what to hand back, you do not know what you earned.' },
+    precios: { nombre: 'Which one is cheaper?',
+      descripcion: 'Two sizes, two prices. Pick the one that costs less.',
+      ensena: 'Cheap is not the price: it is the price per unit. And the big pack does not always win.' },
     estafas: { nombre: 'Scam hunter',
       descripcion: 'Messages come in. Decide which ones are fraud.',
       ensena: 'No bank asks for your PIN by text, and urgency is the warning sign.' },

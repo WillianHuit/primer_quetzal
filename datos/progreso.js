@@ -102,6 +102,19 @@
  * enseñar: que primero se busca trabajo y luego, si sobra tiempo, se estudia. */
 var PROGRESO_INICIAL = ['estudio'];
 
+/* Cuantos turnos son SOLO colegio para quien eligio estudiar.
+ *
+ * A los trece cada turno es un mes, asi que son los primeros cuatro meses con
+ * dos pestanas: Mes y Estudio. En el quinto se abre Trabajo. Es el numero que
+ * decide el ritmo de la apertura del juego, y esta aqui arriba para que se
+ * pueda mover sin buscarlo. */
+var MESES_SOLO_COLEGIO = 4;
+
+/* Y con cuanto en la mano se abre el imperio. El negocio mas barato del juego
+ * es un puesto de dulces de Q450: se abre con el doble, para que la pantalla
+ * no aparezca ofreciendo algo que no se puede pagar. */
+var DINERO_PARA_IMPERIO = 900;
+
 var PROGRESO = [
 
   // ---------- el tutorial: un toque por paso ----------
@@ -161,7 +174,7 @@ var PROGRESO = [
    */
   {
     id: 'primeraTarea',
-    llaves: ['trabajo'],
+    llaves: [],
     /* SIN `requiere`, y no es un descuido: este peldaño abre una llave, y la
      * regla de arriba dice que esos se miden por el ESTADO y nunca por el
      * peldaño anterior. Así, quien salte el tutorial y haga las cosas en otro
@@ -190,9 +203,41 @@ var PROGRESO = [
         : '.jornada:not(.lleno):not(.bloqueado)';
     },
     pestana: 'casa',
-    titulo: 'Se abrió el trabajo',
+    titulo: 'Hiciste tu primera tarea',
     texto: 'Esa jornada no te dio un quetzal, y aun así fue la mejor pagada del mes: la experiencia es lo que te va a dejar entrar a las carreras que piden más.',
-    leccion: 'El dinero se gasta; lo que aprendiste, no. Es lo único de este juego que, una vez que lo tienes, ya es tuyo. Ahora sí: a buscar con qué mantenerte.',
+    leccion: 'El dinero se gasta; lo que aprendiste, no. Es lo único de este juego que, una vez que lo tienes, ya es tuyo.',
+    icono: 'birrete'
+  },
+
+  /* Y el trabajo llega DESPUÉS, no de una.
+   *
+   * Un chico de trece que acaba de inscribirse en básicos no sale a buscar
+   * empleo el mismo mes: va a clases. Así que los primeros cuatro turnos son
+   * solo colegio —Mes y Estudio, dos pestañas— y en el quinto se abre Trabajo
+   * con lo único que existe a esa edad: los tres trabajitos por cuenta propia,
+   * sin contrato y sin patrón.
+   *
+   * Quien decidió NO estudiar lo abre de una, porque no tiene clases a las que
+   * ir y lo único que le queda es buscar con qué mantenerse. Esa es la
+   * diferencia entera entre los dos caminos, y el juego la dice sin decirla:
+   * el que estudia empieza más despacio.
+   */
+  {
+    id: 'primerTrabajo',
+    llaves: ['trabajo'],
+    cuando: function (e) {
+      if (e.decisionEstudio === null && e.edad < 14) return false;
+      // Sin colegio no hay nada que esperar: a buscar con qué comer
+      if (!e.estudio) return true;
+      return e.mesesJugados >= MESES_SOLO_COLEGIO;
+    },
+    pista: 'Estás en clases. Cierra los meses y haz tus tareas: el trabajo llega después.',
+    guia: true,
+    senala: '#cerrar-turno',
+    pestana: 'casa',
+    titulo: 'Se abrió el trabajo',
+    texto: 'Llevas unos meses en clases y ya puedes buscar algo para las tardes. A tu edad no hay sueldos: hay tres trabajitos por tu cuenta, sin contrato y sin patrón.',
+    leccion: 'Cada jornada que le pongas al trabajo es una que no le pones a las tareas. Nadie te va a decir cuál conviene, porque depende de a dónde quieras llegar.',
     icono: 'maletin'
   },
 
@@ -277,14 +322,33 @@ var PROGRESO = [
 
   {
     id: 'primerMes',
-    llaves: ['extra', 'mejoras'],
+    llaves: [],
     cuando: function (e) { return e.mesesJugados >= 1; },
     pista: 'Cierra el mes y mira el resumen: te va a mostrar en una barra a dónde se fue cada quetzal.',
     guia: true,
     senala: '#cerrar-turno',
-    pestana: 'casa',
+    pestana: 'casa'
+  },
+
+  /* El imperio, cuando ya hay con qué.
+   *
+   * Se abría al cerrar el primer mes, y eso era un cañonazo: un chico de trece
+   * en su primer mes de básicos abría el juego y le aparecían un negocio y una
+   * tienda de mejoras que no puede pagar. Ahora llega cuando la frase tiene
+   * sentido: cuando tiene con qué. El puesto de dulces más barato cuesta Q450,
+   * así que se abre con el doble en la mano y un trabajo que lo sostenga.
+   */
+  {
+    id: 'imperio',
+    llaves: ['extra', 'mejoras'],
+    /* La condición es SOLO el dinero, y a propósito. Pedir además un trabajo
+     * dejaría el imperio cerrado para siempre a quien vive de una mesada o de
+     * remesas, y este juego no esconde contenido: lo pone donde tiene sentido.
+     * Con qué se juntó ese dinero es asunto del jugador. */
+    cuando: function (e, M) { return M.dineroDisponible() >= DINERO_PARA_IMPERIO; },
+    pista: null,
     titulo: 'Se abrió tu Imperio',
-    texto: 'Ya puedes abrir tu primer negocio y comprar cosas que te hacen ganar más: tu herramienta, tus útiles. Empieza chico: un puesto de dulces cuesta Q450. Y en Extra hay trabajos sueltos para una jornada.',
+    texto: 'Ya tienes con qué abrir algo propio. Empieza chico: un puesto de dulces cuesta Q450. Y en Extra hay trabajos sueltos que se pagan aparte.',
     leccion: 'Un negocio se mide con dos números, no con uno: lo que vende y lo que le queda después de pagar el producto y la renta. Un negocio que vende el doble que otro puede ganar la mitad. Ese segundo número es el único que importa.',
     icono: 'trending-up'
   },

@@ -7,6 +7,40 @@ aporta al juego, no por lo que es más fácil.
 
 ## 0. Lo que se cerró hoy
 
+### El juego empieza en clases, y nada más
+
+El tutorial abría el trabajo, el imperio y los extras casi de golpe. Ahora:
+
+- **Los primeros cuatro turnos son solo colegio**: dos pestañas, Mes y Estudio. En el quinto
+  se abre Trabajo, y lo que hay ahí son los **tres trabajitos por cuenta propia**, sin
+  contrato y sin patrón, que es lo único que existe a los trece. La constante está arriba de
+  `datos/progreso.js` como `MESES_SOLO_COLEGIO`.
+- **Quien decide no estudiar lo abre de una**, porque no tiene clases a las que ir. Esa es la
+  diferencia entera entre los dos caminos y el juego la dice sin decirla: el que estudia
+  empieza más despacio.
+- **El imperio ya no se abre al cerrar el primer mes.** Eso era un cañonazo: un chico de
+  trece veía aparecer un negocio y una tienda de mejoras que no puede pagar. Ahora llega
+  cuando tiene con qué —Q900, el doble del puesto de dulces más barato— y la condición es
+  solo el dinero, no tener empleo: pedir las dos cosas se lo cerraría para siempre a quien
+  vive de una mesada.
+- **El banco se abre solo**, sin tutorial, porque cuatro meses de clases bastan para que el
+  efectivo se le vaya en gastos hormiga. Ese es el momento en que el banco tiene sentido.
+
+### Las tareas ahora son de la carrera que estás haciendo
+
+- **Dos ejes distintos y no se parecen.** `requiereCarrera` es de los trabajos de oficio: se
+  abren con el título **ya en la mano**. `paraCarrera` es de las clases: se abren mientras
+  estás **inscrito**. Es la diferencia entre "ya lo aprendí" y "lo estoy aprendiendo".
+- **Básicos tiene tres tareas sencillas y generales**: `Da el cambio` (restar dinero de
+  verdad, con precios de tienda), `¿Cuál conviene?` (precio por unidad, y **el paquete
+  grande no siempre gana**, porque premiar "compra el grande" enseñaría una regla falsa) y
+  `Caza-estafas`.
+- **Diversificado tiene la primera especializada**: `Cuadra el mes`. A los trece no hay
+  sueldo que cuadrar.
+- **Las carreras que todavía no tienen tarea propia lo dicen** en pantalla, en vez de dejar
+  la sección en blanco. Faltan: técnico, administración, ingeniería y maestría.
+
+
 ### El colegio da experiencia, no dinero
 
 Primera mitad de la reforma de la ruta. Lo que había antes no se sostenía: los dos
