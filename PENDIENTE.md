@@ -7,6 +7,34 @@ aporta al juego, no por lo que es más fácil.
 
 ## 0. Lo que se cerró hoy
 
+### El tutorial ya no contesta por el jugador
+
+El foco apaga la pantalla menos lo señalado, y lo señalado salía de `querySelector`: **el
+primero**. En las dos pantallas donde el juego pregunta de verdad eso significaba elegir por
+el jugador —"Pública" de la primera carrera, con la privada y el "no, a trabajar" a oscuras;
+y una de las tres ofertas de trabajo—. Había además una segunda capa deliberada: la marca del
+tutorial iba solo en el primer botón de inscribirse.
+
+En un juego cuya lección es que ninguna de esas salidas es gratis, eso enseñaba lo contrario.
+Arreglado en el foco, en la marca y en `reubicarFoco` (que pedía uno solo y deshacía el
+arreglo al primer scroll), y comprobado en cada paso por `pruebas/dom-real.js`.
+
+### Abrir y administrar un negocio se hace en la calle
+
+- **El engranaje de cada local** abre una hoja debajo de la calle con lo de subirle el nivel,
+  contratar y traspasarlo. **El lote vacío** abre ahí mismo lo que se puede abrir, en vez de
+  llevarte a otra pestaña y hacerte volver.
+- La hoja **reusa las tarjetas del imperio**, no las copia: son las que enseñan lo que cuesta
+  de verdad un empleado formal, y dos versiones serían dos sitios donde equivocarse.
+- Es una hoja dentro de la pantalla y no una ventana encima, porque contratar vuelve a pintar
+  la pantalla y una ventana flotante se quedaría con las cifras viejas.
+
+### El mes se cierra desde la calle
+
+Estaba al final de la pantalla, después de la rejilla, la ruta y las tres cifras: a dos
+pantallazos de scroll de lo que el jugador acababa de decidir. Ahora está en la barra pegada
+a la calle, y cambia de tamaño según si queda mes por repartir.
+
 ### La calle dejó de ser una pestaña y pasó a ser la pantalla
 
 La reforma del imperio había metido los negocios, la planilla y los techos **en la cuarta

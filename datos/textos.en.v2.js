@@ -529,12 +529,12 @@
       px = X.progreso_texto, pl = X.progreso_leccion;
 
   pp.verEstudio = 'You are 13 and you just finished primary school. Tap Study: there is something to decide.';
-  pp.decidirEstudio = 'Decide: enroll in middle school or go to work. Both are possible, and both cost you something.';
+  pp.decidirEstudio = 'Three ways out, and all three cost you something: public middle school, private, or go to work. You choose.';
   pt.decidirEstudio = 'Work is open';
   px.decidirEstudio = 'You decided what to do with your mornings. What you do with your afternoons is what will pay for everything else.';
   pl.decidirEstudio = 'Studying is not free: it is paid for with the hours you could be earning. And not studying is not free either: in Guatemala a worker without middle school earns half of what one with high school earns, for life.';
   pp.verTrabajo = 'Now tap Work. At 13 there are no salaries, but there are odd jobs.';
-  pp.empleo = 'Pick one of the three odd jobs and take it. They pay a few quetzales per half-day: that is what exists at your age.';
+  pp.empleo = 'All three are yours to pick from. They pay a few quetzales per half-day: that is what exists at your age.';
   px.empleo = 'Money is coming in now, even if it is very little. What you are missing is somewhere for it to land.';
   pp.verMes = 'Go back to the Month tab. That is where you split your time, which is the only thing you really have.';
   pp.tocarJornada = 'Every week has a morning and an afternoon. Tap a free slot.';
@@ -702,12 +702,12 @@
   ui['Tus negocios'] = 'Your businesses';
   ui['Mejoras para ti'] = 'Upgrades for you';
   ui['Abrir un negocio'] = 'Open a business';
+  ui['Administrar este negocio'] = 'Manage this business';
+  ui['Por ahora no hay nada que puedas abrir.'] = 'There is nothing you can open right now.';
 
   /* La calle como tablero: se toca un local y se mete una jornada adentro. */
   ui['Te quedan {0} jornadas'] = '{0} half-days left';
   ui['Mes repartido'] = 'Month spent';
-  ui['Ver el imperio'] = 'See your empire';
-  ui['Buscar trabajo'] = 'Look for work';
   ui['El mes ya está repartido'] = 'The month is already spent';
   ui['Las ocho jornadas están ocupadas. Vacía una en la rejilla de abajo si quieres cambiar algo.'] =
     'All eight half-days are taken. Empty one in the grid below if you want to change something.';

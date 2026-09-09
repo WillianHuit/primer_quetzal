@@ -790,6 +790,55 @@ vuelve a pintar la pantalla y sin eso la calle le saltaba de sitio debajo del de
 responde al dedo. Es lo que evita que se separen: un negocio nuevo, un nivel nuevo o una
 ilustración nueva salen en las dos el mismo día.
 
+**Dos botones en cada edificio, y cada uno tiene su razón.** Tocar el local pone una jornada
+tuya adentro: eso se hace ocho veces al mes. Tocar el engranaje de su esquina abre lo que se
+hace una vez cada varios meses —subirle el nivel, contratar, traspasarlo— en una hoja que se
+despliega debajo de la calle. Si lo frecuente costara dos toques para que lo raro costara
+uno, el juego se sentiría lento justo donde no puede permitírselo.
+
+Esa hoja **no dibuja nada propio**: reusa las mismas tarjetas del imperio. Importa más de lo
+que parece, porque son las pantallas que enseñan lo que cuesta de verdad un empleado formal
+contra uno informal, y tener dos versiones de eso sería tener dos sitios donde equivocarse.
+Y es una hoja dentro de la pantalla, no una ventana encima: contratar vuelve a pintar la
+pantalla entera, y una ventana flotante se quedaría con las cifras viejas debajo del dedo.
+
+**Y el mes se cierra desde la calle.** El botón estaba al final de la pantalla, después de la
+rejilla, de la ruta y de las tres cifras: a dos pantallazos de scroll de lo que el jugador
+acababa de decidir. La acción que cierra el ciclo del juego —reparto el mes, lo cierro, entra
+el dinero, abro otro negocio— no puede estar donde hay que ir a buscarla.
+
+### 14.6c El tutorial no puede contestar por el jugador
+
+Un fallo que estuvo mucho tiempo y que no se veía leyendo el código, porque cada pieza por
+separado era razonable.
+
+El foco del tutorial apaga toda la pantalla menos lo que hay que tocar. Y lo que hay que
+tocar salía de `document.querySelector`, que devuelve **el primero** que cumple. En las
+pantallas de una sola acción eso está bien. En las dos pantallas donde el juego pregunta de
+verdad, no: en la de estudio alumbraba "Pública" de la primera carrera y dejaba a oscuras la
+privada y el "no, a trabajar"; en la de trabajo alumbraba una de las tres ofertas. Y había
+una segunda capa, esta deliberada: los botones de inscribirse llevaban la marca del tutorial
+**solo en el primero**, con un comentario que decía que era para que la cinta apuntara a un
+botón concreto.
+
+O sea que el tutorial, en las dos únicas decisiones que el juego pide al principio, le
+contestaba al jugador. Y no es un detalle de estilo: la lección de este juego es que esas
+decisiones se pagan de formas distintas y que ninguna es gratis. Un tutorial que señala una
+sola enseña que hay una respuesta correcta, que es exactamente lo contrario.
+
+Arreglado en tres sitios, y hacían falta los tres: el foco toma **todas** las que cumplen y
+alumbra la caja que las contiene; la marca va en **todos** los botones de la decisión, el "no
+estudiar" incluido; y `reubicarFoco` —el que vuelve a colocar el foco al hacer scroll—
+también pide todas, porque pedía una y el primer movimiento del dedo deshacía el arreglo.
+
+Con varias opciones se alumbra **la tarjeta** de cada una y no su botón: los tres "Aceptar"
+de las ofertas están alineados en la misma columna, así que la caja que los contiene a los
+tres es una tira vertical estrecha que parte las tarjetas por la mitad. Con una sola opción
+no se toca nada, porque ahí el paso no ofrece: dice qué tocar.
+
+`pruebas/dom-real.js` lo comprueba en cada paso del tutorial: si el paso tiene más de una
+opción, tienen que estar señaladas todas.
+
 ### 14.7 Ilustraciones, y el dibujo que se queda detrás
 
 El juego se dibujaba entero con SVG propio: iconos de trazo, un muñeco por piezas y una

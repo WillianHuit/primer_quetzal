@@ -136,7 +136,7 @@ var PROGRESO = [
     id: 'decidirEstudio',
     llaves: ['trabajo'],
     cuando: function (e) { return e.decisionEstudio !== null || e.edad >= 14; },
-    pista: 'Decide: te inscribes en básicos o te pones a trabajar. Las dos se pueden, y las dos cuestan algo.',
+    pista: 'Tres salidas, y las tres cuestan algo: básicos en pública, en privada, o a trabajar. Elige tú.',
     guia: true,
     senala: '[data-decide]',
     pestana: 'estudio',
@@ -160,7 +160,7 @@ var PROGRESO = [
     id: 'empleo',
     llaves: [],
     cuando: function (e) { return e.empleo !== null; },
-    pista: 'Elige uno de los tres trabajitos y acéptalo. Pagan unos pocos quetzales por jornada: eso es lo que hay a tu edad.',
+    pista: 'Los tres son tuyos para elegir. Pagan unos pocos quetzales por jornada: eso es lo que hay a tu edad.',
     guia: true,
     senala: '[data-tomar]',
     pestana: 'trabajo'

@@ -198,6 +198,27 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
     if (w.document.querySelector('.senala') && !w.document.querySelector('.foco')) {
       ok(false, 'el foco debería estar encendido en el paso ' + toques);
     }
+    /* Y cuando el paso pide una DECISION, tiene que señalarlas todas.
+     *
+     * Este es el fallo que esta comprobación existe para atrapar, y es de los
+     * peores que puede tener este juego en concreto. El foco apaga todo lo que
+     * no está señalado, así que señalar una sola opción no es una ayuda
+     * visual: es contestar por el jugador. Pasaba en las dos pantallas donde
+     * el juego pregunta de verdad —pública, privada o a trabajar; y cuál de
+     * los tres trabajitos— y en las dos la lección es justamente que ninguna
+     * respuesta es gratis y que la eliges tú. */
+    const marcadas = w.document.querySelectorAll('.senala').length;
+    const decisiones = w.document.querySelectorAll('[data-decide]').length;
+    const ofertas = w.document.querySelectorAll('[data-tomar]').length;
+    if (decisiones > 1) {
+      ok(marcadas === decisiones,
+         `la decisión de estudiar señala sus ${decisiones} opciones, no una (señala ${marcadas})`);
+    }
+    if (ofertas > 1 && w.document.querySelector('.senala[data-tomar]')) {
+      ok(marcadas === ofertas,
+         `y las ${ofertas} ofertas de trabajo se señalan todas (señala ${marcadas})`);
+    }
+
     const objetivo = w.document.querySelector('.senala') ||
                      w.document.querySelector('[data-guia-ir]');
     if (!objetivo) break;
@@ -383,14 +404,35 @@ clic(w, w.document.querySelector('[data-poner="descanso"]'));
 ok(w.Motor.espaciosUsados('descanso') >= 1,
    'y con una casilla elegida, la actividad va a ESA casilla');
 
-/* El lote vacío no gasta jornada: lleva a abrir un negocio. */
+/* El lote vacío no gasta jornada: abre lo que se puede abrir, AHÍ MISMO.
+ * Que llevara a otra pestaña era irse de la pantalla para volver. */
 const lote = w.document.querySelector('[data-lote]');
 ok(!!lote, 'al lado de tus negocios hay un lote vacío, mientras te quepa otro');
 clic(w, lote);
-ok(w.document.querySelector('.pestanas .activa').dataset.pestana === 'mejoras',
-   'y tocarlo lleva a la pantalla donde se abre uno');
+ok(w.document.querySelector('.pestanas .activa').dataset.pestana === 'casa',
+   'tocarlo no te saca de la calle');
+ok(!!w.document.querySelector('.hoja-calle [data-abrir-negocio]'),
+   'y abre debajo de la calle lo que puedes abrir');
+clic(w, w.document.querySelector('[data-cerrar-hoja]'));
+ok(!w.document.querySelector('.hoja-calle'), 'y la hoja se cierra');
+
+/* Y el engranaje de cada local administra ESE negocio sin salir de la calle. */
+const engrane = w.document.querySelector('[data-gestion="refrescos"]');
+ok(!!engrane, 'cada local lleva su botón de administrar');
+clic(w, engrane);
+const hoja = w.document.querySelector('.hoja-calle');
+ok(!!hoja, 'y abre la hoja de ese negocio debajo de la calle');
+ok(!!hoja.querySelector('[data-subir-negocio="refrescos"]') &&
+   !!hoja.querySelector('[data-contratar="refrescos"]'),
+   'con lo de subirle el nivel y contratar, sin ir a otra pestaña');
+clic(w, w.document.querySelector('[data-cerrar-hoja]'));
+
+/* El mes se cierra desde la calle, no al final de la pantalla. */
+const cerrar = w.document.querySelector('.calle-barra #cerrar-turno');
+ok(!!cerrar, 'y el botón de terminar el mes está en la barra de la calle');
 
 // El imperio dibuja la MISMA calle, pero quieta: ahí las acciones son tarjetas
+clic(w, w.document.querySelector('[data-pestana="mejoras"]'));
 ok(!!w.document.querySelector('.escena') && !w.document.querySelector('.escena.viva'),
    'el imperio dibuja la misma calle, pero sin zonas que se toquen');
 

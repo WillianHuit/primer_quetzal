@@ -317,8 +317,12 @@ var Escena = (function () {
   function tuyas(x0, cuantas, alto) {
     if (!cuantas) return '';
     var an = cuantas > 9 ? 25 : 21, al = 14;
-    var x = x0 + ANCHO_LOCAL - an - 1;
-    var y = SUELO - (alto || 34) * 0.78 - al / 2;
+    /* Pegada al borde derecho del LOCAL, no del hueco. Un puesto de nivel 1
+     * mide 32 y el hueco 56, así que anclada al hueco la insignia salía
+     * flotando doce unidades al lado del dibujo, como un globo suelto. */
+    var lado = alto || 34;
+    var x = x0 + (ANCHO_LOCAL + lado) / 2 - an;
+    var y = SUELO - lado * 0.78 - al / 2;
     return '<g class="tuyas">' +
       '<rect x="' + x + '" y="' + y + '" width="' + an + '" height="' + al + '" rx="7"' +
         ' fill="' + C.verde + '" stroke="' + C.tinta + '" stroke-width="1.1"/>' +
@@ -326,6 +330,34 @@ var Escena = (function () {
       '<text x="' + (x + an - 6) + '" y="' + (y + al / 2 + 3.4) +
         '" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff">' +
         cuantas + '</text></g>';
+  }
+
+  /* El botón de administrar ese negocio, en la esquina de arriba a la
+   * IZQUIERDA del local.
+   *
+   * Dos botones en el mismo edificio, y cada uno tiene su razón. Tocar el
+   * local pone una jornada tuya adentro, que es lo que se hace ocho veces al
+   * mes; tocar el engranaje abre lo que se hace una vez cada varios meses:
+   * subirle el nivel, contratar, traspasarlo. Si lo frecuente costara dos
+   * toques para que lo raro costara uno, el juego se sentiría lento en el
+   * único sitio donde no se puede permitir.
+   *
+   * Va en la esquina opuesta a la insignia de tus jornadas, así que en un
+   * local de 56 unidades los dos caben sin tocarse. */
+  function gestionar(x0, tipo, alto, etiqueta) {
+    if (typeof Iconos === 'undefined' || !Iconos.trazo('engranaje')) return '';
+    var r = 6.5;
+    // Pegado al borde izquierdo del LOCAL, por el mismo motivo que la insignia
+    var lado = alto || 34;
+    var cx = x0 + (ANCHO_LOCAL - lado) / 2 + r;
+    var cy = SUELO - lado * 0.78;
+    return '<g class="calle-toque gestion" role="button" tabindex="0"' +
+           ' data-gestion="' + tipo + '"><title>' + etiqueta + '</title>' +
+           '<circle class="toque" cx="' + cx + '" cy="' + cy + '" r="' + (r + 3) +
+             '" fill="transparent"/>' +
+           '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + C.lona +
+             '" stroke="' + C.tinta + '" stroke-width="1.1"/>' +
+           emblema('engranaje', cx, cy, 10) + '</g>';
   }
 
   /* Las monedas que suben de un local que produjo.
@@ -343,10 +375,14 @@ var Escena = (function () {
   function monedas(x0, cuantas, alto) {
     var img = (typeof Arte !== 'undefined') ? Arte.moneda() : null;
     var h = '';
-    var techo = SUELO - (alto || 34) * 0.78;
+    /* Y van por ENCIMA de las insignias, no a su altura. Las dos insignias del
+     * local —el engranaje y las jornadas tuyas— se sientan justo en la línea
+     * del techo, así que las monedas ahí se les montaban encima y la esquina
+     * quedaba ilegible. */
+    var techo = SUELO - (alto || 34) * 0.78 - 12;
     var a = ANCHO_LOCAL;
-    var sitios = [[x0 + a * 0.24, techo - 5], [x0 + a * 0.50, techo - 13],
-                  [x0 + a * 0.74, techo - 3]];
+    var sitios = [[x0 + a * 0.28, techo - 4], [x0 + a * 0.52, techo - 12],
+                  [x0 + a * 0.74, techo - 2]];
     for (var i = 0; i < Math.min(cuantas, 3); i++) {
       var cx = sitios[i][0], cy = sitios[i][1];
       h += '<g class="esc-moneda esc-moneda-' + (i + 1) + '">';
@@ -552,7 +588,10 @@ var Escena = (function () {
       h += tuyas(x0, n.tuyas || 0, alto);
       if (n.produce) h += monedas(x0, (n.nivel || 1), alto);
       if (toca && n.tipo) {
+        // Primero la zona grande, y ENCIMA el engranaje: al revés, la zona
+        // del local se comería el toque del botón chico.
         h += tocable(x0, 'negocio:' + n.tipo, n.nombre || '', (n.tuyas || 0) > 0);
+        h += gestionar(x0, n.tipo, alto, n.textoGestion || '');
       }
     }
 

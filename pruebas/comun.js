@@ -57,6 +57,11 @@ function cargar(idioma) {
     console,
     document: {
       querySelector: (s) => (s === '#app' ? app : Elem('div')),
+      /* Vacio a proposito: este DOM no tiene geometria, asi que el foco del
+       * tutorial no se dibuja y la vista tiene que salir igual sin el. Faltaba
+       * del doble, y en cuanto la interfaz empezo a pedir TODAS las opciones
+       * senaladas en vez de la primera, esta suite se rompio entera. */
+      querySelectorAll: () => [],
       // Devuelve null a proposito: no hay canvas de verdad, asi que la
       // grafica no se dibuja y la vista tiene que salir igual.
       getElementById: () => null,

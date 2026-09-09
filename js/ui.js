@@ -9,6 +9,13 @@ var UI = (function () {
 
   var pestana = 'casa';
   var espacioSel = null;
+  /* Qué hoja de negocio está abierta debajo de la calle, si alguna.
+   * Un id de tipo administra ese negocio; 'abrir' muestra qué se puede abrir.
+   *
+   * Es una hoja DENTRO de la pantalla y no una ventana encima a propósito:
+   * subir de nivel o contratar vuelven a pintar la pantalla entera, y una
+   * ventana flotante se quedaría con las cifras viejas debajo del dedo. */
+  var hojaNegocio = null;
   var app;
 
   /* El orden importa: de el sale el sentido en que se desliza la vista al
@@ -222,6 +229,7 @@ var UI = (function () {
           empleados: n.empleados.length,
           // Las jornadas TUYAS de este mes, que es lo que la calle no decía
           tuyas: Motor.espaciosUsados('negocio:' + n.tipoId),
+          textoGestion: T('Administrar este negocio'),
           produce: (n.gananciaUltimoMes || 0) > 0
         };
       }),
@@ -241,25 +249,29 @@ var UI = (function () {
    * dibujadas una por una. Existe porque la calle contesta "¿qué tengo?" pero
    * no "¿cuánto me queda por repartir?", y esa es la pregunta que el jugador
    * se hace justo después de tocar un local. */
-  function barraDeCalle(e, t) {
+  function barraDeCalle(e) {
     var libres = 0;
     for (var i = 0; i < e.espacios.length; i++) if (!e.espacios[i]) libres++;
 
-    var h = '<div class="calle-barra">';
+    /* El botón de cerrar el mes vive AQUÍ, pegado a la calle.
+     *
+     * Estaba al final de la pantalla, después de la rejilla, de la ruta y de
+     * las tres cifras: en un teléfono, a dos pantallazos de scroll de lo que
+     * el jugador acababa de decidir. La acción que cierra el ciclo del juego
+     * —reparto el mes, lo cierro, entra el dinero, abro otro negocio— no puede
+     * estar donde hay que ir a buscarla.
+     *
+     * Y cambia de cara según si queda mes por repartir, porque son dos
+     * momentos distintos: uno dice "te falta", el otro dice "ya, dale". */
+    var h = '<div class="calle-barra' + (libres ? '' : ' listo') + '">';
     if (libres) {
       h += '<span class="quedan">' + Ico('mas') + ' ' +
            T('Te quedan {0} jornadas', libres) + '</span>';
     } else {
       h += '<span class="listo">' + Ico('visto') + ' ' + T('Mes repartido') + '</span>';
     }
-    // Y el atajo a lo que el jugador va a querer hacer después de mirar la calle
-    if (!t && !e.migracion) {
-      h += '<button class="btn-chico" data-pestana="trabajo">' + Ico('maletin') + ' ' +
-           T('Buscar trabajo') + '</button>';
-    } else if (Motor.desbloqueado('mejoras')) {
-      h += '<button class="btn-chico" data-pestana="mejoras">' + Ico('trending-up') + ' ' +
-           T('Ver el imperio') + '</button>';
-    }
+    h += '<button class="btn-primario chico" id="cerrar-turno">' +
+         T('Terminar el {0}', turnoNombre()) + ' ▸</button>';
     return h + '</div>';
   }
 
@@ -274,6 +286,30 @@ var UI = (function () {
       if (!e.espacios[i] && !Motor.espacioBloqueado(i)) return i;
     }
     return null;
+  }
+
+  /* La hoja que se abre debajo de la calle al tocar el engranaje de un
+   * negocio, o el lote vacío.
+   *
+   * No dibuja nada propio: reusa `tarjetaNegocio` y `ofertasDeNegocio`, que
+   * son las mismas del imperio. Eso importa más de lo que parece: son las
+   * pantallas que enseñan la planilla formal contra la informal y lo que
+   * cuesta de verdad un empleado, y tener dos versiones de eso sería tener
+   * dos sitios donde equivocarse. */
+  function hojaDeNegocio() {
+    if (!hojaNegocio) return '';
+    var cuerpo;
+    if (hojaNegocio === 'abrir') {
+      cuerpo = ofertasDeNegocio(Motor.imperio()) ||
+        ('<p class="sutil">' + T('Por ahora no hay nada que puedas abrir.') + '</p>');
+    } else {
+      var neg = Motor.negocioDe(hojaNegocio);
+      if (!neg) { hojaNegocio = null; return ''; }
+      cuerpo = tarjetaNegocio(neg);
+    }
+    return '<div class="tarjeta hoja-calle">' +
+             '<button class="hoja-cerrar" data-cerrar-hoja="1" aria-label="' + T('Cerrar') + '">' +
+               Ico('flecha') + '</button>' + cuerpo + '</div>';
   }
 
   function rejillaJornadas(e) {
@@ -424,8 +460,11 @@ var UI = (function () {
 
     h += '<div class="tarjeta escenario mando">';
     h += calle(true);
-    h += barraDeCalle(e, t);
+    h += barraDeCalle(e);
     h += '</div>';
+
+    // Y justo debajo, si el jugador tocó un negocio o el lote
+    h += hojaDeNegocio();
 
     if (Motor.enGracia()) {
       h += '<div class="aprendizaje">' +
@@ -474,9 +513,12 @@ var UI = (function () {
 
     h += tarjetaLoQueSigue();
 
+    /* Las tres cifras van DEBAJO de la rejilla y ya no encima del botón de
+     * cerrar, porque el botón se subió a la calle. Siguen aquí y no se quitan:
+     * son la consecuencia de lo que se acaba de repartir, y quien quiera
+     * mirarlas antes de cerrar las tiene a un dedo de scroll. */
     h += tarjetaLoQueViene(e, t, v, puedeTrabajar);
 
-    h += '<button class="btn-primario" id="cerrar-turno">' + T('Terminar el {0}', turnoNombre()) + ' ▸</button>';
     h += '<div class="btn-fila" style="margin-top:8px"><button class="btn-chico" id="adelantar" style="flex:1">' + Ico('adelantar') + ' ' +
          T('Adelantar hasta que pase algo') + '</button></div>';
     return h;
@@ -832,9 +874,13 @@ var UI = (function () {
       return h;
     }
 
-    opciones.forEach(function (c, i) { h += tarjetaCarrera(e, c, i === 0); });
+    opciones.forEach(function (c) { h += tarjetaCarrera(e, c, true); });
 
-    h += '<button class="btn-primario claro" data-no-estudiar="1" style="margin-top:6px">' +
+    /* `data-decide` va también aquí, y es la mitad del arreglo. No estudiar es
+     * una de las tres opciones de verdad de esta pantalla —pública, privada o
+     * a trabajar— y sin la marca el tutorial la dejaba a oscuras, como si no
+     * existiera. */
+    h += '<button class="btn-primario claro" data-decide="1" data-no-estudiar="1" style="margin-top:6px">' +
          Ico('maletin') + ' ' + T('No, a trabajar') + '</button>';
     h += '<p class="sutil centrado" style="margin-top:10px">' +
       T('Puedes cambiar de opinión después. Esta pantalla no se cierra nunca.') + '</p>';
@@ -847,10 +893,13 @@ var UI = (function () {
 
   /* Una carrera, con lo que cuesta y sus botones para inscribirse.
    *
-   * `primera` marca la que la cinta del tutorial señala: con `data-decide`
-   * puesto solo en una, el tutorial apunta a un botón concreto en vez de a
-   * cualquiera de los seis que puede haber en pantalla. */
-  function tarjetaCarrera(e, c, primera) {
+   * `decidible` marca los botones que forman la decisión que el tutorial está
+   * pidiendo, y van TODOS. Antes se marcaba solo el primero de la primera
+   * carrera, para que la cinta apuntara a un botón concreto, y eso resultó ser
+   * un error de fondo: el foco apaga todo lo que no está marcado, así que el
+   * tutorial dejaba a oscuras la privada y el "a trabajar" y contestaba por el
+   * jugador la única pregunta que esta pantalla existe para hacerle. */
+  function tarjetaCarrera(e, c, decidible) {
     var et = c.sinMercado ? null : etiquetaDemanda(e.mercado[c.id]);
     var h = '<div class="opcion">';
     h += '<div class="titulo">' + Ico(c.icono) + ' ' + esc(D(c, 'nombre')) +
@@ -865,7 +914,7 @@ var UI = (function () {
                                                    : T('{0} al año', Q0(c.costoAnualPublico)), 'ok'),
       pastilla('billete', T('Privada: {0}', Q0(c.costoAnualPrivado)), 'mal')
     ]);
-    h += botonesInscribir(c, primera);
+    h += botonesInscribir(c, decidible);
     return h + '</div>';
   }
 
@@ -925,20 +974,20 @@ var UI = (function () {
    * Con horario de jornada hay que elegir mañana o tarde ANTES de inscribirse,
    * porque esa elección decide en qué jornada va a poder trabajar los próximos
    * años. Con horario libre basta pública o privada. */
-  function botonesInscribir(c, primera) {
-    var marca = primera ? ' data-decide="1"' : '';
+  function botonesInscribir(c, decidible) {
+    var marca = decidible ? ' data-decide="1"' : '';
     var h = '<div class="btn-fila" style="margin-top:10px">';
     if (c.horario === 'jornada') {
       h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="0" data-jornada="am">' +
            Ico('manana') + ' ' + T('Mañana') + '</button>';
-      h += '<button class="btn-chico" data-inscribir="' + c.id + '" data-priv="0" data-jornada="pm">' +
+      h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="0" data-jornada="pm">' +
            Ico('tarde') + ' ' + T('Tarde') + '</button>';
-      h += '<button class="btn-chico" data-inscribir="' + c.id + '" data-priv="1" data-jornada="am">' +
+      h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="1" data-jornada="am">' +
            T('Privada') + '</button>';
     } else {
       h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="0">' +
            T('Pública') + '</button>';
-      h += '<button class="btn-chico" data-inscribir="' + c.id + '" data-priv="1">' +
+      h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="1">' +
            T('Privada') + '</button>';
     }
     return h + '</div>';
@@ -2252,8 +2301,8 @@ var UI = (function () {
   function pintarGuia() {
     var vieja = document.querySelector('.guia');
     if (vieja) vieja.remove();
-    var previo = document.querySelector('.senala');
-    if (previo) previo.classList.remove('senala');
+    var previos = document.querySelectorAll('.senala');
+    Array.prototype.forEach.call(previos, function (n) { n.classList.remove('senala'); });
 
     var act = guiaActiva();
     // La marca en el body es lo que le da al contenido el espacio de la cinta
@@ -2308,10 +2357,23 @@ var UI = (function () {
       var sel = typeof act.paso.senala === 'function'
         ? act.paso.senala(Motor.get(), { pestana: pestana, espacioSel: espacioSel })
         : act.paso.senala;
-      var obj = sel && document.querySelector(sel);
-      if (obj) obj.classList.add('senala');
-      focoSel = obj ? sel : null;
-      pintarFoco(obj);
+      /* TODAS las que cumplen, no la primera.
+       *
+       * Esto era un fallo de fondo y no de dibujo. `querySelector` devuelve la
+       * primera, y el foco apaga TODO lo demás: en la pantalla de estudio, el
+       * tutorial alumbraba "Pública" de la primera carrera y dejaba a oscuras
+       * la privada y el "a trabajar"; en la de trabajo, alumbraba una de las
+       * tres ofertas. O sea que en las dos pantallas donde el juego pregunta
+       * al jugador qué quiere hacer, el tutorial le contestaba por él.
+       *
+       * Y no es un detalle de estilo: la lección de este juego es que esas
+       * decisiones se pagan de formas distintas y que ninguna es gratis. Un
+       * tutorial que señala una sola enseña que hay una respuesta correcta,
+       * que es exactamente lo contrario. */
+      var objs = sel ? Array.prototype.slice.call(document.querySelectorAll(sel)) : [];
+      objs.forEach(function (o) { o.classList.add('senala'); });
+      focoSel = objs.length ? sel : null;
+      pintarFoco(objs);
     } else {
       focoSel = null;
       pintarFoco(null);
@@ -2332,17 +2394,68 @@ var UI = (function () {
    */
   var focoSel = null;
 
+  /* Recibe UNA cosa o VARIAS, y alumbra todas.
+   *
+   * Cuando el paso señala opciones —las carreras, las ofertas de trabajo, las
+   * casillas libres del mes— hay que dejar encendidas todas, no la primera.
+   * Se hace con la caja que las contiene a todas, que para opciones apiladas
+   * una debajo de otra es justo la lista. */
+  /* Las tarjetas que envuelven una opción. Si el objetivo vive dentro de una,
+   * lo que se alumbra es la tarjeta entera. */
+  var TARJETA_DE_OPCION = '.oferta, .opcion, .cadena';
+
+  function cajaDe(cosas) {
+    var lista = (cosas && cosas.length !== undefined && typeof cosas !== 'string')
+      ? Array.prototype.slice.call(cosas) : [cosas];
+
+    /* Con VARIAS opciones se alumbra la tarjeta de cada una, no su botón.
+     *
+     * La diferencia importa y se ve de inmediato: los tres botones "Aceptar"
+     * de las ofertas de trabajo están alineados en la misma columna, así que
+     * la caja que los contiene a los tres es una tira vertical estrecha que
+     * parte las tres tarjetas por la mitad y no se entiende. Alumbrando las
+     * tarjetas, el hueco es justo "estas son tus tres opciones".
+     *
+     * Con UNA sola no se toca nada: ahí el paso no está ofreciendo opciones,
+     * está diciendo qué botón tocar, y agrandar el hueco a la tarjeta entera
+     * lo haría menos claro. */
+    if (lista.length > 1) {
+      lista = lista.map(function (o) {
+        if (!o || typeof o.closest !== 'function') return o;
+        var t = null;
+        try { t = o.closest(TARJETA_DE_OPCION); } catch (err) { t = null; }
+        return t || o;
+      });
+    }
+
+    var cajas = [];
+    for (var i = 0; i < lista.length; i++) {
+      var o = lista[i];
+      if (!o || typeof o.getBoundingClientRect !== 'function') continue;
+      var c;
+      try { c = o.getBoundingClientRect(); } catch (err) { continue; }
+      // Sin navegador de verdad no hay geometría: las pruebas no dibujan foco
+      if (!c || !c.width || !c.height) continue;
+      cajas.push(c);
+    }
+    if (!cajas.length) return null;
+    var t = cajas[0].top, iz = cajas[0].left;
+    var ab = cajas[0].bottom, de = cajas[0].right;
+    for (var j = 1; j < cajas.length; j++) {
+      t = Math.min(t, cajas[j].top);   iz = Math.min(iz, cajas[j].left);
+      ab = Math.max(ab, cajas[j].bottom); de = Math.max(de, cajas[j].right);
+    }
+    return { top: t, left: iz, width: de - iz, height: ab - t };
+  }
+
   function pintarFoco(obj) {
     var viejo = document.querySelector('.foco');
     if (viejo && viejo.remove) viejo.remove();
     var flechaVieja = document.querySelector('.foco-flecha');
     if (flechaVieja && flechaVieja.remove) flechaVieja.remove();
-    if (!obj || typeof obj.getBoundingClientRect !== 'function') return;
 
-    var r;
-    try { r = obj.getBoundingClientRect(); } catch (err) { return; }
-    // Sin navegador de verdad no hay geometría: las pruebas no dibujan foco
-    if (!r || !r.width || !r.height) return;
+    var r = cajaDe(obj);
+    if (!r) return;
 
     var m = 7;   // aire alrededor del objetivo
     var d = document.createElement('div');
@@ -2392,7 +2505,11 @@ var UI = (function () {
    * queda donde estaba. Esto lo vuelve a poner encima. */
   function reubicarFoco() {
     if (!focoSel) return;
-    pintarFoco(document.querySelector(focoSel));
+    /* querySelectorAll y no querySelector, y esto NO es un detalle: con uno
+     * solo, el primer scroll de la pantalla apagaba todas las opciones menos
+     * la primera y el arreglo del foco duraba hasta que el jugador movía el
+     * dedo. */
+    pintarFoco(document.querySelectorAll(focoSel));
   }
 
   function saltarGuia() {
@@ -2756,7 +2873,7 @@ var UI = (function () {
 
   function conectar() {
     app.addEventListener('click', function (ev) {
-      var el = ev.target.closest('[data-pestana],[data-sub],[data-espacio],[data-poner],[data-lote],[data-tomar],[data-abrir],' +
+      var el = ev.target.closest('[data-pestana],[data-sub],[data-espacio],[data-poner],[data-lote],[data-gestion],[data-cerrar-hoja],[data-tomar],[data-abrir],' +
         '[data-mover],[data-mudar],[data-inscribir],[data-jugar],[data-abonar],[data-abrir-menu],' +
         '[data-casa],[data-envio],[data-canal],[data-porque],[data-detalle],[data-no-estudiar],' +
         '[data-ver-perfil],[data-mejora],' +
@@ -2789,8 +2906,22 @@ var UI = (function () {
       }
       if (d.detalle) { verDetalle = !verDetalle; return render(); }
 
-      /* El lote vacío de la calle: lo único de ahí que no gasta una jornada. */
-      if (d.lote !== undefined) { irAPestana('mejoras'); return render(); }
+      /* Los dos botones que abren la hoja de un negocio debajo de la calle.
+       *
+       * Antes el lote vacío llevaba a la pestaña del imperio, y eso era irse
+       * de la pantalla para volver: lo que se abre y lo que se administra
+       * ahora pasa donde están los negocios, que es la calle. */
+      if (d.lote !== undefined) {
+        hojaNegocio = hojaNegocio === 'abrir' ? null : 'abrir';
+        espacioSel = null;
+        return render();
+      }
+      if (d.gestion !== undefined) {
+        hojaNegocio = hojaNegocio === d.gestion ? null : d.gestion;
+        espacioSel = null;
+        return render();
+      }
+      if (d.cerrarHoja !== undefined) { hojaNegocio = null; return render(); }
 
       /* Poner una jornada en algo.
        *

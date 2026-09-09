@@ -875,6 +875,42 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
 .calle-barra .listo { color: var(--verde); }
 .calle-barra .quedan svg, .calle-barra .listo svg { width: 16px; height: 16px; }
 .calle-barra .btn-chico { flex: 0 0 auto; }
+
+/* El boton de cerrar el mes, dentro de la barra de la calle. Chico mientras
+   queda mes por repartir y entero cuando ya no: son dos momentos distintos y
+   la pantalla tiene que decir cual es. */
+.btn-primario.chico {
+  width: auto; flex: 0 0 auto;
+  padding: 9px 14px; font-size: 14px; margin: 0;
+}
+.calle-barra.listo { gap: 10px; }
+.calle-barra.listo .btn-primario.chico { flex: 1 1 auto; padding: 11px 14px; font-size: 15px; }
+
+/* La hoja de un negocio, debajo de la calle. Va pegada a la tarjeta de arriba
+   para que se lea como que sale DE ella, y no como una tarjeta suelta mas. */
+.tarjeta.hoja-calle {
+  position: relative;
+  margin-top: -6px; border-top-left-radius: 6px; border-top-right-radius: 6px;
+  border: 2px solid var(--verde-borde);
+  animation: hoja-abre .18s ease both;
+}
+@keyframes hoja-abre {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+.hoja-cerrar {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  width: 30px; height: 30px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--fondo); border: 1.5px solid var(--linea);
+  border-radius: 99px; color: var(--gris); cursor: pointer;
+}
+.hoja-cerrar .ic { width: 17px; height: 17px; transform: rotate(90deg); }
+.hoja-cerrar:hover { border-color: var(--verde); color: var(--verde); }
+.tarjeta.hoja-calle h3 { margin-top: 0; padding-right: 34px; }
+
+/* El engranaje de administrar, en la esquina del local */
+.calle-toque.gestion { cursor: pointer; }
 .escena {
   display: block; width: 100%; height: auto;
   border-radius: 14px;
