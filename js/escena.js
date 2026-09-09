@@ -344,20 +344,37 @@ var Escena = (function () {
    *
    * Va en la esquina opuesta a la insignia de tus jornadas, así que en un
    * local de 56 unidades los dos caben sin tocarse. */
-  function gestionar(x0, tipo, alto, etiqueta) {
+  function gestionar(x0, tipo, alto, etiqueta, alerta) {
     if (typeof Iconos === 'undefined' || !Iconos.trazo('engranaje')) return '';
     var r = 6.5;
     // Pegado al borde izquierdo del LOCAL, por el mismo motivo que la insignia
     var lado = alto || 34;
     var cx = x0 + (ANCHO_LOCAL - lado) / 2 + r;
     var cy = SUELO - lado * 0.78;
-    return '<g class="calle-toque gestion" role="button" tabindex="0"' +
-           ' data-gestion="' + tipo + '"><title>' + etiqueta + '</title>' +
-           '<circle class="toque" cx="' + cx + '" cy="' + cy + '" r="' + (r + 3) +
-             '" fill="transparent"/>' +
-           '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + C.lona +
-             '" stroke="' + C.tinta + '" stroke-width="1.1"/>' +
-           emblema('engranaje', cx, cy, 10) + '</g>';
+    var h = '<g class="calle-toque gestion' + (alerta ? ' avisa' : '') +
+            '" role="button" tabindex="0"' +
+            ' data-gestion="' + tipo + '"><title>' + etiqueta + '</title>' +
+            '<circle class="toque" cx="' + cx + '" cy="' + cy + '" r="' + (r + 3) +
+              '" fill="transparent"/>' +
+            '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + C.lona +
+              '" stroke="' + C.tinta + '" stroke-width="1.1"/>' +
+            emblema('engranaje', cx, cy, 10);
+
+    /* El punto rojo: este negocio está perdiendo dinero.
+     *
+     * Es lo que le faltaba a la calle para funcionar como tablero. Hasta ahora
+     * un local vacío que se come la renta todos los meses se veía exactamente
+     * igual que uno lleno que deja Q3,000, y para enterarte había que entrar a
+     * mirar sus cifras uno por uno. En un tycoon, la pantalla te dice dónde
+     * hace falta que vayas.
+     *
+     * Va encima del engranaje a propósito, y no suelto en otra esquina: la
+     * señal tiene que estar en el botón que la resuelve. */
+    if (alerta) {
+      h += '<circle class="punto-avisa" cx="' + (cx + r - 1) + '" cy="' + (cy - r + 1) +
+             '" r="3.6" fill="' + C.rojo + '" stroke="#fff" stroke-width="1.2"/>';
+    }
+    return h + '</g>';
   }
 
   /* Las monedas que suben de un local que produjo.
@@ -591,15 +608,22 @@ var Escena = (function () {
         // Primero la zona grande, y ENCIMA el engranaje: al revés, la zona
         // del local se comería el toque del botón chico.
         h += tocable(x0, 'negocio:' + n.tipo, n.nombre || '', (n.tuyas || 0) > 0);
-        h += gestionar(x0, n.tipo, alto, n.textoGestion || '');
+        h += gestionar(x0, n.tipo, alto, n.textoGestion || '', n.pierde);
       }
     }
 
-    // El lote vacío: el único de la calle que no pone una jornada sino que
-    // lleva a abrir un negocio, así que sale con su propio dato.
+    /* El lote vacío: el único de la calle que no pone una jornada sino que
+     * lleva a abrir un negocio, así que sale con su propio dato.
+     *
+     * Y solo se puede TOCAR si el jugador ya puede abrir negocios. Antes se
+     * podía desde el primer turno: un chico de trece en el paso uno del
+     * tutorial tenía un "+" latiendo al lado de su casa que le abría un
+     * catálogo de nueve negocios que no puede poner. El lote se sigue
+     * dibujando, punteado y quieto, porque decir "aquí va a caber algo" está
+     * bien; lo que no está bien es ofrecerlo antes de tiempo. */
     if (!negs.length || lote) {
       var xl = X_CALLE + negs.length * ANCHO_LOCAL;
-      if (toca) {
+      if (toca && o.cabeOtro) {
         /* El terreno va DENTRO del grupo que se toca. Fuera, el resaltado del
          * dedo era una columna de cielo de cien unidades de alto al lado del
          * último local, y se leía como un panel suelto en vez de como un lote. */

@@ -230,6 +230,11 @@ var UI = (function () {
           // Las jornadas TUYAS de este mes, que es lo que la calle no decía
           tuyas: Motor.espaciosUsados('negocio:' + n.tipoId),
           textoGestion: T('Administrar este negocio'),
+          /* Si tal como está el mes ese negocio va a cerrar en rojo. Es lo que
+           * pinta el punto de aviso en la calle, y es la diferencia entre un
+           * escenario y un tablero: un local vacío que se come la renta se veía
+           * igual que uno lleno que deja tres mil al mes. */
+          pierde: Motor.proyeccionDeNegocio(n).neto < 0,
           produce: (n.gananciaUltimoMes || 0) > 0
         };
       }),
@@ -270,8 +275,15 @@ var UI = (function () {
     } else {
       h += '<span class="listo">' + Ico('visto') + ' ' + T('Mes repartido') + '</span>';
     }
-    h += '<button class="btn-primario chico" id="cerrar-turno">' +
-         T('Terminar el {0}', turnoNombre()) + ' ▸</button>';
+    /* El botón solo grita cuando el mes ya está repartido.
+     *
+     * Subirlo a la calle lo puso encima de las cifras, y con ocho jornadas sin
+     * repartir eso era una trampa: un botón verde enorme invitando a cerrar un
+     * mes en el que no trabajas —o sea, a cerrarlo en pérdida— antes de que el
+     * jugador haya visto lo que va a pasar. Sigue estando, porque cerrar un mes
+     * a medias es una decisión legítima, pero deja de ser la invitación. */
+    h += '<button class="' + (libres ? 'btn-chico' : 'btn-primario chico') +
+         '" id="cerrar-turno">' + T('Terminar el {0}', turnoNombre()) + ' ▸</button>';
     return h + '</div>';
   }
 
@@ -1563,8 +1575,6 @@ var UI = (function () {
     // --- 3. los dos techos, que es donde el colegio se vuelve tamaño ---
     h += tarjetaTechos(imp);
 
-    h += graficaNegocio(e);
-
     // --- 4. sus negocios ---
     if (negs.length) {
       h += '<h3>' + T('Tus negocios') + '</h3>';
@@ -1573,6 +1583,13 @@ var UI = (function () {
 
     // --- 5. lo que puede abrir ---
     h += ofertasDeNegocio(imp);
+
+    /* La gráfica va DESPUÉS de los negocios, no antes.
+     *
+     * Es lo único de esta pantalla que no se puede tocar: cuenta cómo te ha
+     * ido, y eso se mira, no se decide. Estaba encima de las tarjetas, así que
+     * para llegar a lo accionable había que pasar por delante de ella. */
+    h += graficaNegocio(e);
 
     // --- 6. las mejoras para él mismo ---
     h += '<h3>' + T('Mejoras para ti') + '</h3>';
@@ -1895,9 +1912,15 @@ var UI = (function () {
     var conNegocio = meses.filter(function (m) { return (m.negocio || 0) > 0; });
     // Con menos de dos meses de historia la gráfica no dice nada
     if (conNegocio.length < 2) return '';
+    /* El lienzo va dentro de una caja de alto FIJO.
+     *
+     * Chart.js con `maintainAspectRatio: false` estira el lienzo hasta llenar
+     * a su padre, y el padre no tenía alto: la gráfica salía de casi quinientos
+     * píxeles para dibujar dos barras. El atributo `height` del canvas no la
+     * frena, hace falta que el padre mida. */
     return '<div class="tarjeta grafica-caja">' +
       '<h3 style="margin-top:0">' + T('Lo que han dejado tus negocios') + '</h3>' +
-      '<canvas id="grafica-negocio" height="150"></canvas></div>';
+      '<div class="lienzo"><canvas id="grafica-negocio"></canvas></div></div>';
   }
 
   /* Llena el lienzo de la gráfica. Se llama al final de pintar(). */
@@ -2276,6 +2299,7 @@ var UI = (function () {
   var COLOR_ENTRA = {
     salario:  '#1f7a5a',
     bono:     '#2f9b74',
+    negocio:  '#b5811f',
     remesa:   '#2c5f8a',
     extras:   '#4b86ae',
     intereses:'#7cb342'
@@ -2318,8 +2342,16 @@ var UI = (function () {
     var entra = [
       { id: 'salario',   nombre: T('Salario'),          monto: (m.salario || 0) + (m.bono || 0) },
       { id: 'remesa',    nombre: T('Remesas'),          monto: m.remesa || 0 },
+      /* Los negocios van en su PROPIO trozo de la barra.
+       *
+       * Estaban metidos dentro de "Ingresos extra" junto con la mesada y los
+       * trabajos sueltos, así que en un mes en que el imperio dejó Q26,748 la
+       * barra decía "ingresos extra 79%". Lo que sostiene al jugador no puede
+       * llamarse extra, y además el desglose de abajo ya lo llamaba "Tu
+       * negocio": dos nombres para lo mismo en la misma tarjeta. */
+      { id: 'negocio',   nombre: T('Tus negocios'),     monto: m.negocio || 0 },
       { id: 'extras',    nombre: T('Ingresos extra'),
-        monto: (m.extras || 0) + (m.mesada || 0) + (m.negocio || 0) },
+        monto: (m.extras || 0) + (m.mesada || 0) },
       { id: 'intereses', nombre: T('Intereses ganados'), monto: (m.intereses || 0) + (m.rendimientoPension || 0) }
     ];
     var sale = [
@@ -2675,33 +2707,57 @@ var UI = (function () {
             esc(m.mes) + ' ' + m.anio +
             (m.mesesCubiertos > 1 ? ' · ' + T('{0} meses', m.mesesCubiertos) : '') + '</h2>';
     h += barraFlujo(m);
-    if (m.salario) h += fila(T('Salario'), Q(m.salario), 'pos');
-    if (m.bono) h += fila(T('Bono de ley'), Q(m.bono), 'pos');
-    if (m.mesada) h += fila(T('Mesada'), Q(m.mesada), 'pos');
-    if (m.negocio) h += fila(T('Tu negocio'), Q(m.negocio), 'pos');
-    if (m.mantenimiento) h += fila(T('Mantenimiento de tus mejoras'), '-' + Q(m.mantenimiento), 'neg');
-    if (m.remesa) h += fila(T('Remesas'), Q(m.remesa), 'pos');
-    if (m.extras) h += fila(T('Ingresos extra'), Q(m.extras), 'pos');
-    if (m.comisionRemesa) h += fila(T('Comisión de remesa'), '-' + Q(m.comisionRemesa), 'neg');
-    if (m.vivienda) h += fila(T('Vivienda y gastos'), '-' + Q(m.vivienda), 'neg');
-    if (m.colegiatura) h += fila(T('Colegiatura'), '-' + Q(m.colegiatura), 'neg');
-    if (m.manejo) h += fila(T('Manejo de cuenta'), '-' + Q(m.manejo), 'neg');
-    if (m.enviado) h += fila(T('Mandado a tu familia'), '-' + Q(m.enviado), 'neg');
-    if (m.comisionEnvio) h += fila(T('Comisión del envío'), '-' + Q(m.comisionEnvio), 'neg');
-    if (m.cuotaHipoteca) h += fila(T('Cuota de hipoteca'), '-' + Q(m.cuotaHipoteca), 'neg');
-    if (m.aportePension) h += fila(T('Aporte a pensión'), '-' + Q(m.aportePension));
-    if (m.rendimientoPension) h += fila(T('Rendimiento de la pensión'), Q(m.rendimientoPension), 'pos');
-    if (m.cuotasPagadas) h += fila(T('Cuotas pagadas'), '-' + Q(m.cuotasPagadas), 'neg');
-    if (m.pagoTarjeta) h += fila(T('Pago de tarjeta'), '-' + Q(m.pagoTarjeta), 'neg');
-    if (m.interesesPagados) h += fila(T('Intereses que pagaste'), '-' + Q(m.interesesPagados), 'neg');
-    if (m.imprevistos) h += fila(T('Imprevistos'), '-' + Q(m.imprevistos), 'neg');
-    if (m.enfermedad) h += fila(T('Enfermedad'), '-' + Q(m.enfermedad), 'neg');
-    if (m.fuga) h += fila(T('Gastos hormiga'), '-' + Q(m.fuga), 'neg');
-    if (m.perdidaEfectivo) h += fila(T('Efectivo perdido'), '-' + Q(m.perdidaEfectivo), 'neg');
-    if (m.intereses) h += fila(T('Intereses ganados'), Q(m.intereses), 'pos');
-    if (m.isr) h += fila(T('Impuesto sobre intereses'), '-' + Q(m.isr), 'neg');
-    if (m.deudaHogar) h += fila(T('Quedaste debiendo'), Q(m.deudaHogar), 'neg');
 
+    /* Y el desglose línea por línea va PLEGADO.
+     *
+     * Las dos barras ya cuentan el mes entero: cuánto entró, de dónde, cuánto
+     * salió, en qué, y cuánto quedó. Debajo venían hasta veintiséis filas
+     * repitiendo exactamente eso mismo, partido más fino. Era la pantalla más
+     * cargada del juego, y encima aparece en el único momento en que el
+     * jugador SÍ quiere leer: cuando acaba de cerrar el mes.
+     *
+     * Sigue entero, porque cuadrar el mes al centavo es parte de lo que este
+     * juego enseña y hay quien lo quiere. Pero se pide.
+     *
+     * `<details>` y no el plegable propio del juego a propósito: esto vive en
+     * una ventana encima de la pantalla, y el plegable propio se abre volviendo
+     * a pintar la pantalla de abajo, que no es la que se está mirando. */
+    var det = '';
+    if (m.salario) det += fila(T('Salario'), Q(m.salario), 'pos');
+    if (m.bono) det += fila(T('Bono de ley'), Q(m.bono), 'pos');
+    if (m.mesada) det += fila(T('Mesada'), Q(m.mesada), 'pos');
+    if (m.negocio) det += fila(T('Tu negocio'), Q(m.negocio), 'pos');
+    if (m.mantenimiento) det += fila(T('Mantenimiento de tus mejoras'), '-' + Q(m.mantenimiento), 'neg');
+    if (m.remesa) det += fila(T('Remesas'), Q(m.remesa), 'pos');
+    if (m.extras) det += fila(T('Ingresos extra'), Q(m.extras), 'pos');
+    if (m.comisionRemesa) det += fila(T('Comisión de remesa'), '-' + Q(m.comisionRemesa), 'neg');
+    if (m.vivienda) det += fila(T('Vivienda y gastos'), '-' + Q(m.vivienda), 'neg');
+    if (m.colegiatura) det += fila(T('Colegiatura'), '-' + Q(m.colegiatura), 'neg');
+    if (m.manejo) det += fila(T('Manejo de cuenta'), '-' + Q(m.manejo), 'neg');
+    if (m.enviado) det += fila(T('Mandado a tu familia'), '-' + Q(m.enviado), 'neg');
+    if (m.comisionEnvio) det += fila(T('Comisión del envío'), '-' + Q(m.comisionEnvio), 'neg');
+    if (m.cuotaHipoteca) det += fila(T('Cuota de hipoteca'), '-' + Q(m.cuotaHipoteca), 'neg');
+    if (m.aportePension) det += fila(T('Aporte a pensión'), '-' + Q(m.aportePension));
+    if (m.rendimientoPension) det += fila(T('Rendimiento de la pensión'), Q(m.rendimientoPension), 'pos');
+    if (m.cuotasPagadas) det += fila(T('Cuotas pagadas'), '-' + Q(m.cuotasPagadas), 'neg');
+    if (m.pagoTarjeta) det += fila(T('Pago de tarjeta'), '-' + Q(m.pagoTarjeta), 'neg');
+    if (m.interesesPagados) det += fila(T('Intereses que pagaste'), '-' + Q(m.interesesPagados), 'neg');
+    if (m.imprevistos) det += fila(T('Imprevistos'), '-' + Q(m.imprevistos), 'neg');
+    if (m.enfermedad) det += fila(T('Enfermedad'), '-' + Q(m.enfermedad), 'neg');
+    if (m.fuga) det += fila(T('Gastos hormiga'), '-' + Q(m.fuga), 'neg');
+    if (m.perdidaEfectivo) det += fila(T('Efectivo perdido'), '-' + Q(m.perdidaEfectivo), 'neg');
+    if (m.intereses) det += fila(T('Intereses ganados'), Q(m.intereses), 'pos');
+    if (m.isr) det += fila(T('Impuesto sobre intereses'), '-' + Q(m.isr), 'neg');
+    if (m.deudaHogar) det += fila(T('Quedaste debiendo'), Q(m.deudaHogar), 'neg');
+
+    if (det) {
+      h += '<details class="desglose"><summary>' + Ico('recibo') + ' ' +
+           T('Ver línea por línea') + '</summary>' + det + '</details>';
+    }
+
+    /* Lo que PASÓ va suelto y a la vista. Es lo único de esta tarjeta que no
+     * es una cifra: que te pagaron el Bono 14, que tu hermano mandó dinero,
+     * que se te fue un empleado. Eso no se pliega. */
     if (m.eventos.length) {
       h += '<ul class="eventos">';
       m.eventos.forEach(function (t) { h += '<li>' + esc(t) + '</li>'; });

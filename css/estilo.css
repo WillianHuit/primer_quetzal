@@ -916,6 +916,13 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
 
 /* El engranaje de administrar, en la esquina del local */
 .calle-toque.gestion { cursor: pointer; }
+/* El punto rojo del negocio que pierde dinero: late despacio, porque es un
+   aviso y no una alarma. */
+.calle-toque.avisa .punto-avisa { animation: avisa-late 2s ease-in-out infinite; }
+@keyframes avisa-late {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .45; }
+}
 .escena {
   display: block; width: 100%; height: auto;
   border-radius: 14px;
@@ -939,6 +946,29 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
 }
 
 .grafica-caja { padding: 12px 13px 8px; }
+
+/* El desglose linea por linea del cierre de mes, plegado.
+   Las dos barras ya cuentan el mes; esto es la auditoria, y se pide. */
+.desglose { margin-top: 14px; border-top: 1.5px solid var(--linea); padding-top: 10px; }
+.desglose summary {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 2px; cursor: pointer; list-style: none;
+  font-weight: 700; font-size: 13.5px; color: var(--verde);
+}
+.desglose summary::-webkit-details-marker { display: none; }
+.desglose summary .ic { width: 17px; height: 17px; }
+.desglose summary::after {
+  content: ''; margin-left: auto;
+  width: 8px; height: 8px; border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor; transform: rotate(45deg) translate(-2px,-2px);
+  transition: transform .15s ease;
+}
+.desglose[open] summary::after { transform: rotate(225deg) translate(-1px,-1px); }
+.desglose > .fila:first-of-type { margin-top: 4px; }
+/* Alto fijo: Chart.js estira el lienzo hasta llenar a su padre, y sin esto la
+   grafica salia de casi quinientos pixeles para dibujar dos barras. */
+.grafica-caja .lienzo { position: relative; height: 160px; }
+.grafica-caja canvas { display: block; }
 
 /* El saltito del escenario al comprar una mejora: es la unica forma de que
    el jugador vea que lo que compro cambio el dibujo. */
@@ -1392,6 +1422,7 @@ nav.pestanas button.senala { color: var(--ambar-hondo); }
   .esc-moneda { animation: none; opacity: 1; }
   .escena-caja.crecio .escena { animation: none; }
   .lote-marco.late { animation: none; stroke: var(--verde); }
+  .calle-toque.avisa .punto-avisa { animation: none; }
   .foco { animation: none; }
   .foco-flecha.arriba { animation: none; }
   .foco-flecha.abajo { animation: none; transform: rotate(180deg); }

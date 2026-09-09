@@ -327,8 +327,21 @@ cerrarModales(w);
 const mesAntes = w.Motor.get().mesesJugados;
 clic(w, w.document.querySelector('#cerrar-turno'));
 ok(!!modalAbierto(w), 'cerrar el turno abre el resumen del mes');
-const resumen = modalAbierto(w).textContent;
+const cajaResumen = modalAbierto(w);
+const resumen = cajaResumen.textContent;
 ok(resumen.indexOf('Salario') >= 0, 'el resumen muestra el salario cobrado');
+
+/* El desglose línea por línea llega PLEGADO.
+ *
+ * Las dos barras ya cuentan el mes entero, y debajo venían hasta veintiséis
+ * filas repitiendo lo mismo partido más fino. Era la pantalla más cargada del
+ * juego, y aparecía en el único momento en que el jugador sí quiere leer. */
+const desglose = cajaResumen.querySelector('details.desglose');
+ok(!!desglose, 'el resumen del mes trae el desglose línea por línea');
+ok(!desglose.hasAttribute('open'),
+   'y llega plegado: primero las dos barras y lo que te quedó, el detalle se pide');
+ok(cajaResumen.querySelector('.flujo-barra'),
+   'lo que sí llega abierto son las barras de entró y salió');
 cerrarModales(w);
 ok(w.Motor.get().mesesJugados === mesAntes + 1, 'el mes avanzó');
 ok(w.Motor.desbloqueado('noticias'),
@@ -427,6 +440,19 @@ ok(!!hoja.querySelector('[data-subir-negocio="refrescos"]') &&
    !!hoja.querySelector('[data-contratar="refrescos"]'),
    'con lo de subirle el nivel y contratar, sin ir a otra pestaña');
 clic(w, w.document.querySelector('[data-cerrar-hoja]'));
+
+/* Un negocio que va a cerrar en rojo lo dice EN LA CALLE.
+ *
+ * Sin esto la calle es un escenario y no un tablero: un local vacío que se
+ * come la renta todos los meses se ve igual que uno lleno que deja tres mil,
+ * y para enterarte hay que entrar a mirar sus cifras uno por uno. */
+const negRojo = w.Motor.negociosAbiertos()[0];
+if (negRojo && w.Motor.proyeccionDeNegocio(negRojo).neto < 0) {
+  ok(!!w.document.querySelector('[data-gestion="' + negRojo.tipoId + '"].avisa'),
+     'un negocio que pierde dinero lleva su aviso en la calle, sin entrar a mirarlo');
+  ok(!!w.document.querySelector('.punto-avisa'),
+     'y el aviso va encima del botón que lo resuelve');
+}
 
 /* El mes se cierra desde la calle, no al final de la pantalla. */
 const cerrar = w.document.querySelector('.calle-barra #cerrar-turno');

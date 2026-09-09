@@ -7,6 +7,37 @@ aporta al juego, no por lo que es más fácil.
 
 ## 0. Lo que se cerró hoy
 
+### Repaso de saturación: cinco cosas que sobraban o llegaban antes de tiempo
+
+Salió de mirar las pantallas con los ojos, una por una, a tres edades distintas.
+
+1. **El cierre del mes decía todo dos veces.** Las dos barras —entró, de dónde, salió, en
+   qué, cuánto quedó— y debajo hasta **veintiséis filas** repitiendo lo mismo partido más
+   fino. Era la pantalla más cargada del juego y aparecía en el único momento en que el
+   jugador sí quiere leer. Ahora el desglose llega plegado, y sigue entero para quien quiera
+   cuadrar el mes al centavo.
+2. **El imperio se llamaba "Ingresos extra"** en la barra del cierre, metido con la mesada y
+   los trabajos sueltos: en un mes en que dejó Q23,842 la barra decía "ingresos extra 76%".
+   Lo que sostiene al jugador no puede llamarse extra, y el desglose de abajo ya lo llamaba
+   "Tu negocio". Ahora tiene su propio trozo, en ámbar.
+3. **El lote vacío se podía tocar desde el primer turno.** Un chico de trece en el paso uno
+   del tutorial tenía un "+" latiendo al lado de su casa que le abría un catálogo de nueve
+   negocios que no puede poner. Se sigue dibujando punteado y quieto —decir "aquí va a caber
+   algo" está bien— pero no se ofrece hasta que el imperio existe.
+4. **El botón de cerrar el mes invitaba a cerrarlo sin repartir.** Subirlo a la calle lo puso
+   encima de las cifras, y con ocho jornadas libres era un botón verde enorme invitando a
+   cerrar el mes en pérdida. Ahora solo grita cuando el mes ya está repartido.
+5. **La gráfica del imperio medía casi quinientos píxeles para dibujar dos barras**, y estaba
+   encima de las tarjetas: para llegar a lo accionable había que pasar por delante de ella.
+   Alto fijo, y debajo de los negocios.
+
+### Un negocio que pierde dinero lo dice en la calle
+
+Era lo que le faltaba a la calle para ser un tablero y no un escenario: un local vacío que se
+come la renta todos los meses se veía **exactamente igual** que uno lleno que deja Q3,000, y
+para enterarte había que entrar a mirar sus cifras uno por uno. Ahora lleva un punto rojo, y
+va encima del engranaje a propósito: la señal tiene que estar en el botón que la resuelve.
+
 ### Estudio y Trabajo dejaron de ser pantallas de solo mirar
 
 Las dos eran un estado y **un solo botón, que además destruía** —renunciar, dejar de

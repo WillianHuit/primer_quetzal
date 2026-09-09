@@ -717,6 +717,8 @@
    * peticion de planilla, que es la leccion del juego vista desde el lado del
    * trabajador. */
   ui['Turnos'] = 'Shifts';
+  ui['Ver línea por línea'] = 'See it line by line';
+  ui['Tus negocios'] = 'Your businesses';
   ui['Los de oficio salen también en Trabajo y los que enseñan en Estudio, al lado de lo que tienen que ver. Aquí están todos.'] =
     'The trade ones also show up under Work and the teaching ones under Study, next to what they relate to. Here are all of them.';
   ui['Hacerlo'] = 'Do it';
