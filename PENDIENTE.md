@@ -7,6 +7,44 @@ aporta al juego, no por lo que es más fácil.
 
 ## 0. Lo que se cerró hoy
 
+### El colegio da experiencia, no dinero
+
+Primera mitad de la reforma de la ruta. Lo que había antes no se sostenía: los dos
+minijuegos que enseñan —cuadrar un presupuesto, reconocer una estafa— vivían en un cajón
+llamado "Extra" y **soltaban Q400 por hacerlos**. Eso decía algo que no es verdad: que hacer
+la tarea da dinero.
+
+- **Son clases, y las clases no pagan.** `tipo: 'clase'`, `pagoMaximo: 0`,
+  `experienciaMaxima: 25`. Dan **experiencia**, que es un número que solo sube: no se compra,
+  no se gasta y no se pierde al quedarse sin dinero. Es lo único del juego que, una vez que
+  lo tienes, ya es tuyo.
+- **Cuestan una jornada de `tarea`**, una casilla propia distinta de "Estudiar" y de "Extra".
+  Estudiar adelanta los meses de la carrera; la tarea da experiencia. Solo se ofrece mientras
+  esté inscrito, porque no hay tareas sin colegio.
+- **La experiencia abre carreras.** Perito 60, técnico 150, administración 180, ingeniería
+  240, maestría 400. Los números están puestos contra la cuenta del pupitre (3 por mes
+  inscrito): básicos da 108 sin hacer una sola tarea y el bachillerato otros 72, así que el
+  camino normal llega **siempre** a las del medio. Ingeniería y la maestría **no**: esas hay
+  que ganárselas. Ahí está la decisión.
+- **Las dos primeras carreras no piden nada.** La puerta de entrada del juego no se cierra
+  jamás, y `pruebas/minijuegos-valen.js` lo comprueba.
+- **Nada se bloquea en silencio.** Cada carrera lleva su barra con el hueco —`234 / 240`— y
+  la pantalla de Estudio dice siempre qué se abre con lo que falta. Un "no te alcanza" al
+  tocar es un muro; una barra que sube es una meta.
+- **El trabajo ya no lo abre inscribirse: lo abre la primera tarea.** Antes un chico de trece
+  salía a buscar empleo el primer mes sin haber pisado un aula. Quien decide **no** estudiar
+  lo abre de una, porque sin colegio no tiene tareas que hacer.
+- **Las partidas guardadas se migran.** Sin eso, quien ya tenía diversificado abría el juego
+  con cero de experiencia y **ninguna carrera** en la que inscribirse. Se le da la que habría
+  ganado sentado en clase por lo que ya estudió.
+
+Y las vidas simuladas ahora hacen tareas, porque el juego se las pide: la escalera quedó
+**Q135k sin estudiar → Q578k diversificado → Q685k técnico → Q942k licenciatura → Q1.63M
+maestría**, más empinada que antes.
+
+Lo que sigue de esta reforma, cuando se retome: los **trabajos por edad y experiencia**, con
+**entrevista** para los formales, y el imperio detrás.
+
 ### Repaso de saturación: cinco cosas que sobraban o llegaban antes de tiempo
 
 Salió de mirar las pantallas con los ojos, una por una, a tres edades distintas.

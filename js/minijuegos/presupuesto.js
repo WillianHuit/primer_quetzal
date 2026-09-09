@@ -7,11 +7,16 @@ Minijuegos.registrar({
   id: 'presupuesto',
   nombre: 'Cuadra el mes',
   icono: 'recibo',
-  tipo: 'basico',
+  tipo: 'clase',
   descripcion: 'Reparte el sueldo. Van a caer imprevistos.',
   ensena: 'Sin un colchón, cualquier imprevisto se vuelve deuda.',
   duracion: 75,
-  pagoMaximo: 420,
+  /* Una CLASE no paga: da experiencia. Antes esto soltaba Q420 por
+   * resolver un presupuesto, y eso decia algo que no es verdad —que
+   * hacer la tarea da dinero—. Lo que da la tarea es lo que despues te
+   * deja entrar donde quieres entrar. */
+  pagoMaximo: 0,
+  experienciaMaxima: 25,
   puntosParaPagoMaximo: 90,
 
   jugar: function (caja, api) {

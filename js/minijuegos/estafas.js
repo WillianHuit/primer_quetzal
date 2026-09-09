@@ -8,11 +8,16 @@ Minijuegos.registrar({
   id: 'estafas',
   nombre: 'Caza-estafas',
   icono: 'anzuelo',
-  tipo: 'basico',
+  tipo: 'clase',
   descripcion: 'Te llegan mensajes. Decide cuáles son fraude.',
   ensena: 'Ningún banco pide claves por mensaje, y la urgencia es la señal de alarma.',
   duracion: 60,
-  pagoMaximo: 400,
+  /* Una CLASE no paga: da experiencia. Antes esto soltaba Q400 por
+   * resolver un presupuesto, y eso decia algo que no es verdad —que
+   * hacer la tarea da dinero—. Lo que da la tarea es lo que despues te
+   * deja entrar donde quieres entrar. */
+  pagoMaximo: 0,
+  experienciaMaxima: 25,
   puntosParaPagoMaximo: 100,
 
   jugar: function (caja, api) {

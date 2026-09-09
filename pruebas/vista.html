@@ -153,6 +153,12 @@
     var z = Motor.get();
     z.edad = 24;
     z.educacion = 'diversificado';
+    /* Y con las carreras que eso implica, no solo el nivel. Importa: la
+     * experiencia de estudio se calcula de lo que terminaste, y un adulto
+     * puesto a mano con nivel pero sin carreras aparecia con cero experiencia
+     * y sin ninguna carrera en la que inscribirse. */
+    z.carrerasTerminadas = ['basicos', 'bachillerato'];
+    z.experiencia = (36 + 24) * CONFIG.experiencia.porMesInscrito;
     z.decisionEstudio = 'si';
     z.efectivo = 3000;
     z.vistos.cumplio18 = true;

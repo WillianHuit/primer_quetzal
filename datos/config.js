@@ -49,6 +49,9 @@ var CONFIG = {
       // Atender tu propio negocio cansa igual que atender el de otro
       negocio: -6,
       estudio: -5,
+      // Una tarea cansa como estudiar, porque es estudiar
+      tarea: -5,
+      'tarea-usada': -5,
       minijuego: -6,
       'minijuego-usado': -6,
       descanso: 22
@@ -175,6 +178,28 @@ var CONFIG = {
   },
 
   // El año laboral guatemalteco tiene 14 pagos
+  /* -------------------------------------------------------------------------
+   * La experiencia de estudio
+   * -------------------------------------------------------------------------
+   * No es dinero: es lo que abren las TAREAS del colegio y lo que piden las
+   * carreras mas exigentes. Los dos numeros de aqui son los que deciden si la
+   * mecanica es una meta o un muro, asi que conviene entender la cuenta.
+   *
+   *   porMesInscrito   sentarse en clase ya ensena algo. Basicos son 36 meses,
+   *                    asi que dan 108 de experiencia sin hacer una sola
+   *                    tarea, y el bachillerato otros 72. Con eso el camino
+   *                    normal llega SIEMPRE a las carreras del medio y nunca
+   *                    se queda trabado.
+   *   maximaPorTarea   una tarea bien hecha vale como ocho meses de estar
+   *                    sentado. Es lo que hace que valga la jornada que
+   *                    cuesta, y lo que abre ingenieria y la maestria, que el
+   *                    camino pasivo NO alcanza. Ahi esta la decision.
+   */
+  experiencia: {
+    porMesInscrito: 3,
+    maximaPorTarea: 25
+  },
+
   prestaciones: {
     bono14Mes: 6,        // julio
     aguinaldoMes1: 11,   // diciembre, primera mitad

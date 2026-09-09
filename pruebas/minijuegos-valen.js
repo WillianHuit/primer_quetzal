@@ -30,7 +30,16 @@ function sueldo(id, dificultad) {
   return t.salarioBase * mult * prima;
 }
 
-const juegos = Minijuegos.todos();
+/* Los OFICIOS se miden en dinero; las CLASES, no.
+ *
+ * Una clase —la tarea del colegio— dejo de pagar a proposito: da experiencia,
+ * y la experiencia es lo que abre las carreras que piden mas. Medirla contra
+ * el sueldo de una jornada no dice nada, porque no compite con el sueldo:
+ * compite con estar sentado en el pupitre sin hacer nada. Asi que se mide
+ * contra eso, mas abajo. */
+const todosLosJuegos = Minijuegos.todos();
+const juegos = todosLosJuegos.filter(j => j.tipo !== 'clase');
+const clases = todosLosJuegos.filter(j => j.tipo === 'clase');
 const basicos = juegos.filter(j => !j.requiereCarrera && !j.requiereNivel);
 const mejorBasico = Math.max(...basicos.map(j => j.pagoMaximo));
 
@@ -63,9 +72,48 @@ juegos.filter(j => j.requiereCarrera || j.requiereNivel).forEach(j => {
 });
 
 // 5. El pago escala con el desempeño, no es fijo
-juegos.forEach(j => {
+todosLosJuegos.forEach(j => {
   const tope = j.puntosParaPagoMaximo || 100;
-  m.ok(tope > 0, `${j.nombre} escala el pago con los puntos (tope ${tope})`);
+  m.ok(tope > 0, `${j.nombre} escala con los puntos (tope ${tope})`);
 });
+
+// ---------- las clases: la otra moneda ----------
+
+/* Una clase no puede pagar NADA. Es la mitad de la mecánica: si pagara, el
+ * jugador la haría por el dinero y el mensaje se perdería. Lo que da la tarea
+ * es lo que después te deja entrar donde quieres entrar. */
+m.ok(clases.length > 0, `hay ${clases.length} clases, que dan experiencia y no dinero`);
+clases.forEach(j => {
+  m.ok(!j.pagoMaximo, `${j.nombre} no paga nada: da experiencia`);
+  m.ok((j.experienciaMaxima || 0) > 0,
+    `${j.nombre} da hasta +${j.experienciaMaxima} de experiencia`);
+});
+
+/* Y tiene que valer la jornada que cuesta, medida en su propia moneda: estar
+ * inscrito da 3 al mes, así que una tarea que valga menos que un par de meses
+ * de pupitre no la haría nadie. */
+const porMes = CONFIG.experiencia.porMesInscrito;
+clases.forEach(j => {
+  m.ok(j.experienciaMaxima >= porMes * 4,
+    `${j.nombre} vale ${Math.round(j.experienciaMaxima / porMes)} meses de estar sentado ` +
+    `(+${j.experienciaMaxima} contra ${porMes} al mes)`);
+});
+
+/* Y la escalera de carreras tiene que ser alcanzable: las de arriba piden más
+ * de lo que da el pupitre solo, y las de abajo NO piden nada. Si la primera
+ * carrera pidiera experiencia, el juego no podría empezar. */
+const CARRERAS = sb.CARRERAS;
+const primera = CARRERAS.find(c => c.requiere === 'primaria');
+m.ok(!primera.experienciaRequerida,
+  `${primera.nombre} no pide experiencia: es la puerta de entrada y no se cierra`);
+
+const pupitreBasicos = 36 * porMes;
+const conExigencia = CARRERAS.filter(c => (c.experienciaRequerida || 0) > 0);
+m.ok(conExigencia.length >= 3,
+  `${conExigencia.length} carreras piden experiencia, así que las tareas sirven de algo`);
+const masAlta = Math.max(...CARRERAS.map(c => c.experienciaRequerida || 0));
+m.ok(masAlta > pupitreBasicos + 24 * porMes,
+  `la carrera más exigente pide ${masAlta}, más de lo que da el pupitre solo ` +
+  `(${pupitreBasicos + 24 * porMes}): hay que hacer tareas`);
 
 m.imprimir('Los minijuegos valen la jornada que cuestan');

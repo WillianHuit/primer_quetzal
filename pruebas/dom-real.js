@@ -254,6 +254,61 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
   }
 })();
 
+// ---------- las tareas dan experiencia, no dinero ----------
+
+/* La mecánica entera del colegio en cinco comprobaciones. Lo que se fija aquí
+ * es que las tareas NO sean una forma de ganar dinero: si pagaran, el jugador
+ * las haría por el pago y el mensaje se perdería. */
+clic(w, w.document.querySelector('[data-pestana="estudio"]'));
+const claseUI = w.document.querySelector('[data-jugar="presupuesto"]');
+ok(!!claseUI, 'las tareas viven en Estudio, no en un cajón aparte');
+const txtEstudio = w.document.querySelector('main').textContent;
+ok(txtEstudio.indexOf('experiencia') >= 0,
+   'y la pantalla habla de experiencia, no de lo que pagan');
+
+const clasesDef = w.Minijuegos.todos().filter(j => j.tipo === 'clase');
+ok(clasesDef.length > 0 && clasesDef.every(j => !j.pagoMaximo),
+   `las ${clasesDef.length} clases no pagan un quetzal`);
+ok(clasesDef.every(j => (j.experienciaMaxima || 0) > 0),
+   'y todas dan experiencia');
+
+/* La experiencia sube sola por estar inscrito, pero poco: es el valve que
+ * evita que alguien se quede trabado, no el camino. */
+const xpAntes = w.Motor.experiencia();
+ok(xpAntes > 0, `estar inscrito ya dio ${xpAntes} de experiencia`);
+
+/* Y la jornada de tarea es una casilla propia, distinta de "Estudiar" y de
+ * "Extra": estudiar adelanta los meses de la carrera, la tarea da
+ * experiencia. Solo sale mientras esté inscrito, porque no hay tareas sin
+ * colegio. */
+clic(w, w.document.querySelector('[data-pestana="casa"]'));
+const libreParaTarea = jornadasLibres(w)[0];
+if (libreParaTarea) {
+  clic(w, libreParaTarea);
+  const botonTarea = w.document.querySelector('[data-poner="tarea"]');
+  ok(!!w.Motor.get().estudio && !!botonTarea,
+     'estando inscrito, el mes ofrece gastar una jornada en tareas');
+  clic(w, botonTarea);
+  ok(w.Motor.espaciosUsados('tarea') === 1,
+     'y la jornada de tarea es una casilla propia, distinta de Estudiar y de Extra');
+}
+
+/* Y es lo que abre las carreras de arriba. Con la experiencia en cero, la
+ * carrera más exigente no se puede empezar y la pantalla dice cuánto falta. */
+const masExigente = w.CARRERAS.reduce((a, c) =>
+  (c.experienciaRequerida || 0) > (a.experienciaRequerida || 0) ? c : a, w.CARRERAS[0]);
+const faltaXp = w.Motor.faltaParaCarrera(masExigente.id);
+ok(!!faltaXp, `${masExigente.nombre} todavía no se puede empezar`);
+w.Motor.sumarExperiencia(masExigente.experienciaRequerida);
+ok(w.Motor.experiencia() >= masExigente.experienciaRequerida,
+   'la experiencia sube y no se gasta');
+
+/* La primera carrera NO pide experiencia, y eso es lo que deja empezar el
+ * juego: si la puerta de entrada se cerrara, no habría por dónde entrar. */
+const puerta = w.CARRERAS.find(c => c.requiere === 'primaria');
+ok(!puerta.experienciaRequerida,
+   `${puerta.nombre} no pide experiencia: la puerta de entrada no se cierra`);
+
 // ---------- la ruta va abriéndose ----------
 /* Al terminar el tutorial el jugador ya tiene empleo, cuenta y un mes cerrado.
  * Lo que se comprueba aquí es que la ruta fue abriendo cada cosa a su tiempo y

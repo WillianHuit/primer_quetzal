@@ -23,6 +23,23 @@
  *              cuatro semanas, y la otra jornada es tuya para trabajar. Asi
  *              funciona el diversificado en Guatemala.
  *   'libre'    reparte como quiera, jornada por jornada. La universidad.
+ *
+ * ---------------------------------------------------------------------------
+ * Y `experienciaRequerida` es lo que hace que las tareas sirvan de algo
+ * ---------------------------------------------------------------------------
+ * La experiencia se gana haciendo TAREAS —las clases— y, mas despacio, con
+ * solo estar inscrito. Las dos primeras carreras no piden nada: la puerta de
+ * entrada del juego no se cierra nunca. De ahi para arriba si, y los numeros
+ * estan puestos contra la cuenta del camino pasivo (3 por mes inscrito):
+ *
+ *   basicos 36 meses -> 108 de experiencia sin hacer una sola tarea
+ *   + bachillerato 24 -> 180
+ *   + una licenciatura 60 -> 360
+ *
+ * Asi que perito (60), tecnico (150) y administracion (180) los alcanza quien
+ * solo se sienta en el pupitre. Ingenieria (240) y la maestria (400) NO: esas
+ * dos hay que ganarselas haciendo el trabajo. Es exactamente la diferencia que
+ * el juego quiere ensenar, y no cierra ninguna puerta sin decir cuanto falta.
  */
 
 var AVANCE_POR_JORNADA_ESTUDIO = 0.25; // un cuarto de mes de carrera por jornada
@@ -30,6 +47,7 @@ var AVANCE_POR_JORNADA_ESTUDIO = 0.25; // un cuarto de mes de carrera por jornad
 var CARRERAS = [
   {
     id: 'basicos',
+    experienciaRequerida: 0,
     nombre: 'Básicos',
     icono: 'mochila',
     nivelQueOtorga: 'basicos',
@@ -49,6 +67,7 @@ var CARRERAS = [
   },
   {
     id: 'bachillerato',
+    experienciaRequerida: 0,
     nombre: 'Bachillerato en ciencias y letras',
     icono: 'birrete',
     nivelQueOtorga: 'diversificado',
@@ -63,6 +82,7 @@ var CARRERAS = [
   },
   {
     id: 'perito',
+    experienciaRequerida: 60,
     nombre: 'Perito contador',
     icono: 'calculadora',
     nivelQueOtorga: 'diversificado',
@@ -77,6 +97,7 @@ var CARRERAS = [
   },
   {
     id: 'tecnico',
+    experienciaRequerida: 150,
     nombre: 'Carrera técnica',
     icono: 'casco',
     nivelQueOtorga: 'tecnico',
@@ -92,6 +113,7 @@ var CARRERAS = [
   },
   {
     id: 'admin',
+    experienciaRequerida: 180,
     nombre: 'Licenciatura en administración',
     icono: 'portapapeles',
     nivelQueOtorga: 'licenciatura',
@@ -111,6 +133,7 @@ var CARRERAS = [
   },
   {
     id: 'ingenieria',
+    experienciaRequerida: 240,
     nombre: 'Licenciatura en ingeniería',
     icono: 'escuadra',
     nivelQueOtorga: 'licenciatura',
@@ -127,6 +150,7 @@ var CARRERAS = [
   },
   {
     id: 'maestria',
+    experienciaRequerida: 400,
     nombre: 'Maestría',
     icono: 'birrete',
     nivelQueOtorga: 'maestria',

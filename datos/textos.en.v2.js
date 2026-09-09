@@ -528,6 +528,12 @@
 
   pp.verEstudio = 'You are 13 and you just finished primary school. Tap Study: there is something to decide.';
   pp.decidirEstudio = 'Three ways out, and all three cost you something: public middle school, private, or go to work. You choose.';
+
+  /* La primera tarea, que es la que abre el trabajo. */
+  pp.primeraTarea = 'Put a half-day into homework: tap a free slot and pick Homework. Homework does not pay, it gives experience.';
+  pt.primeraTarea = 'Work is open';
+  px.primeraTarea = 'That half-day did not earn you a single quetzal, and it was still the best paid of the month: experience is what will get you into the courses that ask for more.';
+  pl.primeraTarea = 'Money gets spent; what you learned does not. It is the one thing in this game that, once you have it, is yours. Now yes: go find something to live on.';
   pt.decidirEstudio = 'Work is open';
   px.decidirEstudio = 'You decided what to do with your mornings. What you do with your afternoons is what will pay for everything else.';
   pl.decidirEstudio = 'Studying is not free: it is paid for with the hours you could be earning. And not studying is not free either: in Guatemala a worker without middle school earns half of what one with high school earns, for life.';
@@ -656,6 +662,14 @@
    * mejoras y los negocios, porque en pantalla se leen igual. */
   /* Por que todavia no puedes pedir la planilla. Las claves son el `motivo`
    * que devuelve Motor.faltaParaPlanilla(). */
+  /* Por que una carrera todavia no se puede empezar. Las claves son el
+   * `motivo` que devuelve Motor.faltaParaCarrera(). */
+  X.carrera_falta = {
+    experiencia: 'You need more experience for this one. You earn it doing homework.',
+    nivel: 'You have to finish the previous level first.',
+    repetida: 'You already have that level or a higher one.'
+  };
+
   X.planilla_falta = {
     nuevo: 'You have not been here long enough. Nobody puts a brand new hire on the payroll.',
     espera: 'You asked not long ago. Let a few months pass before asking again.',
@@ -717,18 +731,37 @@
    * peticion de planilla, que es la leccion del juego vista desde el lado del
    * trabajador. */
   ui['Turnos'] = 'Shifts';
+
+  /* Las tareas del colegio y la experiencia: la tarea no paga, ensena, y lo
+   * que ensena es lo que despues abre las carreras que piden mas. */
+  ui['Las tareas'] = 'Homework';
+  ui['Tarea'] = 'Homework';
+  ui['Hecha'] = 'Done';
+  ui['clase'] = 'class';
+  ui['hasta +{0} de experiencia'] = 'up to +{0} experience';
+  ui['No pagan nada: dan experiencia, y la experiencia es lo que te deja entrar a las carreras que piden más. Cada una cuesta una jornada.'] =
+    'They pay nothing: they give experience, and experience is what gets you into the courses that ask for more. Each one costs a half-day.';
+  ui['Ponle una jornada a las tareas en la pestaña del mes.'] =
+    'Put a half-day into homework on the month screen.';
+  ui['Ponle una jornada a Extra en la pestaña del mes.'] =
+    'Put a half-day into Extra on the month screen.';
+  ui['Tu experiencia'] = 'Your experience';
+  ui['Con {0} más se abre {1}'] = '{0} more opens up {1}';
+  ui['Te alcanza para cualquier carrera del juego. Las tareas ya hicieron su trabajo.'] =
+    'You have enough for any course in the game. The homework did its job.';
+  ui['Se gana haciendo tareas, y más despacio con solo estar inscrito. No se gasta y no se pierde nunca.'] =
+    'You earn it doing homework, and more slowly just by being enrolled. It is never spent and never lost.';
+  ui['Pide {0} de experiencia'] = 'Asks for {0} experience';
+  ui['Experiencia ganada'] = 'Experience earned';
+  ui['Experiencia total'] = 'Total experience';
   ui['Ver línea por línea'] = 'See it line by line';
   ui['Tus negocios'] = 'Your businesses';
   ui['Los de oficio salen también en Trabajo y los que enseñan en Estudio, al lado de lo que tienen que ver. Aquí están todos.'] =
     'The trade ones also show up under Work and the teaching ones under Study, next to what they relate to. Here are all of them.';
   ui['Hacerlo'] = 'Do it';
   ui['Practicar'] = 'Practice';
-  ui['Para hacer uno, primero pon una jornada en Extra en la pestaña del mes.'] =
-    'To do one, first put a half-day into Extra on the month screen.';
   ui['Trabajos sueltos que se pagan aparte del sueldo. Cada uno cuesta una jornada de Extra.'] =
     'Odd jobs paid on top of your wage. Each one costs a half-day of Extra.';
-  ui['Ejercicios que pagan poco y enseñan mucho. Cada uno cuesta una jornada de Extra.'] =
-    'Exercises that pay little and teach a lot. Each one costs a half-day of Extra.';
   ui['Todavía no hay turnos extra para ti. Se abren al subir de nivel educativo.'] =
     'No extra shifts for you yet. They open up as your education level rises.';
   ui['Jornadas de estudio este mes'] = 'Study half-days this month';

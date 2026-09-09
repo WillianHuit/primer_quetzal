@@ -134,22 +134,72 @@ var PROGRESO = [
 
   {
     id: 'decidirEstudio',
-    llaves: ['trabajo'],
+    llaves: [],
     cuando: function (e) { return e.decisionEstudio !== null || e.edad >= 14; },
     pista: 'Tres salidas, y las tres cuestan algo: básicos en pública, en privada, o a trabajar. Elige tú.',
     guia: true,
     senala: '[data-decide]',
     pestana: 'estudio',
+    titulo: 'Ya decidiste',
+    texto: 'Estudiar no es gratis: se paga con las horas que podrías estar ganando. Y no estudiar tampoco es gratis.',
+    leccion: 'En Guatemala un trabajador sin básicos gana alrededor de Q2,400 al mes. Con diversificado, Q3,800. Esa diferencia dura toda la vida, y es lo que estás decidiendo aquí.',
+    icono: 'birrete'
+  },
+
+  /* La primera tarea, y es la que abre el trabajo.
+   *
+   * El orden es a propósito y es la parte más importante de esta ruta: el
+   * juego empieza con dos pestañas, Mes y Estudio, y el trabajo NO existe
+   * todavía. Se abre cuando el chico hace su primera tarea —o cuando decide no
+   * estudiar, porque entonces no tiene tareas que hacer y lo único que le
+   * queda es buscar trabajo—.
+   *
+   * Así el jugador aprende en qué orden pasan las cosas de verdad: primero el
+   * colegio, y el colegio da experiencia, no dinero. Antes el trabajo se abría
+   * en el mismo momento de inscribirse, y un chico de trece salía a buscar
+   * empleo el primer mes sin haber pisado un aula.
+   */
+  {
+    id: 'primeraTarea',
+    llaves: ['trabajo'],
+    /* SIN `requiere`, y no es un descuido: este peldaño abre una llave, y la
+     * regla de arriba dice que esos se miden por el ESTADO y nunca por el
+     * peldaño anterior. Así, quien salte el tutorial y haga las cosas en otro
+     * orden abre exactamente lo mismo.
+     *
+     * La condición se sostiene sola: mientras no haya decidido nada no se abre
+     * (es el primer momento del juego); si decidió no estudiar se abre de una,
+     * porque sin colegio no hay tareas que hacer y lo único que le queda es
+     * buscar con qué mantenerse; y si estudia, hace falta la tarea. */
+    cuando: function (e) {
+      /* El mismo escape que usa el peldaño de decidir: a los 14, quien nunca
+       * abrió la pantalla de Estudio igual necesita poder buscar trabajo. Sin
+       * esto, un jugador que ignora el colegio se queda sin trabajo para
+       * siempre, y la ruta no está para castigar: está para enseñar el orden. */
+      if (e.decisionEstudio === null && e.edad < 14) return false;
+      if (!e.estudio) return true;
+      if ((e.experiencia || 0) > 0) return true;
+      return e.espacios.some(function (x) { return x === 'tarea' || x === 'tarea-usada'; });
+    },
+    pista: 'Ponle una jornada a las tareas: toca una casilla libre y elige Tarea. Las tareas no pagan, dan experiencia.',
+    guia: true,
+    // Son dos toques —casilla y actividad— así que la cinta señala el que toca
+    senala: function (e, vista) {
+      return typeof vista.espacioSel === 'number'
+        ? '[data-poner="tarea"]'
+        : '.jornada:not(.lleno):not(.bloqueado)';
+    },
+    pestana: 'casa',
     titulo: 'Se abrió el trabajo',
-    texto: 'Ya decidiste qué hacer con tus mañanas. Lo que hagas con las tardes es lo que va a pagar todo lo demás.',
-    leccion: 'Estudiar no es gratis: se paga con las horas que podrías estar ganando. Y no estudiar tampoco es gratis: en Guatemala, un trabajador sin básicos gana la mitad que uno con diversificado, toda la vida.',
+    texto: 'Esa jornada no te dio un quetzal, y aun así fue la mejor pagada del mes: la experiencia es lo que te va a dejar entrar a las carreras que piden más.',
+    leccion: 'El dinero se gasta; lo que aprendiste, no. Es lo único de este juego que, una vez que lo tienes, ya es tuyo. Ahora sí: a buscar con qué mantenerte.',
     icono: 'maletin'
   },
 
   {
     id: 'verTrabajo',
     llaves: [],
-    requiere: 'decidirEstudio',
+    requiere: 'primeraTarea',
     cuando: function (e, M, vista) { return vista.pestana === 'trabajo'; },
     pista: 'Ahora toca Trabajo. A los 13 no hay sueldos, pero sí hay trabajitos.',
     guia: true,

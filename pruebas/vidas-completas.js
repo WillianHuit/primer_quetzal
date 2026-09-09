@@ -116,7 +116,33 @@ function subirEscalera(M, e, destino) {
  *
  * Los dos primeros parametros siguen en SEMANAS porque asi se lee mejor la
  * estrategia; dentro son dos jornadas cada una. */
-function repartir(M, e, trabajoSemanas, estudioSemanas) {
+/* Lo que un chico aplicado saca de una tarea.
+ *
+ * Las tareas son minijuegos y no se pueden jugar sin pantalla, asi que aqui se
+ * simula el resultado: 18 de los 25 que da una tarea perfecta, o sea alguien
+ * que la hace bien pero no impecable. La jornada SI se gasta, que es lo que
+ * hace honesta la simulacion: la experiencia se paga con tiempo que no se
+ * trabaja, igual que en el juego. */
+const XP_POR_TAREA = 18;
+
+/* Si a la carrera que viene todavia le falta experiencia.
+ *
+ * Sin esto la simulacion se queda atascada donde el juego ahora pide tareas:
+ * ingenieria pide 240 y la maestria 400, y estar sentado en el pupitre solo da
+ * 3 por mes. Un chico que quiere una maestria hace las tareas; uno que no las
+ * hace, no llega, y eso es justo lo que la mecanica quiere decir. */
+function faltaExperiencia(M, e, destino) {
+  if (!e.estudio || destino === 'ninguno') return false;
+  const orden = { tecnico: ['tecnico'], diversificado: ['bachillerato'],
+                  ingenieria: ['ingenieria'], maestria: ['ingenieria', 'maestria'] };
+  const metas = orden[destino] || [];
+  return metas.some(function (id) {
+    const c = sandbox.CARRERAS.find(x => x.id === id);
+    return c && (c.experienciaRequerida || 0) > M.experiencia();
+  });
+}
+
+function repartir(M, e, trabajoSemanas, estudioSemanas, tareas) {
   // Cada jornada de trabajo o estudio cuesta 6 de energia y cada descanso
   // devuelve 22: con dos descansos se sostiene un mes de trabajo completo.
   const descanso = e.energia < 70 ? 2 : 0;
@@ -129,6 +155,10 @@ function repartir(M, e, trabajoSemanas, estudioSemanas) {
   // diversificado son de jornada fija y el motor las rechaza.
   const estudioLibre = e.estudio && !e.estudio.jornada;
   let k = 0;
+  for (let n = 0; n < (tareas || 0) && k < tope; n++, k++) {
+    M.asignarEspacio(libres[k], 'tarea');
+    M.sumarExperiencia(XP_POR_TAREA);
+  }
   for (let n = 0; n < trabajoSemanas * 2 && k < tope; n++, k++) M.asignarEspacio(libres[k], 'trabajo');
   if (estudioLibre) {
     for (let n = 0; n < estudioSemanas * 2 && k < tope; n++, k++) M.asignarEspacio(libres[k], 'estudio');
@@ -225,19 +255,22 @@ const RUTAS = {
     mejorEmpleo(M, e, true);
     cuentasBasicas(M, e);
     subirEscalera(M, e, 'tecnico');
-    repartir(M, e, e.estudio ? 2 : 3, e.estudio ? 1 : 0);
+    repartir(M, e, e.estudio ? 2 : 3, e.estudio ? 1 : 0,
+             faltaExperiencia(M, e, 'tecnico') ? 1 : 0);
   },
   'licenciatura': (M, e) => {
     mejorEmpleo(M, e, true);
     cuentasBasicas(M, e);
     subirEscalera(M, e, 'ingenieria');
-    repartir(M, e, e.estudio ? 2 : 3, e.estudio ? 1 : 0);
+    repartir(M, e, e.estudio ? 2 : 3, e.estudio ? 1 : 0,
+             faltaExperiencia(M, e, 'ingenieria') ? 1 : 0);
   },
   'maestria': (M, e) => {
     mejorEmpleo(M, e, true);
     cuentasBasicas(M, e);
     subirEscalera(M, e, 'maestria');
-    repartir(M, e, e.estudio ? 2 : 3, e.estudio ? 1 : 0);
+    repartir(M, e, e.estudio ? 2 : 3, e.estudio ? 1 : 0,
+             faltaExperiencia(M, e, 'maestria') ? 1 : 0);
   }
 };
 

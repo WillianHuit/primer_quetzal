@@ -49,6 +49,14 @@ var Motor = (function () {
       plazo: null,            // { monto, mesesRestantes, tasa }
       pension: null,          // { saldo, aporteMensual }
       energia: CONFIG.inicio.energia,
+      /* Lo que sabe, medido en experiencia de estudio.
+       *
+       * No es dinero y no se gasta: solo sube. Es lo que abren las TAREAS —las
+       * clases del colegio— y lo que piden las carreras mas exigentes. Un
+       * chico que se sienta en el pupitre tres anos y nunca hace una tarea
+       * pasa de basicos y llega al bachillerato; para meterse a ingenieria o a
+       * una maestria hace falta haber hecho el trabajo. */
+      experiencia: 0,
 
       casa: null,             // { id, valor, comprada }
       hipoteca: null,         // { saldo, cuota, tasaMensual, mesesRestantes, atrasos }
@@ -1013,15 +1021,68 @@ var Motor = (function () {
              razon: 'Te dijeron que no. Pasa, y por eso dos de cada tres personas en el país trabajan sin contrato.' };
   }
 
+  /* -------------------------------------------------------------------------
+   * La experiencia de estudio
+   * -------------------------------------------------------------------------
+   * Las tareas ya no pagan. Antes eran dos minijuegos guardados en un cajon
+   * llamado "Extra" que soltaban Q400 por resolver un presupuesto, y eso
+   * decia algo que no es verdad: que hacer la tarea da dinero. Lo que da la
+   * tarea es lo que despues te deja entrar donde quieres entrar.
+   *
+   * Es un solo numero que solo sube. No se compra, no se hereda y no se pierde
+   * al quedarte sin dinero: es lo unico del juego que, una vez que lo tienes,
+   * es tuyo. Eso tambien es una leccion.
+   */
+  function experiencia() { return estado ? (estado.experiencia || 0) : 0; }
+
+  /* La experiencia que le toca a alguien por las carreras que ya termino, al
+   * ritmo del pupitre. Solo se usa para migrar partidas viejas. */
+  function experienciaGanada() {
+    var t = 0;
+    (estado.carrerasTerminadas || []).forEach(function (id) {
+      var c = buscarPorId(CARRERAS, id);
+      if (c) t += c.mesesRequeridos * CONFIG.experiencia.porMesInscrito;
+    });
+    if (estado.estudio) {
+      t += Math.round((estado.estudio.mesesAvanzados || 0) * CONFIG.experiencia.porMesInscrito);
+    }
+    return t;
+  }
+
+  function sumarExperiencia(n) {
+    if (!estado || !n) return 0;
+    estado.experiencia = (estado.experiencia || 0) + Math.max(0, Math.round(n));
+    return estado.experiencia;
+  }
+
+  /* Lo que le falta a una carrera para poder inscribirse. `null` si puede.
+   *
+   * Devuelve tambien `experiencia` y `requerida` cuando el motivo es la
+   * experiencia, porque la pantalla dibuja una barra con el hueco: "no te
+   * alcanza" cierra la puerta, y una barra que sube es una meta. */
+  function faltaParaCarrera(carreraId) {
+    var c = buscarPorId(CARRERAS, carreraId);
+    if (!c) return { motivo: 'noexiste', razon: 'Esa carrera no existe.' };
+    if (nivelIndice(estado.educacion) < nivelIndice(c.requiere)) {
+      return { motivo: 'nivel', razon: 'Primero hay que terminar el nivel anterior.' };
+    }
+    if (nivelIndice(estado.educacion) >= nivelIndice(c.nivelQueOtorga)) {
+      return { motivo: 'repetida', razon: 'Ya tienes ese nivel o uno mayor.' };
+    }
+    var pide = c.experienciaRequerida || 0;
+    if (pide > experiencia()) {
+      return { motivo: 'experiencia', experiencia: experiencia(), requerida: pide,
+               razon: 'Te faltan ' + (pide - experiencia()) +
+                      ' de experiencia. Se gana haciendo tareas.' };
+    }
+    return null;
+  }
+
   function inscribirse(carreraId, privada, jornada) {
     var c = buscarPorId(CARRERAS, carreraId);
     if (!c) return { ok: false, razon: 'Esa carrera no existe.' };
-    if (nivelIndice(estado.educacion) < nivelIndice(c.requiere)) {
-      return { ok: false, razon: 'Primero necesitas nivel ' + c.requiere + '.' };
-    }
-    if (nivelIndice(estado.educacion) >= nivelIndice(c.nivelQueOtorga)) {
-      return { ok: false, razon: 'Ya tienes ese nivel o uno mayor.' };
-    }
+    var falta = faltaParaCarrera(carreraId);
+    if (falta) return { ok: false, razon: falta.razon, motivo: falta.motivo };
     /* La jornada sale del horario de la carrera: basicos siempre por la manana
      * (es como funciona el instituto), diversificado la que elija el jugador, y
      * la universidad ninguna, porque ahi reparte libre. */
@@ -1473,6 +1534,13 @@ var Motor = (function () {
       estado.estudio.mesesAvanzados +=
         espEstudio * (AVANCE_POR_JORNADA_ESTUDIO + mej.avanceEstudio);
       estado.totales.mesesEstudiando++;
+      /* Sentarse en clase ya ensena algo, y por eso la experiencia pasiva
+       * existe: sin ella, el jugador que estudia normal se quedaria trabado
+       * ante una carrera que le pide experiencia y no tendria como salir. Es
+       * poca a proposito: llega para las carreras del medio y no para las de
+       * arriba. Las tareas son las que aceleran. */
+      estado.experiencia += CONFIG.experiencia.porMesInscrito * (m.mesesCubiertos || 1);
+      m.experiencia = (m.experiencia || 0) + CONFIG.experiencia.porMesInscrito * (m.mesesCubiertos || 1);
       m.colegiatura += costoMensualEstudio();
       if (estado.estudio.mesesAvanzados >= carrera.mesesRequeridos) {
         estado.educacion = carrera.nivelQueOtorga;
@@ -2210,6 +2278,13 @@ var Motor = (function () {
         // Partida vieja: si ya estaba estudiando, es que ya habia decidido
         estado.decisionEstudio = estado.estudio ? 'si' : null;
       }
+      /* La experiencia no existia antes, y sin esto una partida guardada se
+       * queda TRABADA: quien ya tenia diversificado abriria el juego con cero
+       * de experiencia y ninguna carrera para inscribirse, porque de
+       * diversificado para arriba todas piden. Se le da la que habria ganado
+       * sentado en clase por lo que ya estudio, que es exactamente lo que le
+       * corresponde. */
+      if (estado.experiencia === undefined) estado.experiencia = experienciaGanada();
       // Una partida guardada antes de que la ruta existiera no puede perder
       // de golpe la mitad del juego: se le abre todo lo que ya se ganó.
       revisarProgreso();
@@ -2290,6 +2365,8 @@ var Motor = (function () {
     faltaParaPlanilla: faltaParaPlanilla, probabilidadPlanilla: probabilidadPlanilla,
     pedirPlanilla: pedirPlanilla,
     inscribirse: inscribirse, abandonarEstudio: abandonarEstudio,
+    experiencia: experiencia, sumarExperiencia: sumarExperiencia,
+    faltaParaCarrera: faltaParaCarrera,
     abrirCuenta: abrirCuenta, mover: mover, mudarse: mudarse,
     abrirPlazo: abrirPlazo, romperPlazo: romperPlazo,
     comprarCasa: comprarCasa, requisitoHipoteca: requisitoHipoteca,

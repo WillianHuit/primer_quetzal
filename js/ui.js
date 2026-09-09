@@ -326,9 +326,11 @@ var UI = (function () {
 
   function rejillaJornadas(e) {
     var iconos = { trabajo: 'maletin', estudio: 'birrete', minijuego: 'mando',
-                   'minijuego-usado': 'visto', descanso: 'luna', '': 'mas' };
+                   'minijuego-usado': 'visto', tarea: 'libro', 'tarea-usada': 'visto',
+                   descanso: 'luna', '': 'mas' };
     var claves = { trabajo: 'Trabajo', estudio: 'Estudio', minijuego: 'Extra',
-                   'minijuego-usado': 'Hecho', descanso: 'Descanso', '': 'Libre' };
+                   'minijuego-usado': 'Hecho', tarea: 'Tarea', 'tarea-usada': 'Hecha',
+                   descanso: 'Descanso', '': 'Libre' };
 
     /* Una casilla puede decir 'negocio:dulces'. Se dibuja con el icono de ESE
      * negocio y con su nombre, no con un genérico: cuando el jugador tiene
@@ -512,6 +514,13 @@ var UI = (function () {
       // colegio las jornadas ya vienen puestas y no se agregan a mano.
       if (e.estudio && !e.estudio.jornada) {
         h += '<button class="btn-chico" data-poner="estudio">' + Ico('birrete') + ' ' + T('Estudiar') + '</button>';
+      }
+      /* La tarea es una jornada aparte de "Estudiar", y la diferencia importa:
+       * estudiar adelanta los meses de la carrera, la tarea da experiencia.
+       * Solo sale mientras esté inscrito, porque no hay tareas sin colegio. */
+      if (e.estudio) {
+        h += '<button class="btn-chico" data-poner="tarea">' + Ico('libro') + ' ' +
+             T('Tarea') + '</button>';
       }
       if (Motor.desbloqueado('extra')) {
         h += '<button class="btn-chico" data-poner="minijuego">' + Ico('mando') + ' ' + T('Extra') + '</button>';
@@ -926,9 +935,9 @@ var UI = (function () {
     var e = Motor.get();
     var h = '<h2>' + T('Estudio') + '</h2>';
 
-    if (e.estudio) return h + estudioEnCurso(e) + estudioPracticar();
+    if (e.estudio) return h + estudioEnCurso(e) + tarjetaExperiencia() + estudioPracticar();
     if (e.decisionEstudio === null) return h + estudioDecidir(e);
-    return h + estudioRutas(e) + estudioPracticar();
+    return h + estudioRutas(e) + tarjetaExperiencia() + estudioPracticar();
   }
 
   /* La primera pantalla del juego: estudias, y qué, o no estudias.
@@ -996,6 +1005,26 @@ var UI = (function () {
                                                    : T('{0} al año', Q0(c.costoAnualPublico)), 'ok'),
       pastilla('billete', T('Privada: {0}', Q0(c.costoAnualPrivado)), 'mal')
     ]);
+    /* Lo que pide de experiencia, con barra, ANTES de los botones.
+     *
+     * Es la mitad de la mecánica: sin esto, el jugador toca "Pública" y el
+     * juego le dice que no sin haberle avisado nunca. Una barra que sube es
+     * una meta; un "no te alcanza" al tocar es un muro. */
+    var faltaC = Motor.faltaParaCarrera(c.id);
+    if (c.experienciaRequerida) {
+      var xp = Motor.experiencia();
+      var pc = Math.round(Math.min(1, xp / c.experienciaRequerida) * 100);
+      h += '<div class="progreso mejora-barra"><div class="progreso-relleno' +
+           (xp >= c.experienciaRequerida ? ' tope' : '') + '" style="width:' + pc + '%"></div></div>';
+      h += '<div class="fila"><span class="etq sutil">' + Ico('birrete') + ' ' +
+           T('Pide {0} de experiencia', c.experienciaRequerida) +
+           '</span><span class="val sutil">' + xp + ' / ' + c.experienciaRequerida + '</span></div>';
+    }
+    if (faltaC && faltaC.motivo === 'experiencia') {
+      h += '<p class="aviso">' + esc(K('carrera_falta', faltaC.motivo, faltaC.razon)) + '</p>';
+      return h + '</div>';
+    }
+
     h += botonesInscribir(c, decidible);
     return h + '</div>';
   }
@@ -1063,13 +1092,48 @@ var UI = (function () {
    * sueldo entre lo que hay que pagar, y reconocer una estafa antes de caer.
    * Estaban en el cajón de "Extra" junto a los turnos de reparto, y su sitio
    * es este: pagan poco a propósito, porque lo que dan es la lección. */
+  /* Lo que sabe, y para qué le va a servir.
+   *
+   * Una cifra sola no dice nada: 108 de experiencia no significa nada si no
+   * sabes qué se abre con eso. Así que va con la siguiente carrera que la
+   * pide y cuánto falta. Un número que no lleva a ningún lado es adorno.
+   */
+  function tarjetaExperiencia() {
+    var xp = Motor.experiencia();
+    // La carrera más barata de las que todavía le piden experiencia
+    var meta = null;
+    CARRERAS.forEach(function (c) {
+      var pide = c.experienciaRequerida || 0;
+      if (pide <= xp) return;
+      if (!meta || pide < meta.experienciaRequerida) meta = c;
+    });
+
+    var h = '<div class="tarjeta">';
+    h += '<div class="fila"><span class="etq">' + Ico('birrete') + ' ' +
+         T('Tu experiencia') + '</span><span class="val"><strong>' + xp + '</strong></span></div>';
+    if (meta) {
+      var pide = meta.experienciaRequerida;
+      var pc = Math.round(Math.min(1, xp / pide) * 100);
+      h += '<div class="progreso"><div class="progreso-relleno" style="width:' + pc + '%"></div></div>';
+      h += '<div class="fila"><span class="etq sutil">' +
+           T('Con {0} más se abre {1}', pide - xp, esc(D(meta, 'nombre'))) +
+           '</span><span class="val sutil">' + xp + ' / ' + pide + '</span></div>';
+    } else {
+      h += '<p class="sutil">' +
+        T('Te alcanza para cualquier carrera del juego. Las tareas ya hicieron su trabajo.') + '</p>';
+    }
+    h += '<p class="sutil">' +
+      T('Se gana haciendo tareas, y más despacio con solo estar inscrito. No se gasta y no se pierde nunca.') +
+      '</p>';
+    return h + '</div>';
+  }
+
   function estudioPracticar() {
-    if (!Motor.desbloqueado('extra')) return '';
     var lista = listaMinijuegos(esDeEstudio);
     if (!lista) return '';
-    return '<h3>' + T('Practicar') + '</h3>' +
+    return '<h3>' + T('Las tareas') + '</h3>' +
       '<p class="sutil">' +
-      T('Ejercicios que pagan poco y enseñan mucho. Cada uno cuesta una jornada de Extra.') +
+      T('No pagan nada: dan experiencia, y la experiencia es lo que te deja entrar a las carreras que piden más. Cada una cuesta una jornada.') +
       '</p>' + lista;
   }
 
@@ -2026,35 +2090,45 @@ var UI = (function () {
    * cambia es dónde se encuentran. */
   function listaMinijuegos(filtro) {
     var e = Motor.get();
-    var libres = Motor.espaciosUsados('minijuego');
     var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas)
       .filter(filtro || function () { return true; });
     if (!lista.length) return '';
 
     var h = '';
-    if (libres === 0) {
-      h += '<div class="aprendizaje">' +
-        T('Para hacer uno, primero pon una jornada en Extra en la pestaña del mes.') + '</div>';
-    }
     lista.forEach(function (j) {
-      var etiqueta = j.tipo === 'generico' ? T('paga')
-                   : (j.tipo === 'basico' ? T('enseña') : T('de tu profesión'));
+      /* Una CLASE cuesta una jornada de tarea y da experiencia; un oficio
+       * cuesta una de Extra y paga. Son dos monedas distintas y dos casillas
+       * distintas, y la tarjeta tiene que decir cuál es cuál sin que haya que
+       * leerla dos veces. */
+      var clase = j.tipo === 'clase';
+      var libres = Motor.espaciosUsados(clase ? 'tarea' : 'minijuego');
+      var etiqueta = clase ? T('clase')
+                   : (j.tipo === 'generico' ? T('paga') : T('de tu profesión'));
       h += '<div class="opcion"><div class="titulo">' + Ico(j.icono) + ' ' + esc(D(j, 'nombre')) +
            '<span class="etiqueta">' + etiqueta + '</span></div>';
       h += '<p class="sutil" style="margin:6px 0">' + esc(D(j, 'descripcion')) + '</p>';
       h += pastillas([
-        pastilla('moneda', T('hasta {0}', Q0(j.pagoMaximo)), 'ok'),
+        clase ? pastilla('birrete', T('hasta +{0} de experiencia', j.experienciaMaxima || 0), 'ok')
+              : pastilla('moneda', T('hasta {0}', Q0(j.pagoMaximo)), 'ok'),
         j.ensena ? pastilla('libro', esc(D(j, 'ensena'))) : ''
       ]);
+      /* En `sutil` y no en `aviso`: no es un error, es una instrucción. El
+       * rojo de aviso está para cuando algo va mal, y gastarlo en "te falta
+       * una jornada" es gritar donde solo hacía falta decir. */
+      if (libres === 0) {
+        h += '<p class="sutil">' + (clase
+          ? T('Ponle una jornada a las tareas en la pestaña del mes.')
+          : T('Ponle una jornada a Extra en la pestaña del mes.')) + '</p>';
+      }
       h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-jugar="' +
-           j.id + '"' + (libres > 0 ? '' : ' disabled') + '>' + Ico('mando') + ' ' +
-           T('Hacerlo') + '</button></div></div>';
+           j.id + '"' + (libres > 0 ? '' : ' disabled') + '>' +
+           Ico(clase ? 'libro' : 'mando') + ' ' + T('Hacerlo') + '</button></div></div>';
     });
     return h;
   }
 
-  var esDeTrabajo = function (j) { return j.tipo !== 'basico'; };
-  var esDeEstudio = function (j) { return j.tipo === 'basico'; };
+  var esDeTrabajo = function (j) { return j.tipo !== 'clase'; };
+  var esDeEstudio = function (j) { return j.tipo === 'clase'; };
 
   /* La pestaña Extra: los ocho juntos.
    *
@@ -3047,10 +3121,26 @@ var UI = (function () {
 
     Minijuegos.lanzar(id, interior, function (res) {
       var e = Motor.get();
+      /* Una clase gasta su jornada de TAREA y un oficio la de Extra. Son dos
+       * casillas distintas porque son dos cosas distintas, y gastar la que no
+       * es dejaría al jugador con una jornada fantasma. */
+      var clase = res.def.tipo === 'clase';
+      var gasta = clase ? 'tarea' : 'minijuego';
       for (var i = 0; i < e.espacios.length; i++) {
-        if (e.espacios[i] === 'minijuego') { e.espacios[i] = 'minijuego-usado'; break; }
+        if (e.espacios[i] === gasta) { e.espacios[i] = gasta + (clase ? '-usada' : '-usado'); break; }
       }
-      if (res.pago > 0) {
+
+      /* Y aquí es donde la clase deja de pagar. La experiencia sale de lo
+       * mismo que salía el pago —cómo te fue— pero no se puede gastar: solo
+       * sube, y es lo que después te deja entrar donde quieres entrar. */
+      var gano = 0;
+      if (clase) {
+        var tope = res.def.experienciaMaxima || 0;
+        var parte = Math.max(0, Math.min(1, res.puntos / (res.def.puntosParaPagoMaximo || 100)));
+        gano = Math.max(1, Math.round(tope * parte));
+        Motor.sumarExperiencia(gano);
+        Sonido.tono('logro');
+      } else if (res.pago > 0) {
         if (e.monetaria !== null) e.monetaria += res.pago; else e.efectivo += res.pago;
         Sonido.tono('moneda');
         monedaVuela(interior);
@@ -3060,7 +3150,10 @@ var UI = (function () {
         '<span class="icono">' + Ico(res.def.icono) + '</span><h2>' + esc(D(res.def, 'nombre')) + '</h2>' +
         fila(T('Puntos'), res.puntos) +
         fila(T('Aciertos'), T('{0} de {1}', res.aciertos, res.total)) +
-        fila(T('Te pagaron'), Q(res.pago), 'pos') +
+        (clase
+          ? fila(T('Experiencia ganada'), '+' + gano, 'pos') +
+            fila(T('Experiencia total'), String(Motor.experiencia()))
+          : fila(T('Te pagaron'), Q(res.pago), 'pos')) +
         (res.def.ensena ? '<div class="aprendizaje"><strong>' + T('Lo que practicaste.') + '</strong> ' +
           esc(D(res.def, 'ensena')) + '</div>' : '') +
         '<button class="btn-primario" data-cerrar>' + T('Listo') + '</button>';
