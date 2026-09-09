@@ -152,16 +152,20 @@ ok(e.efectivo === 50, 'y no le cobran nada al fallar');
   adulto(sinNada, { efectivo: 5000 });
   sinNada.Motor.tomarTrabajo('tienda', true);
 
+  /* El turno de un chico de 18 son tres meses, y el reparto se repite en los
+   * tres: el bono por jornada se cobra una vez por mes, no una por turno. */
   const conH = conAzarSemilla(sbH, 777, function () {
     for (let i = 0; i < 8; i++) MH.asignarEspacio(i, 'trabajo');
-    return MH.cerrarTurno().salario;
+    return MH.cerrarTurno();
   });
   const sinH = conAzarSemilla(sinNada, 777, function () {
     for (let i = 0; i < 8; i++) sinNada.Motor.asignarEspacio(i, 'trabajo');
     return sinNada.Motor.cerrarTurno().salario;
   });
-  ok(Math.abs((conH - sinH) - 24) < 1,
-     `ocho jornadas con Q3 de bono pagan Q24 más (Q${Math.round(conH - sinH)})`);
+  const esperado = 24 * conH.mesesCubiertos;
+  ok(Math.abs((conH.salario - sinH) - esperado) < 1,
+     `ocho jornadas con Q3 de bono pagan Q${esperado} más en el turno ` +
+     `(${conH.mesesCubiertos} meses, Q${Math.round(conH.salario - sinH)})`);
 })();
 
 /* El mantenimiento se cobra cada mes, y se ve.
@@ -184,7 +188,8 @@ ok(e.efectivo === 50, 'y no le cobran nada al fallar');
     for (let i = 0; i < 8; i++) MM.asignarEspacio(i, 'trabajo');
     return MM.cerrarTurno();
   });
-  ok(m.mantenimiento === 45, `y se cobra en el resumen del mes (Q${m.mantenimiento})`);
+  ok(m.mantenimiento === 45 * m.mesesCubiertos,
+     `y se cobra cada mes del turno (Q${m.mantenimiento} en ${m.mesesCubiertos})`);
 })();
 
 /* Una cama de verdad hace rendir el descanso. */
@@ -192,7 +197,10 @@ ok(e.efectivo === 50, 'y no le cobran nada al fallar');
   const sbD = cargar('es');
   const MD = sbD.Motor;
   MD.iniciar('normal', 5, 'apoyo');
-  const z = adulto(sbD, { efectivo: 5000 });
+  /* A los 13 el turno es un mes, y eso es lo que mide esta comprobación: la
+   * energía de UN mes de siete jornadas de trabajo y una de descanso. Con un
+   * turno de tres meses el mismo reparto la deja en cero y no se ve nada. */
+  const z = adulto(sbD, { efectivo: 5000, edad: 13 });
   MD.comprarMejora('escritorio');
   z.energia = 20;
   conAzarSemilla(sbD, 5, function () {

@@ -876,7 +876,17 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
   font-weight: 700; font-size: 12.5px; line-height: 1.25;
   flex: 1 1 90px; min-width: 0;
 }
-.calle-barra .pendientes { color: var(--ambar-hondo); }
+/* El contador de tareas es un boton, y tiene que parecerlo lo justo: si
+   gritara competiria con el de cerrar el mes, que es la accion grande de la
+   franja. Sin fondo, sin borde, subrayado al pasar. */
+.calle-barra .pendientes {
+  color: var(--ambar-hondo);
+  background: none; border: 0; padding: 0; margin: 0;
+  font: inherit; font-weight: 700; text-align: left; cursor: pointer;
+}
+.calle-barra .pendientes:hover, .calle-barra .pendientes:focus-visible {
+  text-decoration: underline;
+}
 .calle-barra .listo { color: var(--verde); }
 .calle-barra .pendientes svg, .calle-barra .listo svg { width: 16px; height: 16px; }
 .calle-barra .btn-chico { flex: 0 0 auto; }
@@ -1031,6 +1041,76 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
 .fig.triangulo.azul  { border-bottom: 42px solid var(--azul); }
 .fig.triangulo.ambar { border-bottom: 42px solid var(--ambar); }
 .fig.triangulo.rojo  { border-bottom: 42px solid var(--rojo); }
+
+/* La tarea de arte: cuatro marcos y una figura corrida dentro de cada uno.
+   El marco tiene que ser visible, porque el centro se juzga CONTRA algo: sin
+   borde no hay respecto a que estar centrado. */
+.mj-figura.mj-marco {
+  position: relative; overflow: hidden;
+  border-style: solid; border-width: 2px;
+}
+
+/* La tarea industrial: un hueco arriba y tres barras abajo, todas medidas en
+   pixeles de verdad para que se puedan comparar a ojo y solo a ojo. */
+.mj-hueco {
+  display: flex; justify-content: center; align-items: center;
+  height: 54px; margin: 6px 0 14px;
+  border-radius: 10px; background: var(--fondo);
+  border: 2px dashed var(--linea);
+  overflow-x: auto;
+}
+.mj-hueco-vano {
+  display: block; height: 26px; border-radius: 5px;
+  background: var(--tinta); opacity: .12;
+  box-shadow: inset 0 0 0 2px var(--tinta);
+  flex: 0 0 auto;
+}
+.mj-piezas { display: flex; flex-direction: column; gap: 9px; align-items: center; }
+.mj-pieza {
+  display: flex; justify-content: center; align-items: center;
+  width: 100%; padding: 9px 6px; cursor: pointer;
+  background: var(--tarjeta, #fff); border: 1.5px solid var(--linea);
+  border-radius: 10px; overflow-x: auto;
+}
+.mj-pieza-barra {
+  display: block; height: 22px; border-radius: 5px;
+  background: var(--ambar); flex: 0 0 auto;
+}
+.mj-pieza.bien { border-color: var(--verde); }
+.mj-pieza.bien .mj-pieza-barra { background: var(--verde); }
+.mj-pieza.mal { border-color: var(--rojo); }
+.mj-pieza.mal .mj-pieza-barra { background: var(--rojo); }
+
+/* -------------------------------------------------------------------------
+   Los titulos de una rama del diversificado
+   -------------------------------------------------------------------------
+   Diecinueve carreras en una pantalla se leen si estan agrupadas y en fila:
+   una linea por titulo, el nombre a la izquierda y los anios a la derecha,
+   como un menu. Se despliega el elegido y solo el elegido. */
+.titulos { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.titulo-op {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 11px; border-radius: 10px; cursor: pointer; text-align: left;
+  background: var(--fondo); border: 1.5px solid var(--linea); color: inherit;
+  font: inherit; line-height: 1.3;
+}
+.titulo-op:hover { border-color: var(--verde-borde); }
+.titulo-op.elegido { border-color: var(--verde); background: var(--verde-suave, var(--fondo)); }
+.titulo-nombre { flex: 1 1 auto; font-size: 13px; font-weight: 600; }
+.titulo-anios {
+  flex: 0 0 auto; font-size: 11.5px; font-weight: 700; color: var(--gris);
+  white-space: nowrap;
+}
+.titulo-op.elegido .titulo-anios { color: var(--verde); }
+.titulo-nota { margin: 2px 2px 0; font-size: 12px; }
+
+/* El encabezado que parte la lista en "lo que se te dio mejor" y el resto */
+.titulo-seccion {
+  display: flex; align-items: center; gap: 7px;
+  margin: 14px 0 6px; font-size: 13px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .03em; color: var(--gris);
+}
+.titulo-seccion svg { width: 16px; height: 16px; }
 
 /* Los botones de elegir que tarea hacer al cerrar el mes */
 .tarea-elegir {

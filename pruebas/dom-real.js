@@ -425,12 +425,21 @@ ok(!puerta.experienciaRequerida,
   const pide = modalAbierto(w3);
   ok(!!pide && pide.textContent.indexOf('2 tareas') >= 0,
      'al terminar de repartir, el juego lleva a hacer las dos tareas');
-  /* Y solo salen las que ya se abrieron. Con la experiencia en cero son las
-   * dos de aritmética: básicos dura tres años y no puede empezar pidiendo
-   * calcular el cambio de una compra con centavos. */
+  /* Y lo que sale son LAS TAREAS QUE DEJÓ EL COLEGIO, no el catálogo entero.
+   *
+   * Antes salían las cuatro clases que estuvieran abiertas y el jugador elegía
+   * cuál hacer, que es exactamente lo que un colegio no hace. Ahora cada turno
+   * deja unas cuantas al azar y esas son las que hay. */
   const aElegir = pide.querySelectorAll('[data-tarea]');
-  ok(aElegir.length === 4,
-     `y deja elegir entre las ${aElegir.length} tareas que ya se abrieron, las más sencillas`);
+  const dejadas3 = M3.tareasSinHacer();
+  ok(aElegir.length === dejadas3.length && aElegir.length > 0,
+     `y deja elegir entre las ${aElegir.length} que el colegio dejó este turno`);
+  const est3 = M3.get();
+  const abiertas3 = w3.Minijuegos.disponibles(est3.educacion, est3.carrerasTerminadas,
+      est3.estudio ? est3.estudio.carreraId : null, M3.experiencia())
+    .filter(j => j.tipo === 'clase');
+  ok(abiertas3.length > aElegir.length,
+     `y no el catálogo entero, que tiene ${abiertas3.length}`);
   ok(pide.textContent.indexOf('cambio') < 0,
      'la de dar el cambio todavía no: esa se abre con la experiencia de las primeras');
   ok(!pide.querySelector('[data-cerrar]'),
@@ -946,6 +955,34 @@ cerrarModales(w);
 clic(w, w.document.querySelector('[data-pestana="casa"]'));
 clic(w, jornadasLibres(w)[0]);
 clic(w, w.document.querySelector('[data-poner="tarea"]'));
+
+/* El colegio deja unas cuantas tareas al azar, no todas las que existen: por
+ * eso el resto de esta prueba fija cuál dejó. Sin esto, qué tarea se abre
+ * dependería del sorteo y la prueba fallaría una de cada tantas.
+ *
+ * Y antes de fijarla se comprueba justo eso, que el sorteo hace su trabajo. */
+(function elColegioDejaUnasCuantas() {
+  const z0 = w.Motor.get();
+  const clases = w.Minijuegos.disponibles(z0.educacion, z0.carrerasTerminadas,
+      z0.estudio ? z0.estudio.carreraId : null, w.Motor.experiencia())
+    .filter(j => j.tipo === 'clase');
+  const dejadas = w.Motor.tareasDelMes();
+  ok(clases.length > dejadas.length,
+     `de las ${clases.length} tareas de básicos el colegio dejó ${dejadas.length} este turno`);
+  ok(dejadas.every(id => clases.some(j => j.id === id)),
+     'y las dejadas son de las que se pueden hacer ahora');
+  ok(dejadas.length === new Set(dejadas).size, 'sin repetir ninguna');
+})();
+/* Se cuela 'sumas' entre las que dejó, sin cambiar cuántas son: si la lista
+ * quedara con otro tamaño del que le toca al turno, el motor la volvería a
+ * sortear y estaríamos donde empezamos. */
+(function forzarSumas() {
+  const lista = w.Motor.tareasDelMes().slice();
+  if (lista.indexOf('sumas') < 0) lista[0] = 'sumas';
+  w.Motor.get().tareasDelMes = lista;
+  w.Motor.guardar();
+})();
+
 clic(w, w.document.querySelector('[data-pestana="estudio"]'));
 const bJugar = w.document.querySelector('[data-jugar="sumas"]');
 ok(!!bJugar, 'la tarea de sumar está disponible en Estudio');

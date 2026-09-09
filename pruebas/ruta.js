@@ -223,7 +223,9 @@ ok(!abre[0].titulo, 'y lo hace en silencio: aceptar un trabajito no desbloquea n
 ok(!Motor.desbloqueado('banco'),
    'el banco NO se abre por aceptar un trabajo: a los 13 no hay razón para tener cuenta');
 const abiertosAqui = Motor.peldanosAbiertos();
-ok(abiertosAqui === 6, `van ${abiertosAqui} peldaños abiertos`);
+// Ocho, y dos de ellos en silencio: los pasos de las tareas no existen para
+// quien no estudia, así que se cumplen en el mismo instante en que dice que no
+ok(abiertosAqui === 8, `van ${abiertosAqui} peldaños abiertos`);
 
 const segundo = Motor.siguientePeldano();
 ok(!!segundo && segundo.peldano.id === 'verMes',
@@ -342,7 +344,7 @@ ok(Motor.desbloqueado('trabajo') && Motor.peldanosAbiertos() === abiertosAqui,
       // Sube la escalera: básicos, diversificado y luego una carrera
       if (!z.estudio) {
         if (z.educacion === 'primaria') M2.inscribirse('basicos', false);
-        else if (z.educacion === 'basicos') M2.inscribirse('bachillerato', false, 'am');
+        else if (z.educacion === 'basicos') M2.inscribirse('comercio', false, 'am');
         else if (z.educacion === 'diversificado') M2.inscribirse('tecnico', false);
       }
       // El mejor empleo al que ya califica, respetando edad y nivel
@@ -371,7 +373,12 @@ ok(Motor.desbloqueado('trabajo') && Motor.peldanosAbiertos() === abiertosAqui,
       for (let i = 0; i < sb2.CONFIG.jornadasPorMes; i++) {
         if (!M2.espacioBloqueado(i)) libres.push(i);
       }
-      libres.forEach((i, n) => M2.asignarEspacio(i, n < libres.length - 2 ? 'trabajo' : 'descanso'));
+      /* Y si está inscrito, una jornada va a las tareas: eso es lo que hace un
+       * jugador atento, y es de donde salen la experiencia y las notas. */
+      libres.forEach((i, n) => {
+        if (z.estudio && n === 0) return M2.asignarEspacio(i, 'tarea');
+        M2.asignarEspacio(i, n < libres.length - 2 ? 'trabajo' : 'descanso');
+      });
       // La vista va rotando: si no, los pasos de navegación del tutorial no se
       // cierran nunca y la ruta parecería incompleta al final.
       ['casa', 'estudio', 'trabajo', 'banco'].forEach(

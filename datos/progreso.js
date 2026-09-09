@@ -214,6 +214,53 @@ var PROGRESO = [
     icono: 'birrete'
   },
 
+  /* Y después de la tarea, lo otro que hay que aprender: cerrar el mes.
+   *
+   * Es el gesto que hace avanzar el juego y no se descubre solo: la tarea
+   * puesta se queda ahí, el mes no pasa, y el jugador se queda mirando una
+   * casilla llena esperando que algo ocurra. Va aquí y no antes porque cerrar
+   * el mes con la tarea puesta es lo que enseña el orden completo —repartes,
+   * cierras, y ANTES de cerrar haces lo que prometiste—, y ese orden es el
+   * bucle entero del juego. */
+  {
+    id: 'cerrarPrimerMes',
+    llaves: [],
+    requiere: 'primeraTarea',
+    /* Los dos pasos que siguen son del que ESTUDIA, y quien no estudia los
+     * cumple en el mismo instante en que dice que no.
+     *
+     * No es un truco para saltárselos: es que no existen sin colegio. "Termina
+     * el mes con tu tarea puesta" y "aquí te dice cuántas te dejaron" no le
+     * dicen nada a alguien que no tiene tareas, y una cinta que pide algo
+     * imposible es una cinta clavada. A ese jugador el juego le enseña a
+     * cerrar el mes más abajo, cuando ya repartió las ocho jornadas. */
+    cuando: function (e) { return !e.estudio || e.mesesJugados >= 1; },
+    pista: 'Ya tienes tu tarea puesta. Ahora termina el mes: antes de cerrarlo la vas a hacer.',
+    guia: true,
+    senala: '#cerrar-turno',
+    pestana: 'casa'
+  },
+
+  /* Y dónde mirar de ahora en adelante.
+   *
+   * El contador de tareas pendientes es la única pista que va a quedar cuando
+   * la cinta se apague, así que hay que enseñarlo una vez, señalándolo. Y es
+   * un botón: tocarlo pone la jornada, así que el paso se cumple haciendo
+   * exactamente lo que enseña. */
+  {
+    id: 'verPendientes',
+    llaves: [],
+    requiere: 'cerrarPrimerMes',
+    cuando: function (e) {
+      if (!e.estudio) return true;
+      return e.espacios.some(function (x) { return x === 'tarea' || x === 'tarea-usada'; });
+    },
+    pista: 'Ahí arriba te dice cuántas tareas te dejaron. Tócalo y le pone la jornada solo.',
+    guia: true,
+    senala: '.calle-barra .pendientes',
+    pestana: 'casa'
+  },
+
   /* Y el trabajo llega DESPUÉS, no de una.
    *
    * Un chico de trece que acaba de inscribirse en básicos no sale a buscar
@@ -354,6 +401,13 @@ var PROGRESO = [
     icono: 'calendario'
   },
 
+  /* Y cerrar el mes, para quien llegó hasta aquí sin pisar un aula.
+   *
+   * Al que estudia esto ya se lo enseñó `cerrarPrimerMes` cuatro meses antes,
+   * y para cuando llega aquí lleva cinco meses cerrados: el paso se cumple
+   * solo y no llega a salir. Al que no estudia no se lo enseñó nadie, porque
+   * aquel paso era de las tareas y él no tiene. Así que se queda: es el único
+   * sitio donde el camino corto aprende a cerrar el mes. */
   {
     id: 'primerMes',
     llaves: [],

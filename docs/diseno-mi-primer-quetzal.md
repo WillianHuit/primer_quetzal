@@ -109,13 +109,20 @@ de escala según la etapa de vida.
 
 | Edad | Escala del turno | Turnos |
 |---|---|---|
-| 13 a 22 | Mensual | 108 |
-| 22 a 45 | Trimestral | 92 |
+| 13 a 14 | Mensual | 12 |
+| 14 a 45 | Trimestral | 124 |
 | 45 a 65 | Anual | 20 |
 
-Total: **220 turnos**. Los años mensuales son los de las decisiones que definen todo
-—estudiar o no, qué diversificado, el primer empleo, la primera cuenta— y bajar el
-corte de los 30 a los 22 hizo sitio a los nueve años de niñez sin alargar la partida.
+Total: **156 turnos**. El corte mensual está a los 14 y no más allá porque el primer año
+es donde se aprende a jugar —el tutorial, la primera tarea, el primer trabajito— y eso se
+vive mes a mes o no se vive.
+
+De los 14 en adelante el turno es un trimestre, y esa segunda escala no es solo
+compresión: es como se vive el colegio de verdad, por bimestres y notas. Antes los nueve
+años de 13 a 22 eran mensuales, o sea 108 turnos solo para salir del colegio, y la
+elección de diversificado —la decisión más grande de esa etapa, diecinueve carreras sobre
+la mesa— quedaba a tres horas de juego. Nadie llegaba. Con trimestres, básicos son 20
+turnos y el jugador elige rama a los 16, que es la edad real.
 
 Hubo además un botón de **adelantar** que saltaba hasta el próximo evento o decisión
 pendiente, y se quitó. La idea era enseñar el interés compuesto de un tirón; lo que hacía
@@ -236,9 +243,40 @@ El instituto público y la universidad pública son **gratuitos** —la USAC des
 inscripción ni matrícula—. El dilema del estudio no es de dinero, es de **tiempo**: cada
 jornada en el colegio es una jornada que no trabajas.
 
-Las dos opciones de diversificado están a propósito: el bachillerato es un año más corto y
-el perito contador sale con oficio y con más demanda. Es la primera vez que el jugador
-compara dos rutas y ninguna es obviamente mejor.
+#### El diversificado: siete carreras que el jugador ve como diecinueve
+
+El diversificado guatemalteco no es una lista de dos opciones: es un menú enorme de
+bachilleratos con orientación y peritajes, y elegir dentro de ese menú es la decisión más
+grande que toma un chico de dieciséis años. Que el juego ofreciera "bachillerato o perito
+contador" no era simplificar, era contar otra cosa.
+
+Pero siete ramas ya son siete conjuntos de tareas, siete demandas y siete sueldos que
+balancear, y diecinueve serían imposibles de sostener. Así que la lista es **de verdad por
+fuera y de siete por dentro**: cada carrera de `datos/carreras.js` es una CATEGORÍA
+—tecnología, salud, comercio, arte, industrial, agro, magisterio— y sus `titulos` son los
+nombres reales que el jugador elige y que después lleva en su perfil. Dos títulos de la
+misma rama comparten tareas, costo y mercado, y se diferencian en el nombre y en los años.
+
+Eso no es un truco para ahorrar trabajo: es como funciona de verdad. Un perito en
+desarrollo de sistemas y uno en reparación de computadoras llevan casi las mismas clases y
+compiten por los mismos puestos.
+
+#### Y las notas, que son lo que ordena esa lista
+
+Cada rama tiene **una tarea propia** —seguir una secuencia, decidir qué se hace primero en
+una emergencia, ver cuál producto deja más, cuál recuadro está centrado, qué pieza encaja,
+cuándo se siembra, cuál explicación se entiende— y las siete se pueden hacer **desde el
+primer día de básicos**. Ahí no son la materia: son el sondeo. La nota que el jugador saque
+en cada una se guarda por rama, y cuando llega el momento de elegir diversificado la
+pantalla pone arriba las tres que mejor se le dieron, con la nota delante para que se
+entienda de dónde sale, y debajo un botón que abre las diecinueve.
+
+Es lo más cerca que puede estar un juego de una orientación vocacional, y la regla que la
+hace honesta es que **nadie le dice qué estudiar**: se le enseña lo que ya hizo, ordenado,
+y elige él. La lista completa está siempre a un toque.
+
+Las notas no son una moneda ni una llave: no abren ni cierran nada. Una carrera que se le
+dio mal se puede estudiar igual. Lo único que hacen es ordenar.
 
 ### Empleos
 

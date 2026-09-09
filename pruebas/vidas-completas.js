@@ -102,7 +102,7 @@ function mejorEmpleo(M, e, formal) {
 function subirEscalera(M, e, destino) {
   if (e.estudio || destino === 'ninguno') return;
   if (e.educacion === 'primaria') return void M.inscribirse('basicos', false);
-  if (e.educacion === 'basicos') return void M.inscribirse('bachillerato', false, 'am');
+  if (e.educacion === 'basicos') return void M.inscribirse('comercio', false, 'am');
   if (e.educacion === 'diversificado') {
     return void M.inscribirse(destino === 'maestria' ? 'ingenieria' : destino, false);
   }
@@ -133,7 +133,7 @@ const XP_POR_TAREA = 18;
  * hace, no llega, y eso es justo lo que la mecanica quiere decir. */
 function faltaExperiencia(M, e, destino) {
   if (!e.estudio || destino === 'ninguno') return false;
-  const orden = { tecnico: ['tecnico'], diversificado: ['bachillerato'],
+  const orden = { tecnico: ['tecnico'], diversificado: ['comercio'],
                   ingenieria: ['ingenieria'], maestria: ['ingenieria', 'maestria'] };
   const metas = orden[destino] || [];
   return metas.some(function (id) {

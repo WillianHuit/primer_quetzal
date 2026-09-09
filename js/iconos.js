@@ -118,6 +118,10 @@ var Iconos = (function () {
                 '<path d="M7.6 6.4h8.8v3.2H7.6z"/>' +
                 '<path d="M8.2 13h.01M12 13h.01M15.8 13h.01M8.2 17.2h.01M12 17.2h.01M15.8 17.2h.01"/>',
     computadora: '<rect x="3.6" y="4.4" width="16.8" height="11" rx="2"/><path d="M2 18.6h20"/>',
+    // La rama de arte del diversificado: paleta con tres pozos de pintura
+    paleta:     '<path d="M12 3.2c-4.9 0-8.8 3.5-8.8 7.9 0 4.3 3.9 7.7 8.8 7.7.9 0 1.6.7 1.6 1.6' +
+                'S12.9 22 12 22c.5 0 1 0 1.5-.1 3.9-.5 7.3-3.9 7.3-8.6 0-5.6-4-10.1-8.8-10.1z"/>' +
+                '<path d="M7.4 9.4h.01M11 7.4h.01M15.2 9.6h.01M16.6 13.6h.01"/>',
     engranaje:  '<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2.6"/>' +
                 '<path d="M18 12h2.6M6 12H3.4M12 18v2.6M12 6V3.4"/>' +
                 '<path d="M16.3 16.3l1.8 1.8M7.7 7.7 5.9 5.9M16.3 7.7l1.8-1.8M7.7 16.3 5.9 18.1"/>',

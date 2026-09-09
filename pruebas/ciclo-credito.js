@@ -20,6 +20,22 @@ function trabajar(M, e, n) {
   return M.cerrarTurno();
 }
 
+/* Y esto cierra turnos hasta cubrir los MESES que dice la frase.
+ *
+ * Un turno dejo de ser un mes: a los 13 lo es, de los 14 en adelante son tres.
+ * Todas las cuentas de este archivo estan escritas en meses —"doce cuotas",
+ * "pagando el minimo doce meses"— y contando turnos median tres anios. La
+ * tarjeta bajaba de Q1000 a Q104 y la prueba decia que "casi no baja". */
+function correrMeses(M, e, meses, n) {
+  let corridos = 0, ultimo = null, vueltas = 0;
+  while (corridos < meses && vueltas < 500) {
+    ultimo = trabajar(M, e, n);
+    corridos += ultimo.mesesCubiertos || 1;
+    vueltas++;
+  }
+  return ultimo;
+}
+
 nueva('normal', 1);
 const e = Motor.get();
 Motor.tomarTrabajo('callcenter', true);
@@ -30,7 +46,7 @@ let req = Motor.requisitoPrestamo();
 ok(!req.ok && req.necesitaGarantia, 'sin historial ni fiador, te piden garantia');
 
 // --- avanzar 24 meses para construir reputacion ---
-for (let i=0;i<24;i++) trabajar(Motor, e, 3);
+correrMeses(Motor, e, 24, 3);
 ok(e.reputacion >= 55, `tras 2 años de aportar, la reputacion sube (${Math.round(e.reputacion)})`);
 req = Motor.requisitoPrestamo();
 ok(req.ok && req.conFiador, 'con reputacion alta ya te consiguen fiador');
@@ -40,7 +56,7 @@ nueva('normal', 2);
 const g = Motor.get();
 Motor.tomarTrabajo('callcenter', true);
 Motor.abrirCuenta('monetaria', 200);
-for (let i=0;i<6;i++) trabajar(Motor, g, 3);
+correrMeses(Motor, g, 6, 3);
 Motor.abrirCuenta('ahorro', 100);
 Motor.mover('monetaria','ahorro', 4000);
 const antesAhorro = g.ahorro;
@@ -53,7 +69,7 @@ ok(cuota > 180 && cuota < 200, `la cuota de Q2000 a 12 meses es razonable (Q${cu
 
 // --- pagar 12 cuotas y ver subir el puntaje ---
 const puntajeAntes = g.puntaje;
-for (let i=0;i<13;i++) trabajar(Motor, g, 3);
+correrMeses(Motor, g, 13, 3);
 ok(g.puntaje > puntajeAntes, `pagar cuotas sube el puntaje (${puntajeAntes} a ${Math.round(g.puntaje)})`);
 ok(g.prestamos.length === 0, 'el prestamo se liquida al terminar el plazo');
 ok(g.ahorro > antesAhorro - 2000, 'la garantia se devuelve al liquidar');
@@ -66,7 +82,7 @@ if (rt.ok) {
   Motor.gastarConTarjeta(1000);
   const saldoInicial = g.tarjeta.saldo;
   g.tarjeta.pagarMinimo = true;
-  for (let i=0;i<12;i++) trabajar(Motor, g, 3);
+  correrMeses(Motor, g, 12, 3);
   ok(g.tarjeta.saldo > saldoInicial * 0.45,
      `pagando solo el minimo la deuda casi no baja (Q${saldoInicial} a Q${g.tarjeta.saldo.toFixed(2)} en 12 meses)`);
 }
@@ -86,15 +102,15 @@ nueva('normal', 1);
 const m = Motor.get();
 Motor.tomarTrabajo('callcenter', true);
 Motor.abrirCuenta('monetaria', 200);
-for (let i=0;i<10;i++) trabajar(Motor, m, 3);
+correrMeses(Motor, m, 10, 3);
 Motor.abrirCuenta('ahorro', 100);
 Motor.mover('monetaria','ahorro', 3000);
 Motor.pedirPrestamo(2500, 12, true);
-for (let i=0;i<4;i++) trabajar(Motor, m, 3);
+correrMeses(Motor, m, 4, 3);
 const antesMora = m.puntaje;
 Motor.renunciar();                 // se queda sin ingreso
 m.monetaria = 0; m.efectivo = 0; m.ahorro = 0;
-for (let i=0;i<3;i++) trabajar(Motor, m, 0);
+correrMeses(Motor, m, 3, 0);
 ok(m.puntaje < antesMora, `la mora hunde el puntaje (${Math.round(antesMora)} a ${Math.round(m.puntaje)})`);
 
 // --- deposito a plazo e interes compuesto ---
@@ -107,7 +123,7 @@ for (let i=0;i<12;i++) { trabajar(Motor, z, 4); Motor.mover('monetaria','ahorro'
 const rp = Motor.abrirPlazo(5000);
 ok(rp.ok, 'se puede abrir deposito a plazo: ' + (rp.razon||''));
 if (rp.ok) {
-  for (let i=0;i<12;i++) trabajar(Motor, z, 3);
+  correrMeses(Motor, z, 12, 3);
   ok(z.plazo === null, 'el plazo vence a los 12 meses y se abona');
 }
 

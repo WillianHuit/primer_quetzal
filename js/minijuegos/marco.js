@@ -50,6 +50,19 @@ var Minijuegos = (function () {
         var para = [].concat(j.paraCarrera);
         if (!carreraActual || para.indexOf(carreraActual) < 0) return false;
       }
+      /* `categoria` es de las tareas de RAMA del diversificado, y sale en dos
+       * sitios por dos motivos que no son el mismo.
+       *
+       * En BASICOS salen las siete, porque basicos es donde el juego averigua
+       * para que sirve el jugador: la nota de cada una es la que despues pone
+       * su rama arriba o abajo en la lista de carreras. Y en su propia rama
+       * sale la suya, porque ahi ya no es un sondeo, es la materia.
+       *
+       * En cualquier otra carrera no sale ninguna: un universitario no hace la
+       * tarea de dibujo tecnico del diversificado. */
+      if (j.categoria && !j.paraCarrera) {
+        if (carreraActual !== 'basicos' && carreraActual !== j.categoria) return false;
+      }
       /* Y las clases de una misma carrera tienen su propio orden.
        *
        * Basicos dura tres anos y no puede empezar con la tarea de calcular el

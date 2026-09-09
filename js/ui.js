@@ -306,16 +306,17 @@ var UI = (function () {
      * pendiente: si no, la franja seguiría pidiendo lo que el jugador acaba de
      * hacer. Sin colegio no hay tareas, y con las del mes cubiertas la franja
      * se calla en vez de felicitar. */
-    var pendientes = 0;
-    if (e.estudio) {
-      var puestas = Motor.espaciosUsados('tarea') + Motor.espaciosUsados('tarea-usada');
-      pendientes = Math.max(0, CONFIG.experiencia.tareasPorMes - puestas);
-    }
+    var pendientes = Motor.tareasPendientes();
 
+    /* Y el contador es un BOTON, no un cartel.
+     *
+     * Decirle al jugador que le quedan tareas pendientes y obligarlo a bajar a
+     * la rejilla, tocar una casilla y buscar "Tarea" entre seis actividades es
+     * dar una instruccion en vez de una salida. Tocarlo pone la jornada. */
     var h = '<div class="calle-barra' + (libres ? '' : ' listo') + '">';
     if (pendientes) {
-      h += '<span class="pendientes">' + Ico('libro') + ' ' +
-           T('Tareas pendientes: {0}', pendientes) + '</span>';
+      h += '<button class="pendientes" data-poner-tarea="1">' + Ico('libro') + ' ' +
+           T('Tareas pendientes: {0}', pendientes) + '</button>';
     } else if (!libres) {
       h += '<span class="listo">' + Ico('visto') + ' ' + T('Mes repartido') + '</span>';
     }
@@ -996,6 +997,21 @@ var UI = (function () {
    *
    * Es la única decisión que el juego pregunta de frente, y ninguna opción
    * dice "recomendado". Vuelve a salir cada vez que el jugador se gradúa. */
+  /* Cuando la lista de carreras es larga, primero las que se te dieron bien.
+   *
+   * El diversificado son siete ramas y diecinueve titulos, y soltarle los
+   * diecinueve de golpe a alguien de dieciseis es la misma paralisis que tenia
+   * el banco al abrir con once productos. Pero recortar la lista tampoco: la
+   * gracia de este momento es que se ve TODO lo que hay, porque en la vida
+   * real tambien esta todo y nadie te lo ordena.
+   *
+   * Asi que se ordena, no se recorta. Arriba van las ramas donde sacaste mejor
+   * nota en las tareas de basicos, con la nota delante para que se entienda de
+   * donde sale; debajo, un boton que abre las demas. Nadie le dice que estudie
+   * eso: se le ensena lo que ya hizo, y decide el. */
+  var verTodasLasRamas = false;
+  var tituloSel = null;
+
   function estudioDecidir(e) {
     var opciones = carrerasPosibles(e);
     var esPrimera = e.educacion === 'primaria';
@@ -1017,7 +1033,7 @@ var UI = (function () {
       return h;
     }
 
-    opciones.forEach(function (c) { h += tarjetaCarrera(e, c, true); });
+    h += listaDeCarreras(e, opciones, true);
 
     /* `data-decide` va también aquí, y es la mitad del arreglo. No estudiar es
      * una de las tres opciones de verdad de esta pantalla —pública, privada o
@@ -1034,6 +1050,57 @@ var UI = (function () {
     return h;
   }
 
+  /* La lista de carreras, con las recomendadas arriba si hay notas.
+   *
+   * Se usa en las dos pantallas que ofrecen carreras —la decision de recien
+   * graduado y la lista de rutas— para que las dos ordenen igual. */
+  function listaDeCarreras(e, opciones, decidible) {
+    var apt = Motor.aptitudes().filter(function (a) {
+      return opciones.some(function (c) { return c.id === a.rama; });
+    });
+    // Sin notas no hay nada que recomendar: la lista entera y ya
+    if (apt.length < 2 || opciones.length < 4) {
+      var todo = '';
+      opciones.forEach(function (c) { todo += tarjetaCarrera(e, c, decidible); });
+      return todo;
+    }
+
+    var arriba = apt.slice(0, 3).map(function (a) { return a.rama; });
+    var notaDe = {};
+    apt.forEach(function (a) { notaDe[a.rama] = a; });
+
+    var h = '<div class="titulo-seccion">' + Ico('bandera-meta') + ' ' +
+            T('Lo que se te dio mejor') + '</div>';
+    h += '<p class="sutil" style="margin:0 0 8px">' +
+      T('Sale de tus notas en las tareas del colegio. Es una pista, no una orden.') + '</p>';
+    /* En orden de NOTA, no en el orden en que están escritas en los datos: la
+     * primera de la lista tiene que ser la que mejor se le dio, o el orden no
+     * dice nada y la palabra "mejor" del encabezado es mentira. */
+    arriba.forEach(function (id) {
+      var c = buscar(opciones, id);
+      if (c) h += tarjetaCarrera(e, c, decidible, notaDe[id]);
+    });
+
+    // Y las demás, también por nota: las que nunca probó van al final
+    var resto = opciones.filter(function (c) { return arriba.indexOf(c.id) < 0; })
+      .sort(function (x, y) {
+        return ((notaDe[y.id] && notaDe[y.id].nota) || -1) -
+               ((notaDe[x.id] && notaDe[x.id].nota) || -1);
+      });
+    if (!resto.length) return h;
+    if (!verTodasLasRamas) {
+      var cuantos = resto.reduce(function (n, c) {
+        return n + (c.titulos ? c.titulos.length : 1);
+      }, 0);
+      h += '<button class="btn-chico" data-ver-ramas="1" style="width:100%;margin-top:6px">' +
+           Ico('mas') + ' ' + T('Ver las otras {0} carreras', cuantos) + '</button>';
+      return h;
+    }
+    h += '<div class="titulo-seccion">' + Ico('libros') + ' ' + T('Todas las demás') + '</div>';
+    resto.forEach(function (c) { h += tarjetaCarrera(e, c, decidible, notaDe[c.id]); });
+    return h;
+  }
+
   /* Una carrera, con lo que cuesta y sus botones para inscribirse.
    *
    * `decidible` marca los botones que forman la decisión que el tutorial está
@@ -1042,14 +1109,16 @@ var UI = (function () {
    * un error de fondo: el foco apaga todo lo que no está marcado, así que el
    * tutorial dejaba a oscuras la privada y el "a trabajar" y contestaba por el
    * jugador la única pregunta que esta pantalla existe para hacerle. */
-  function tarjetaCarrera(e, c, decidible) {
+  function tarjetaCarrera(e, c, decidible, nota) {
     var et = c.sinMercado ? null : etiquetaDemanda(e.mercado[c.id]);
     var h = '<div class="opcion">';
     h += '<div class="titulo">' + Ico(c.icono) + ' ' + esc(D(c, 'nombre')) +
+         (nota ? '<span class="etiqueta ok">' + T('nota {0}', nota.nota) + '</span>' : '') +
          (et ? '<span class="etiqueta ' + et.clase + '">' + T(et.texto) + '</span>' : '') + '</div>';
     h += '<p class="sutil" style="margin:6px 0">' + esc(D(c, 'descripcion')) + '</p>';
     h += pastillas([
-      pastilla('calendario', T('{0} años', Math.round(c.mesesRequeridos / 12))),
+      // Una rama con varios titulos no tiene UNA duración: la tiene cada título
+      c.titulos ? '' : pastilla('calendario', T('{0} años', Math.round(c.mesesRequeridos / 12))),
       pastilla(c.horario === 'fijo' ? 'manana' : (c.horario === 'jornada' ? 'tarde' : 'calendario'),
                c.horario === 'fijo' ? T('Toma tus mañanas')
                                     : (c.horario === 'jornada' ? T('Mañana o tarde') : T('Horario libre'))),
@@ -1057,6 +1126,12 @@ var UI = (function () {
                                                    : T('{0} al año', Q0(c.costoAnualPublico)), 'ok'),
       pastilla('billete', T('Privada: {0}', Q0(c.costoAnualPrivado)), 'mal')
     ]);
+    if (nota && nota.hechas) {
+      h += '<p class="sutil" style="margin:0 0 6px">' + (nota.hechas === 1
+        ? T('Sacaste {0} de 100 en la única tarea que hiciste de esta rama.', nota.nota)
+        : T('Sacaste {0} de 100 en {1} tareas de esta rama.', nota.nota, nota.hechas)) +
+        '</p>';
+    }
     /* Lo que pide de experiencia, con barra, ANTES de los botones.
      *
      * Es la mitad de la mecánica: sin esto, el jugador toca "Pública" y el
@@ -1077,6 +1152,27 @@ var UI = (function () {
       return h + '</div>';
     }
 
+    /* Una rama del diversificado no se cursa: se cursa uno de sus títulos, y
+     * hasta que el jugador elige cuál no hay nada que inscribir. */
+    if (c.titulos && c.titulos.length) {
+      h += '<div class="titulos">';
+      c.titulos.forEach(function (t) {
+        var sel = tituloSel === c.id + ':' + t.id;
+        h += '<button class="titulo-op' + (sel ? ' elegido' : '') + '" data-titulo="' +
+             c.id + ':' + t.id + '">' +
+             '<span class="titulo-nombre">' + esc(D(t, 'nombre')) + '</span>' +
+             '<span class="titulo-anios">' + T('{0} años', Math.round(t.meses / 12)) + '</span>' +
+             '</button>';
+        if (!sel) return;
+        if (t.nota) {
+          h += '<p class="sutil titulo-nota">' + esc(D(t, 'nota')) + '</p>';
+        }
+        h += botonesInscribir(c, decidible, t.id);
+      });
+      h += '</div>';
+      return h + '</div>';
+    }
+
     h += botonesInscribir(c, decidible);
     return h + '</div>';
   }
@@ -1084,11 +1180,16 @@ var UI = (function () {
   /* Mientras está inscrito. */
   function estudioEnCurso(e) {
     var car = buscar(CARRERAS, e.estudio.carreraId);
-    var avance = Math.min(1, e.estudio.mesesAvanzados / car.mesesRequeridos);
-    var faltan = Math.max(0, Math.ceil(car.mesesRequeridos - e.estudio.mesesAvanzados));
+    // Lo que se cursa es el TÍTULO, y es el nombre que el jugador eligió y el
+    // que va a llevar puesto: la rama es solo la carpeta donde está guardado.
+    var tit = tituloDeCarrera(car, e.estudio.tituloId);
+    var total = mesesDeCarrera(car, e.estudio.tituloId);
+    var avance = Math.min(1, e.estudio.mesesAvanzados / total);
+    var faltan = Math.max(0, Math.ceil(total - e.estudio.mesesAvanzados));
     var h = '<div class="tarjeta acento">';
     h += '<div class="retrato chico">' + Muneco({ estudia: true, trabajo: e.empleo ? e.empleo.id : null }) + '</div>';
-    h += '<div class="titulo">' + Ico(car.icono) + ' ' + esc(D(car, 'nombre')) + '</div>';
+    h += '<div class="titulo">' + Ico(car.icono) + ' ' +
+         esc(tit ? D(tit, 'nombre') : D(car, 'nombre')) + '</div>';
     h += '<div class="progreso"><div class="progreso-relleno" style="width:' + (avance * 100) + '%"></div></div>';
     h += pastillas([
       pastilla('calendario', T('Faltan {0} meses', faltan)),
@@ -1213,7 +1314,7 @@ var UI = (function () {
     h += '</div>';
 
     var opciones = carrerasPosibles(e);
-    opciones.forEach(function (c) { h += tarjetaCarrera(e, c, false); });
+    h += listaDeCarreras(e, opciones, false);
 
     if (!opciones.length) {
       h += '<div class="vacio">' + T('Ya llegaste hasta donde llega la escalera.') + '</div>';
@@ -1229,20 +1330,21 @@ var UI = (function () {
    * Con horario de jornada hay que elegir mañana o tarde ANTES de inscribirse,
    * porque esa elección decide en qué jornada va a poder trabajar los próximos
    * años. Con horario libre basta pública o privada. */
-  function botonesInscribir(c, decidible) {
+  function botonesInscribir(c, decidible, tituloId) {
     var marca = decidible ? ' data-decide="1"' : '';
+    var tit = tituloId ? ' data-titulo-id="' + tituloId + '"' : '';
     var h = '<div class="btn-fila" style="margin-top:10px">';
     if (c.horario === 'jornada') {
-      h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="0" data-jornada="am">' +
+      h += '<button class="btn-chico"' + marca + tit + ' data-inscribir="' + c.id + '" data-priv="0" data-jornada="am">' +
            Ico('manana') + ' ' + T('Mañana') + '</button>';
-      h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="0" data-jornada="pm">' +
+      h += '<button class="btn-chico"' + marca + tit + ' data-inscribir="' + c.id + '" data-priv="0" data-jornada="pm">' +
            Ico('tarde') + ' ' + T('Tarde') + '</button>';
-      h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="1" data-jornada="am">' +
+      h += '<button class="btn-chico"' + marca + tit + ' data-inscribir="' + c.id + '" data-priv="1" data-jornada="am">' +
            T('Privada') + '</button>';
     } else {
-      h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="0">' +
+      h += '<button class="btn-chico"' + marca + tit + ' data-inscribir="' + c.id + '" data-priv="0">' +
            T('Pública') + '</button>';
-      h += '<button class="btn-chico"' + marca + ' data-inscribir="' + c.id + '" data-priv="1">' +
+      h += '<button class="btn-chico"' + marca + tit + ' data-inscribir="' + c.id + '" data-priv="1">' +
            T('Privada') + '</button>';
     }
     return h + '</div>';
@@ -2201,7 +2303,15 @@ var UI = (function () {
   }
 
   var esDeTrabajo = function (j) { return j.tipo !== 'clase'; };
-  var esDeEstudio = function (j) { return j.tipo === 'clase'; };
+  /* Una CLASE, y de las que el colegio dejó este turno.
+   *
+   * No están todas las que existen: cada turno el colegio deja unas cuantas al
+   * azar. Es lo que hace que el colegio se sienta un colegio y no un menú —no
+   * eliges qué tarea te toca— y, con las tareas de rama, es de donde sale el
+   * perfil que después ordena la lista de carreras. */
+  var esDeEstudio = function (j) {
+    return j.tipo === 'clase' && Motor.tareasDelMes().indexOf(j.id) >= 0;
+  };
 
   /* La pestaña Extra: los ocho juntos.
    *
@@ -3264,6 +3374,19 @@ var UI = (function () {
           Motor.sumarExperiencia(gano);
           Sonido.tono('logro');
         }
+        /* Y queda la NOTA, que es otra cosa distinta de la experiencia.
+         *
+         * La experiencia es una sola cifra que abre carreras. La nota es por
+         * rama, no abre nada, y sirve para el momento en que hay que elegir
+         * diversificado entre siete ramas y diecinueve títulos: el juego pone
+         * arriba las que se te dieron mejor. Una tarea reprobada también deja
+         * nota, y por eso cuenta: si solo contaran las buenas, el perfil diría
+         * que todo se te da bien. */
+        if (res.def.categoria) {
+          Motor.apuntarNota(res.def.categoria, res.reprobado ? 0 : res.puntos,
+                            res.def.puntosParaPagoMaximo || 100);
+        }
+        Motor.marcarTareaHecha(res.def.id);
       } else if (res.pago > 0) {
         if (e.monetaria !== null) e.monetaria += res.pago; else e.efectivo += res.pago;
         Sonido.tono('moneda');
@@ -3316,8 +3439,12 @@ var UI = (function () {
     var faltan = Motor.espaciosUsados('tarea');
     if (!faltan) return alTerminar();
 
+    /* Solo las del turno que todavía no ha hecho: repetir la misma tarea dos
+     * veces en el mismo turno no es estudiar, es exprimir el ejercicio. */
+    var sinHacer = Motor.tareasSinHacer();
     var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas,
-      e.estudio ? e.estudio.carreraId : null, Motor.experiencia()).filter(esDeEstudio);
+      e.estudio ? e.estudio.carreraId : null, Motor.experiencia())
+      .filter(function (j) { return sinHacer.indexOf(j.id) >= 0; });
     // Sin ninguna clase disponible no hay nada que hacer y no se castiga
     if (!lista.length) return alTerminar();
 
@@ -3357,7 +3484,7 @@ var UI = (function () {
 
   function conectar() {
     app.addEventListener('click', function (ev) {
-      var el = ev.target.closest('[data-pestana],[data-sub],[data-espacio],[data-poner],[data-lote],[data-gestion],[data-cerrar-hoja],[data-tomar],[data-abrir],' +
+      var el = ev.target.closest('[data-pestana],[data-sub],[data-espacio],[data-poner],[data-poner-tarea],[data-titulo],[data-ver-ramas],[data-lote],[data-gestion],[data-cerrar-hoja],[data-tomar],[data-abrir],' +
         '[data-mover],[data-mudar],[data-inscribir],[data-jugar],[data-abonar],[data-abrir-menu],' +
         '[data-casa],[data-envio],[data-canal],[data-porque],[data-detalle],[data-no-estudiar],' +
         '[data-ver-perfil],[data-mejora],' +
@@ -3389,6 +3516,28 @@ var UI = (function () {
         return render();
       }
       if (d.detalle) { verDetalle = !verDetalle; return render(); }
+
+      /* El contador de tareas pendientes de la calle: tocarlo pone la jornada.
+       * Es un atajo, no una vía nueva: hace exactamente lo mismo que tocar una
+       * casilla libre y elegir Tarea, que sigue estando. */
+      if (d.ponerTarea) {
+        var hueco = primeraLibre();
+        if (hueco === null) {
+          Sonido.tono('error');
+          return aviso(T('El mes ya está repartido'),
+            T('Las ocho jornadas están ocupadas. Vacía una en la rejilla de abajo si quieres cambiar algo.'));
+        }
+        Motor.asignarEspacio(hueco, 'tarea');
+        espacioSel = null; Motor.guardar(); Sonido.tono('toque');
+        return render();
+      }
+
+      // Elegir cuál de los títulos de una rama, antes de inscribirse
+      if (d.titulo) {
+        tituloSel = tituloSel === d.titulo ? null : d.titulo;
+        return render();
+      }
+      if (d.verRamas) { verTodasLasRamas = true; return render(); }
 
       /* Los dos botones que abren la hoja de un negocio debajo de la calle.
        *
@@ -3446,15 +3595,18 @@ var UI = (function () {
       }
 
       if (d.inscribir) {
-        var r = Motor.inscribirse(d.inscribir, d.priv === '1', d.jornada);
+        var r = Motor.inscribirse(d.inscribir, d.priv === '1', d.jornada, d.tituloId);
         if (!r.ok) return aviso(T('No se puede'), r.razon);
+        tituloSel = null; verTodasLasRamas = false;
         Motor.guardar(); render();
         var c = buscar(CARRERAS, d.inscribir);
+        var tSel = tituloDeCarrera(c, d.tituloId);
+        var comoSeLlama = esc(tSel ? D(tSel, 'nombre') : D(c, 'nombre'));
         var cuerpo = c.horario === 'libre'
           ? T('Empiezas {0}. Cada jornada que le dediques avanza un cuarto de mes de carrera, y esa jornada no la estás trabajando.',
-              esc(D(c, 'nombre')))
+              comoSeLlama)
           : T('Empiezas {0}. El colegio te toma la jornada de la {1} de las cuatro semanas; la otra es tuya para trabajar.',
-              esc(D(c, 'nombre')), d.jornada === 'pm' ? T('tarde') : T('mañana'));
+              comoSeLlama, d.jornada === 'pm' ? T('tarde') : T('mañana'));
         return tarjetaEducativa('estudio' + c.id, 'birrete', T('Te inscribiste'), cuerpo,
           T('El costo real de estudiar en Guatemala no es la colegiatura: la pública es gratis. Es el sueldo que dejas de ganar mientras estudias.'));
       }

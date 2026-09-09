@@ -121,11 +121,12 @@ ok(e.bonoJornada === 3, `la herramienta deja bono por jornada (Q${e.bonoJornada}
   MB.iniciar('normal', 2, 'apoyo');
   const z = adulto(sbB, { efectivo: 0 });
   MB.tomarTrabajo('tienda', true);
-  const conBono = conAzarFijo(sbB, 0.5, function () {
+  const turnoB = conAzarFijo(sbB, 0.5, function () {
     z.bonoJornada = 10;
     for (let i = 0; i < 8; i++) MB.asignarEspacio(i, 'trabajo');
-    return MB.cerrarTurno().salario;
+    return MB.cerrarTurno();
   });
+  const conBono = turnoB.salario;
   const sbS = cargar('es');
   const MS = sbS.Motor;
   MS.iniciar('normal', 2, 'apoyo');
@@ -135,8 +136,11 @@ ok(e.bonoJornada === 3, `la herramienta deja bono por jornada (Q${e.bonoJornada}
     for (let i = 0; i < 8; i++) MS.asignarEspacio(i, 'trabajo');
     return MS.cerrarTurno().salario;
   });
-  ok(Math.abs((conBono - sinBono) - 80) < 1,
-     `ocho jornadas con Q10 de bono pagan Q80 más (Q${Math.round(conBono - sinBono)})`);
+  // El reparto se repite en los tres meses del trimestre, y el bono con el
+  const esperadoBono = 80 * turnoB.mesesCubiertos;
+  ok(Math.abs((conBono - sinBono) - esperadoBono) < 1,
+     `ocho jornadas con Q10 de bono pagan Q${esperadoBono} más en el turno ` +
+     `(Q${Math.round(conBono - sinBono)})`);
 })();
 
 const cargosAntes = e.cargosRecurrentes.length;
@@ -182,24 +186,31 @@ ok(Motor.aplicarDecision('decision', 'no-existe', 0).texto === '',
   M3.tomarTrabajo('tienda', true);
   z.mesesJugados = CONFIG.mesesDeGracia;   // fuera del año de gracia
 
-  const meses = [];
+  /* El descanso entre tarjetas se cuenta por MES, no por turno, y a los 18 un
+   * turno son tres meses. Así que lo que se puede medir desde fuera es cuántas
+   * caen en un mismo turno: con tres meses de cooldown y tres meses de turno,
+   * nunca puede haber dos. Si el descanso se rompiera, aquí saldrían dos y
+   * tres tarjetas juntas en la misma pantalla, que es el fallo que importa. */
+  const porTurno = [];
+  let mesesCorridos = 0;
   conAzarFijo(sb3, 0.0001, function () {
     for (let i = 0; i < 40; i++) {
       for (let j = 0; j < 8; j++) M3.asignarEspacio(j, j < 6 ? 'trabajo' : 'descanso');
       const m = M3.cerrarTurno();
-      m.decisiones.filter(d => d.clase === 'decision')
-        .forEach(() => meses.push(z.mesesJugados));
+      mesesCorridos += m.mesesCubiertos;
+      porTurno.push(m.decisiones.filter(d => d.clase === 'decision').length);
       // Se resuelven eligiendo siempre la primera opción, como haría el jugador
       m.decisiones.forEach(d => M3.aplicarDecision(d.clase, d.ref, 0));
     }
   });
 
-  ok(meses.length >= 3, `en 40 meses cayeron ${meses.length} tarjetas de decisión`);
-  const juntas = meses.filter((mes, i) => i > 0 && mes - meses[i - 1] <= MESES_ENTRE_DECISIONES);
-  ok(juntas.length === 0,
-     juntas.length === 0
-       ? `nunca salieron dos con menos de ${MESES_ENTRE_DECISIONES} meses de por medio`
-       : `${juntas.length} tarjetas salieron demasiado seguidas`);
+  const cuantas = porTurno.reduce((a, n) => a + n, 0);
+  ok(cuantas >= 3, `en ${mesesCorridos} meses cayeron ${cuantas} tarjetas de decisión`);
+  const cargados = porTurno.filter(n => n > 1).length;
+  ok(cargados === 0,
+     cargados === 0
+       ? `nunca cayeron dos en el mismo turno (descanso de ${MESES_ENTRE_DECISIONES} meses)`
+       : `${cargados} turnos trajeron más de una tarjeta`);
 
   /* Y las de una sola vez no se repiten nunca, ni forzando el azar. */
   const unaVez = DECISIONES.filter(d => d.unaVez).map(d => d.id);

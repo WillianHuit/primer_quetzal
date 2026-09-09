@@ -93,13 +93,17 @@ informal). De ahí en adelante:
 - **Tarjetas de decisión**: doce dilemas sin respuesta obvia, con dos o tres botones del
   mismo tamaño y ninguno marcado como correcto. La lección no la explica un párrafo: la
   explica la consecuencia que llega tres meses después.
-- **Siete rutas de estudio**: básicos, dos diversificados, técnico, dos licenciaturas y
-  maestría.
+- **Veinticuatro carreras**: básicos, diecinueve diversificados repartidos en siete
+  ramas —tecnología, salud, comercio, arte, industrial, agro y magisterio—, técnico, dos
+  licenciaturas y maestría. Al terminar básicos la pantalla ordena las ramas por la
+  **nota** que sacaste en las tareas de cada una, y debajo están todas las demás.
 - **Productos bancarios**: cuenta monetaria, ahorro, depósito a plazo, préstamo personal,
   tarjeta de crédito, hipoteca y plan de pensiones. Y el prestamista del barrio.
 - **Historial de crédito** con puntaje visible, fiador y garantía.
 - **Remesas** por los dos lados: las recibes de joven, y si migras eres quien las manda.
-- **Ocho minijuegos**, tres de ellos exclusivos de tu carrera.
+- **Veintiún minijuegos**: los de oficio, las tareas de básicos y una tarea por cada
+  rama del diversificado, que en básicos hacen de sondeo vocacional. Cada turno el
+  colegio deja unas cuantas al azar: no eliges cuál te toca.
 - **Noticias**: el mercado laboral que dice qué carrera está pidiendo el país, las
   promociones del banco vigentes con su letra chica, y la bitácora de lo que ha pasado.
 - **Una pantalla de "Yo"** con el patrimonio, el historial de crédito y el nivel

@@ -12,7 +12,7 @@ Minijuegos.registrar({
    * trece no hay sueldo que cuadrar. Es la primera clase ESPECIALIZADA,
    * y las dos carreras de diversificado la comparten porque las dos
    * llevan contabilidad basica. */
-  paraCarrera: ['bachillerato', 'perito'],
+  paraCarrera: ['comercio'],
   desdeExperiencia: 0,
   descripcion: 'Reparte el sueldo. Van a caer imprevistos.',
   ensena: 'Sin un colchón, cualquier imprevisto se vuelve deuda.',

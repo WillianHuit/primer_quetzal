@@ -332,8 +332,9 @@ ok(pr0.jornadas === 0 && pr0.venta === 0, 'sin nadie adentro no vende nada');
   ok(m.negocioVenta > 0, `el negocio vendió ${Q(m.negocioVenta)}`);
   ok(m.negocio > 0 && m.negocio < m.negocioVenta,
      `y de eso le quedaron ${Q(m.negocio)} después del producto`);
-  ok(m.planilla === MC.costoDeEmpleado('formal'),
-     `la planilla se cobró aparte y se ve: ${Q(m.planilla)}`);
+  // La planilla se paga cada mes del turno, no una vez por turno
+  ok(m.planilla === MC.costoDeEmpleado('formal') * m.mesesCubiertos,
+     `la planilla se cobró aparte y se ve: ${Q(m.planilla)} en ${m.mesesCubiertos} meses`);
   ok(m.mantenimiento >= tL.costoMensual,
      `y la renta y la luz también: ${Q(m.mantenimiento)}`);
 
@@ -719,7 +720,7 @@ function imperioSinEstudiar(MV, z, sbV) {
 function escaleraConImperio(MV, z, sbV) {
   if (!z.estudio) {
     if (z.educacion === 'primaria') MV.inscribirse('basicos', false);
-    else if (z.educacion === 'basicos') MV.inscribirse('bachillerato', false, 'am');
+    else if (z.educacion === 'basicos') MV.inscribirse('comercio', false, 'am');
     else if (z.educacion === 'diversificado') MV.inscribirse('ingenieria', false);
     else if (z.educacion === 'licenciatura' && z.edad < 40) MV.inscribirse('maestria', false);
   }

@@ -65,7 +65,16 @@ var Motor = (function () {
       comisionesEnvio: 0,
 
       educacion: CONFIG.inicio.educacion,
-      estudio: null,          // { carreraId, mesesAvanzados, privada, jornada }
+      // { carreraId, tituloId, mesesAvanzados, privada, jornada }
+      estudio: null,
+      /* Como te fue en las tareas de cada rama del diversificado.
+       * { tecnologia: { hechas, puntos, tope }, ... } y de ahi salen las
+       * recomendaciones al elegir carrera. Ver aptitudes(). */
+      notas: {},
+      // Las tareas que el colegio dejo este turno, elegidas al azar,
+      // y cuales de ellas ya estan hechas
+      tareasDelMes: [],
+      tareasHechas: [],
       // null = todavia no ha decidido si estudia. Es la primera decision del
       // juego, y vuelve a estar en null cada vez que se gradua de algo.
       decisionEstudio: null,
@@ -938,6 +947,11 @@ var Motor = (function () {
   }
   function limpiarEspacios() {
     estado.espacios = espaciosVacios();
+    /* Turno nuevo, tareas nuevas. Se vacia aqui y no se rellena: la lista se
+     * vuelve a sortear la primera vez que alguien la pide, y asi una partida
+     * que se cierra y se abre no gasta un sorteo de mas. */
+    estado.tareasDelMes = [];
+    estado.tareasHechas = [];
     aplicarHorarioEstudio();
   }
 
@@ -1035,6 +1049,118 @@ var Motor = (function () {
    */
   function experiencia() { return estado ? (estado.experiencia || 0) : 0; }
 
+  /* -------------------------------------------------------------------------
+   * Las notas: en que rama se te da bien
+   * -------------------------------------------------------------------------
+   * Cada tarea con `categoria` suma a la nota de esa rama del diversificado.
+   * No es una moneda ni una llave: no abre ni cierra nada. Sirve para una sola
+   * cosa, y es la que importa a los dieciseis: cuando llega el momento de
+   * elegir rama, el juego le ensena PRIMERO las que se le dieron mejor, con la
+   * nota delante, y despues la lista entera.
+   *
+   * Es lo mas cerca que puede estar un juego de una orientacion vocacional:
+   * nadie te dice que estudiar, se te ensena lo que ya hiciste.
+   */
+  function apuntarNota(categoria, puntos, tope) {
+    if (!estado || !categoria) return;
+    if (!estado.notas) estado.notas = {};
+    var n = estado.notas[categoria] || { hechas: 0, puntos: 0, tope: 0 };
+    n.hechas++;
+    n.puntos += Math.max(0, puntos || 0);
+    n.tope += Math.max(1, tope || 1);
+    estado.notas[categoria] = n;
+    guardar();
+  }
+
+  /* Las ramas en las que ha hecho alguna tarea, de mejor nota a peor.
+   * La nota va de 0 a 100 y es lo que saco sobre lo que se podia sacar. */
+  function aptitudes() {
+    var out = [];
+    var n = (estado && estado.notas) || {};
+    var ramas = (typeof RAMAS_DIVERSIFICADO !== 'undefined') ? RAMAS_DIVERSIFICADO : [];
+    for (var i = 0; i < ramas.length; i++) {
+      var r = n[ramas[i]];
+      if (!r || !r.hechas) continue;
+      out.push({ rama: ramas[i], hechas: r.hechas,
+                 nota: Math.round(100 * r.puntos / Math.max(1, r.tope)) });
+    }
+    out.sort(function (a, b) { return (b.nota - a.nota) || (b.hechas - a.hechas); });
+    return out;
+  }
+
+  /* -------------------------------------------------------------------------
+   * Las tareas que el colegio deja este turno
+   * -------------------------------------------------------------------------
+   * No son todas las que existen: son unas cuantas, al azar, y cambian cada
+   * turno. Que sea al azar es lo que hace que el colegio se sienta un colegio
+   * y no un menu: no eliges que tarea te toca, te toca la que te toca, y con
+   * las de las ramas eso significa que unos meses te piden logica y otros te
+   * piden dibujo. De ahi sale el perfil con el que despues eliges carrera.
+   *
+   * La lista se guarda en el estado para que no cambie a mitad del turno —seria
+   * insoportable— y se vacia al cerrarlo.
+   */
+  function poolDeTareas() {
+    if (typeof Minijuegos === 'undefined' || !estado || !estado.estudio) return [];
+    return Minijuegos.disponibles(estado.educacion, estado.carrerasTerminadas,
+                                  estado.estudio.carreraId, experiencia())
+      .filter(function (j) { return j.tipo === 'clase'; })
+      .map(function (j) { return j.id; });
+  }
+
+  function cuantasTareasDeja() {
+    var porMes = (CONFIG.experiencia && CONFIG.experiencia.tareasPorMes) || 1;
+    return Math.max(1, porMes * mesesDelTurno());
+  }
+
+  function tareasDelMes() {
+    if (!estado) return [];
+    if (!estado.estudio) { estado.tareasDelMes = []; return []; }
+    var pool = poolDeTareas();
+    if (!pool.length) { estado.tareasDelMes = []; return []; }
+    var cuantas = Math.min(cuantasTareasDeja(), pool.length);
+    var guardadas = (estado.tareasDelMes || []).filter(function (id) {
+      return pool.indexOf(id) >= 0;
+    });
+    if (guardadas.length === cuantas) return guardadas.slice();
+
+    // Sorteo sin repetir: se baraja una copia del pool y se cortan las primeras
+    var bolsa = pool.slice();
+    var elegidas = [];
+    while (elegidas.length < cuantas && bolsa.length) {
+      elegidas.push(bolsa.splice(azarEntero(0, bolsa.length - 1), 1)[0]);
+    }
+    estado.tareasDelMes = elegidas;
+    guardar();
+    return elegidas.slice();
+  }
+
+  /* Las del turno que todavia no ha hecho. Es lo que se le ofrece al cerrar
+   * el mes: la misma tarea dos veces en el mismo turno no es tarea, es repetir
+   * el mismo ejercicio para sacar experiencia. */
+  function tareasSinHacer() {
+    var hechas = estado ? (estado.tareasHechas || []) : [];
+    return tareasDelMes().filter(function (id) { return hechas.indexOf(id) < 0; });
+  }
+
+  function marcarTareaHecha(id) {
+    if (!estado) return;
+    if (!estado.tareasHechas) estado.tareasHechas = [];
+    if (estado.tareasHechas.indexOf(id) < 0) estado.tareasHechas.push(id);
+    guardar();
+  }
+
+  /* Cuantas de las tareas del turno siguen sin jornada. Es lo unico que el
+   * juego le pide al jugador mientras solo estudia, y sale en la franja de la
+   * calle como "Tareas pendientes: 1". */
+  function tareasPendientes() {
+    if (!estado || !estado.estudio) return 0;
+    var dejadas = tareasDelMes().length;
+    if (!dejadas) return 0;
+    var puestas = espaciosUsados('tarea') + espaciosUsados('tarea-usada');
+    return Math.max(0, dejadas - puestas);
+  }
+
   /* La experiencia que le toca a alguien por las carreras que ya termino, al
    * ritmo del pupitre. Solo se usa para migrar partidas viejas. */
   function experienciaGanada() {
@@ -1078,7 +1204,7 @@ var Motor = (function () {
     return null;
   }
 
-  function inscribirse(carreraId, privada, jornada) {
+  function inscribirse(carreraId, privada, jornada, tituloId) {
     var c = buscarPorId(CARRERAS, carreraId);
     if (!c) return { ok: false, razon: 'Esa carrera no existe.' };
     var falta = faltaParaCarrera(carreraId);
@@ -1089,8 +1215,16 @@ var Motor = (function () {
     var j = c.horario === 'fijo' ? 'am'
           : c.horario === 'jornada' ? (jornada === 'pm' ? 'pm' : 'am')
           : null;
-    estado.estudio = { carreraId: carreraId, mesesAvanzados: 0, privada: !!privada, jornada: j };
+    /* El TITULO concreto dentro de la rama. Una rama del diversificado son
+     * dos, tres o cuatro titulos con nombre propio —perito contador, perito en
+     * mercadotecnia— que comparten tareas, costo y mercado y se diferencian en
+     * el nombre y en los anios. El que no viene se resuelve al primero, asi
+     * que inscribirse sin elegir titulo sigue funcionando. */
+    var tit = tituloDeCarrera(c, tituloId);
+    estado.estudio = { carreraId: carreraId, tituloId: tit ? tit.id : null,
+                       mesesAvanzados: 0, privada: !!privada, jornada: j };
     estado.decisionEstudio = 'si';
+    estado.tareasDelMes = [];      // otra carrera, otras tareas
     aplicarHorarioEstudio();
     return { ok: true };
   }
@@ -1542,12 +1676,17 @@ var Motor = (function () {
       estado.experiencia += CONFIG.experiencia.porMesInscrito * (m.mesesCubiertos || 1);
       m.experiencia = (m.experiencia || 0) + CONFIG.experiencia.porMesInscrito * (m.mesesCubiertos || 1);
       m.colegiatura += costoMensualEstudio();
-      if (estado.estudio.mesesAvanzados >= carrera.mesesRequeridos) {
+      // Los meses son los del TITULO elegido, no los de la rama: dentro de
+      // tecnologia, computacion son dos anios y desarrollo de sistemas tres.
+      if (estado.estudio.mesesAvanzados >= mesesDeCarrera(carrera, estado.estudio.tituloId)) {
+        var tituloHecho = tituloDeCarrera(carrera, estado.estudio.tituloId);
         estado.educacion = carrera.nivelQueOtorga;
         estado.carrerasTerminadas.push(carrera.id);
-        m.eventos.push('Te graduaste de ' + carrera.nombre + '.');
+        m.eventos.push('Te graduaste de ' +
+          (tituloHecho ? tituloHecho.nombre : carrera.nombre) + '.');
         m.graduacion = carrera.id;
         estado.estudio = null;
+        estado.tareasDelMes = [];
         // Graduarse vuelve a abrir la pregunta: seguir estudiando o trabajar
         estado.decisionEstudio = null;
         for (var ce = 0; ce < estado.espacios.length; ce++) {
@@ -2269,6 +2408,12 @@ var Motor = (function () {
        * sentado en clase por lo que ya estudio, que es exactamente lo que le
        * corresponde. */
       if (estado.experiencia === undefined) estado.experiencia = experienciaGanada();
+      // Las notas y las tareas del turno tampoco existian. Sin notas, la
+      // pantalla de elegir rama sale sin recomendaciones y con la lista
+      // entera, que es exactamente lo correcto para quien nunca las tuvo.
+      if (!estado.notas) estado.notas = {};
+      if (!estado.tareasDelMes) estado.tareasDelMes = [];
+      if (!estado.tareasHechas) estado.tareasHechas = [];
       // Una partida guardada antes de que la ruta existiera no puede perder
       // de golpe la mitad del juego: se le abre todo lo que ya se ganó.
       revisarProgreso();
@@ -2340,6 +2485,9 @@ var Motor = (function () {
     exportar: exportar, importar: importar,
 
     cerrarTurno: cerrarTurno, aplicarDecision: aplicarDecision,
+    apuntarNota: apuntarNota, aptitudes: aptitudes,
+    tareasDelMes: tareasDelMes, tareasPendientes: tareasPendientes,
+    tareasSinHacer: tareasSinHacer, marcarTareaHecha: marcarTareaHecha,
     asignarEspacio: asignarEspacio, limpiarEspacios: limpiarEspacios,
     espacioBloqueado: espacioBloqueado, semanaDe: semanaDe, jornadaDe: jornadaDe,
     indiceDe: indiceDe, esMenor: esMenor, aperturaMinima: aperturaMinima,

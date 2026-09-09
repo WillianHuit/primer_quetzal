@@ -250,8 +250,20 @@ var CONFIG = {
    * Los años que definen todo se juegan mes a mes; los de ejecucion, no.
    */
   tiempo: {
+    /* El primer anio va mes a mes y de ahi en adelante por trimestres.
+     *
+     * Antes los nueve anios de 13 a 22 eran mensuales: 108 turnos solo para
+     * salir del colegio, y la eleccion de diversificado —que es la decision
+     * mas grande de esa etapa— quedaba a tres horas de juego. Nadie llegaba.
+     *
+     * El corte esta a los 14 y no antes porque el primer anio es donde se
+     * aprende a jugar: el tutorial, la primera tarea, el primer trabajito. Eso
+     * se vive mes a mes o no se vive. De los 14 en adelante el turno es un
+     * trimestre, que ademas es como se vive el colegio de verdad —por
+     * bimestres y notas— y las edades siguen siendo las reales: basicos
+     * termina a los 16 y el diversificado a los 18. */
     etapas: [
-      { hastaEdad: 22, mesesPorTurno: 1,  turno: 'mes',       plural: 'meses' },
+      { hastaEdad: 14, mesesPorTurno: 1,  turno: 'mes',       plural: 'meses' },
       { hastaEdad: 45, mesesPorTurno: 3,  turno: 'trimestre', plural: 'trimestres' },
       { hastaEdad: 999, mesesPorTurno: 12, turno: 'año',       plural: 'años' }
     ],

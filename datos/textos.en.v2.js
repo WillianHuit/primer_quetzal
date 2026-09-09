@@ -335,10 +335,55 @@
   // ---------- la escalera educativa nueva ----------
   datos.basicos = { nombre: 'Middle school',
     descripcion: 'Three years. Without middle school almost no job will look at you.' };
-  datos.bachillerato = { nombre: 'High school diploma',
-    descripcion: 'Two years. The shortest one, and the one everybody asks for.' };
-  datos.perito = { nombre: 'Accounting diploma',
-    descripcion: 'Three years. One more than high school, and you come out with a trade.' };
+  /* Las siete ramas del diversificado y los diecinueve titulos que el jugador
+   * ve dentro de ellas. La rama es la carpeta; el titulo es lo que elige y lo
+   * que despues lleva puesto. */
+  datos.tecnologia = { nombre: 'Technology and computing',
+    descripcion: 'Computing, systems and repair. What the country cannot find.' };
+  datos.tit_compu = { nombre: 'High School Diploma with a Major in Computing',
+    nota: 'The most popular one in the country.' };
+  datos.tit_sistemas = { nombre: 'Technician in Software Systems Development' };
+  datos.tit_reparacion = { nombre: 'Technician in IT and Computer Repair' };
+
+  datos.salud = { nombre: 'Health and life sciences',
+    descripcion: 'The branch for whoever wants medicine or nursing later on.' };
+  datos.tit_biologicas = { nombre: 'High School Diploma with a Major in Biological Sciences',
+    nota: 'It is the door into medicine and dentistry.' };
+  datos.tit_enfermeria = { nombre: 'High School Diploma with a Major in Nursing' };
+  datos.tit_nutricion = { nombre: 'Technician in Community Health and Nutrition' };
+
+  datos.comercio = { nombre: 'Business, finance and trade',
+    descripcion: 'Numbers, accounts and selling. The biggest branch in the country.' };
+  datos.tit_contador = { nombre: 'Certified Bookkeeper with a Major in Computing',
+    nota: 'Three years, and you come out with jobs asking for you.' };
+  datos.tit_empresas = { nombre: 'Technician in Business Administration' };
+  datos.tit_mercadeo = { nombre: 'Technician in Marketing and Advertising' };
+  datos.tit_secretariado = { nombre: 'Bilingual Secretary (Spanish and English)' };
+
+  datos.arte = { nombre: 'Art, design and media',
+    descripcion: 'Design, media and music. You live off jobs, not off a salary.' };
+  datos.tit_diseno = { nombre: 'High School Diploma with a Major in Graphic Design' };
+  datos.tit_comunicacion = { nombre: 'High School Diploma with a Major in Communication Studies' };
+  datos.tit_musica = { nombre: 'High School Diploma in Music or Fine Arts' };
+
+  datos.industrial = { nombre: 'Industry, mechanics and construction',
+    descripcion: 'You come out with a trade in your hands and three years behind you.' };
+  datos.tit_industrial = { nombre: 'Industrial High School Diploma and Technician in the Specialty',
+    nota: 'Car mechanics, electrics, electronics, panel beating or refrigeration.' };
+  datos.tit_dibujo = { nombre: 'Technician in Construction Drafting' };
+
+  datos.agro = { nombre: 'Farming and tourism',
+    descripcion: 'The two things that feed the interior of the country.' };
+  datos.tit_agronomo = { nombre: 'Technician in Agronomy or Forestry',
+    nota: 'Taught at farming schools such as the ENCA.' };
+  datos.tit_turismo = { nombre: 'Technician in Hospitality and Tourism' };
+
+  datos.magisterio = { nombre: 'Teaching',
+    descripcion: 'To teach. The diploma alone is not enough: a technical degree follows.' };
+  datos.tit_educacion = { nombre: 'High School Diploma with a Major in Education',
+    nota: 'To teach primary school you then need a university technical degree.' };
+  datos.tit_infantil = { nombre: 'Teaching Certificate in Intercultural Early Childhood Education',
+    nota: 'To work with preschool children.' };
 
   // ---------- los trabajitos de nino ----------
   datos.limonada = { nombre: 'Selling lemonade',
@@ -535,8 +580,15 @@
   px.primeraTarea = 'That half-day did not earn you a single quetzal, and it was still the best paid of the month: experience is what will get you into the courses that ask for more.';
   pl.primeraTarea = 'Money gets spent; what you learned does not. It is the one thing in this game that, once you have it, is yours.';
 
-  /* El trabajo llega despues: los primeros cuatro turnos son solo colegio. */
-  pp.primerTrabajo = 'These months are yours: spread them out however you like and close them when you are ready. Work arrives in a few months.';
+  /* Cerrar el mes, y donde mirar de ahora en adelante. */
+  pp.cerrarPrimerMes = 'Your homework is set. Now end the month: you will do it right before it closes.';
+  pt.cerrarPrimerMes = 'You closed your first month';
+  px.cerrarPrimerMes = 'Every month school leaves you homework, and the top of the street tells you how much is still due. Giving it a half-day is up to you.';
+  pl.cerrarPrimerMes = 'The month does not move on its own. You split it, you do what you promised, and you close it: that is the whole game, and you will do it some two hundred times.';
+  pp.verPendientes = 'Up there it tells you how much homework you were left. Tap it and it sets the half-day for you.';
+
+  /* El trabajo llega despues: los primeros cuatro turnos son solo colegio.
+   * Ya no lleva pista: es una espera, y la cinta se apaga durante ella. */
   pt.primerTrabajo = 'Work is open';
   px.primerTrabajo = 'You have been in class a few months and can now look for something for the afternoons. At your age there are no wages: there are three odd jobs on your own, no contract and no boss.';
   pl.primerTrabajo = 'Every half-day you give to work is one you do not give to homework. Nobody will tell you which is better, because it depends on where you want to end up.';
@@ -748,6 +800,19 @@
    * que ensena es lo que despues abre las carreras que piden mas. */
   ui['Las tareas'] = 'Homework';
   ui['Tareas pendientes: {0}'] = 'Homework due: {0}';
+
+  /* Elegir rama del diversificado: siete ramas, diecinueve titulos y las notas
+   * que ordenan la lista. */
+  ui['Lo que se te dio mejor'] = 'What you were best at';
+  ui['Sale de tus notas en las tareas del colegio. Es una pista, no una orden.'] =
+    'It comes from your marks in school homework. It is a hint, not an order.';
+  ui['Todas las demás'] = 'All the others';
+  ui['Ver las otras {0} carreras'] = 'See the other {0} programmes';
+  ui['nota {0}'] = 'mark {0}';
+  ui['Sacaste {0} de 100 en {1} tareas de esta rama.'] =
+    'You scored {0} out of 100 across {1} pieces of homework in this branch.';
+  ui['Sacaste {0} de 100 en la única tarea que hiciste de esta rama.'] =
+    'You scored {0} out of 100 on the one piece of homework you did in this branch.';
   ui['No pasaste esta tarea'] = 'You did not pass this one';
   ui['Cuatro errores y se acabó. La jornada se gastó igual, pero la puedes repetir el mes que viene.'] =
     'Four mistakes and that is it. The half-day is spent all the same, but you can retake it next month.';
