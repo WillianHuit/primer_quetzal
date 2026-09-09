@@ -747,9 +747,7 @@
   /* Las tareas del colegio y la experiencia: la tarea no paga, ensena, y lo
    * que ensena es lo que despues abre las carreras que piden mas. */
   ui['Las tareas'] = 'Homework';
-  ui['sin tareas'] = 'no homework';
-  ui['1 tarea'] = '1 homework';
-  ui['{0} tareas'] = '{0} homeworks';
+  ui['Tareas pendientes: {0}'] = 'Homework due: {0}';
   ui['No pasaste esta tarea'] = 'You did not pass this one';
   ui['Cuatro errores y se acabó. La jornada se gastó igual, pero la puedes repetir el mes que viene.'] =
     'Four mistakes and that is it. The half-day is spent all the same, but you can retake it next month.';
@@ -822,7 +820,6 @@
   ui['Por ahora no hay nada que puedas abrir.'] = 'There is nothing you can open right now.';
 
   /* La calle como tablero: se toca un local y se mete una jornada adentro. */
-  ui['Te quedan {0} jornadas'] = '{0} half-days left';
   ui['Mes repartido'] = 'Month spent';
   ui['El mes ya está repartido'] = 'The month is already spent';
   ui['Las ocho jornadas están ocupadas. Vacía una en la rejilla de abajo si quieres cambiar algo.'] =

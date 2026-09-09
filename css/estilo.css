@@ -866,19 +866,19 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
   50%      { stroke: var(--verde); fill: rgba(31, 122, 90, .10); }
 }
 
-/* La franja de debajo de la calle: cuanto mes te queda por repartir */
+/* La franja de debajo de la calle: lo unico que el juego te esta pidiendo */
 .calle-barra {
   display: flex; align-items: center; gap: 8px;
   margin-top: 8px; flex-wrap: wrap;
 }
-.calle-barra .quedan, .calle-barra .listo {
+.calle-barra .pendientes, .calle-barra .listo {
   display: inline-flex; align-items: center; gap: 6px;
   font-weight: 700; font-size: 12.5px; line-height: 1.25;
   flex: 1 1 90px; min-width: 0;
 }
-.calle-barra .quedan { color: var(--ambar-hondo); }
+.calle-barra .pendientes { color: var(--ambar-hondo); }
 .calle-barra .listo { color: var(--verde); }
-.calle-barra .quedan svg, .calle-barra .listo svg { width: 16px; height: 16px; }
+.calle-barra .pendientes svg, .calle-barra .listo svg { width: 16px; height: 16px; }
 .calle-barra .btn-chico { flex: 0 0 auto; }
 
 /* El boton de cerrar el mes, dentro de la barra de la calle. Chico mientras
@@ -1031,16 +1031,6 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
 .fig.triangulo.azul  { border-bottom: 42px solid var(--azul); }
 .fig.triangulo.ambar { border-bottom: 42px solid var(--ambar); }
 .fig.triangulo.rojo  { border-bottom: 42px solid var(--rojo); }
-
-/* Cuantas tareas llevas puestas este mes, en la barra de la calle */
-.cuenta-tareas {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 12px; font-weight: 700; color: var(--gris);
-  padding: 4px 9px; border-radius: 99px;
-  background: var(--fondo); border: 1.5px solid var(--linea);
-}
-.cuenta-tareas.hay { color: var(--verde); border-color: var(--verde-borde); }
-.cuenta-tareas svg { width: 14px; height: 14px; }
 
 /* Los botones de elegir que tarea hacer al cerrar el mes */
 .tarea-elegir {

@@ -46,7 +46,6 @@ PROGRESO.forEach(function (p) {
    * la mano. Lo que sí tiene que traer es la pista, porque si no, la cinta
    * sale vacía. */
   if (p.guia && !p.pista) malos.push(p.id + ': va en la cinta y no dice nada');
-  if (p.guia && !p.pista) malos.push(p.id + ': va en la cinta pero no dice nada');
 });
 ok(malos.length === 0, malos.length === 0
   ? 'los peldaños están completos y sus iconos existen'
@@ -114,11 +113,52 @@ ok(sinUso.length === 0,
    sinUso.length === 0 ? `las ${declaradas.length} llaves de la ruta se consultan en la interfaz`
                        : 'llaves que nadie consulta: ' + sinUso.join(', '));
 
-// La cinta del tutorial va al principio: es lo primero que se juega
+/* La cinta del tutorial va al principio: es lo primero que se juega.
+ *
+ * Y dentro de ella se permite UN tipo de hueco: un peldaño sin pista, o sea
+ * uno que no se persigue porque llega solo con el tiempo. Eso es lo que hace
+ * la espera de cuatro meses de colegio: la cinta se apaga y el juego sigue.
+ * Cualquier otra cosa metida en medio del tutorial —un peldaño que se persigue
+ * pero no guía— dejaría al jugador con media instrucción en pantalla. */
 const conGuia = PROGRESO.filter(p => p.guia);
 const ultimaGuia = PROGRESO.reduce((n, p, i) => (p.guia ? i : n), -1);
-ok(conGuia.length >= 3 && ultimaGuia === conGuia.length - 1,
-   `los ${conGuia.length} pasos del tutorial son los primeros de la ruta`);
+const intrusos = PROGRESO.slice(0, ultimaGuia + 1)
+  .filter(p => !p.guia && p.pista)
+  .map(p => p.id);
+ok(conGuia.length >= 3 && intrusos.length === 0,
+   intrusos.length === 0
+     ? `los ${conGuia.length} pasos del tutorial son los primeros de la ruta`
+     : 'en medio del tutorial hay peldaños que se persiguen sin guiar: ' + intrusos.join(', '));
+
+/* Y el hueco tiene que ser justo eso: una espera, no un agujero.
+ *
+ * Un peldaño sin pista metido entre los pasos de la cinta apaga el tutorial
+ * hasta que se cumple solo. Si además de no decir nada tampoco abriera nada,
+ * el tutorial se quedaría callado sin que pase nada, que es exactamente el
+ * fallo que esto existe para atrapar: la cinta clavada esperando a nadie. */
+const huecos = PROGRESO.slice(0, ultimaGuia + 1).filter(p => !p.guia);
+const huecosVacios = huecos.filter(p => !p.llaves.length).map(p => p.id);
+ok(huecosVacios.length === 0,
+   huecosVacios.length === 0
+     ? `las ${huecos.length} esperas del tutorial abren algo al cumplirse`
+     : 'esperas que no abren nada: ' + huecosVacios.join(', '));
+
+/* Y después de una espera, la cinta no puede reanudarse sola.
+ *
+ * El paso que sigue a un hueco tiene que estar encadenado con `requiere`, o el
+ * tutorial salta por encima de la espera y se pone a señalar una pestaña que
+ * todavía no existe. Pasó: al hacer la primera tarea, la cinta apuntaba a
+ * Trabajo cuatro meses antes de que Trabajo se abriera. */
+const sueltos = [];
+PROGRESO.slice(0, ultimaGuia + 1).forEach((p, i, lista) => {
+  if (!p.guia || i === 0) return;
+  if (lista[i - 1].guia) return;                  // viene de otro paso de la cinta
+  if (p.requiere !== lista[i - 1].id) sueltos.push(p.id);
+});
+ok(sueltos.length === 0,
+   sueltos.length === 0
+     ? 'la cinta se reanuda encadenada a la espera, no por su cuenta'
+     : 'pasos que se reanudan solos tras una espera: ' + sueltos.join(', '));
 
 // ---------- 2. una partida nueva empieza cerrada ----------
 
@@ -211,12 +251,19 @@ ok(!!segundo && segundo.peldano.id === 'verMes',
   ok(!M5.desbloqueado('banco'),
      'y con Q31 fugados TAMPOCO, mientras siga solo en clases: no gana nada que guardar');
 
-  // En cuanto entra al mundo del trabajo, el mismo agujero sí abre el banco
+  /* Ni siquiera con la pestaña de Trabajo abierta: poder buscar trabajo no es
+   * ganar. Mientras no haya aceptado nada, el banco no tiene qué guardarle. */
   z.decisionEstudio = 'no';
-  const abrio = M5.revisarProgreso();
+  M5.revisarProgreso();
   ok(M5.desbloqueado('trabajo'), 'al decidir que no estudia se le abre el trabajo');
+  ok(!M5.desbloqueado('banco'),
+     'y abrirle el trabajo TAMPOCO abre el banco: todavía no ha aceptado nada');
+
+  // En cuanto entra un quetzal, el mismo agujero sí abre el banco
+  M5.tomarTrabajo('dulces');
+  const abrio = M5.revisarProgreso();
   ok(abrio.some(p => p.id === 'banco'),
-     'y ahí sí: con el trabajo en la mano, Q31 fugados abren el banco');
+     'y ahí sí: con un trabajito en la mano, Q31 fugados abren el banco');
   ok(M5.desbloqueado('ahorro') && !M5.desbloqueado('monetaria'),
      'y lo que abre es la cuenta de AHORRO, no la monetaria');
 })();

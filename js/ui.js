@@ -190,6 +190,15 @@ var UI = (function () {
    * ruta sigue existiendo y esta tarjeta es la única que la menciona. */
   function tarjetaLoQueSigue() {
     var e = Motor.get();
+    /* Mientras el juego no hable de dinero, esta tarjeta se calla del todo.
+     *
+     * En los meses de colegio la cinta está apagada a propósito, así que el
+     * siguiente peldaño que se puede perseguir es el del banco, y la tarjeta
+     * se ponía a hablarle de cuánto efectivo se le fuga al mes a un chico de
+     * trece que no gana un quetzal y no tiene la pestaña de banco abierta.
+     * Ahí lo único que hay que hacer son las tareas, y eso ya lo dice la
+     * franja de la calle con dos palabras. */
+    if (sinDineroTodavia()) return '';
     /* Con el tutorial saltado, los pasos que solo enseñan a navegar ("toca la
      * pestaña Estudio") no son una meta: son una instruccion que ya nadie
      * pidio. Se persiguen solo los peldaños que abren algo. */
@@ -267,12 +276,16 @@ var UI = (function () {
     return h + '</div>';
   }
 
-  /* La franja de debajo de la calle: en qué se te está yendo el mes.
+  /* La franja de debajo de la calle: lo único que el juego te está pidiendo.
    *
-   * Son las mismas ocho jornadas de la rejilla, contadas por destino en vez de
-   * dibujadas una por una. Existe porque la calle contesta "¿qué tengo?" pero
-   * no "¿cuánto me queda por repartir?", y esa es la pregunta que el jugador
-   * se hace justo después de tocar un local. */
+   * Empezó contando el mes —"te quedan 4 jornadas", "sin tareas"— y eso era
+   * ruido: las jornadas que faltan se ven en los cuadros vacíos de la rejilla,
+   * y las tareas puestas se ven al ponerlas. Repetir en palabras lo que ya
+   * está dibujado no informa; entrena a no leer la franja.
+   *
+   * Lo que queda es lo que NO se ve en ningún otro sitio: cuántas tareas te
+   * dejó el colegio y todavía no has puesto. Esa es la pista sutil que
+   * sustituye a media cinta de tutorial. Sin nada pendiente, no dice nada. */
   function barraDeCalle(e) {
     var libres = 0;
     for (var i = 0; i < e.espacios.length; i++) if (!e.espacios[i]) libres++;
@@ -287,24 +300,24 @@ var UI = (function () {
      *
      * Y cambia de cara según si queda mes por repartir, porque son dos
      * momentos distintos: uno dice "te falta", el otro dice "ya, dale". */
-    /* Cuántas tareas llevas puestas este mes.
+    /* Las tareas que el colegio dejó y todavía no tienen jornada.
      *
-     * Faltaba, y era justo el número que el jugador necesita para decidir: sin
-     * él, repartir el mes es a ciegas y "haz tus tareas" no se puede seguir
-     * porque no se sabe si ya están puestas o no. */
-    var tareas = Motor.espaciosUsados('tarea') + Motor.espaciosUsados('tarea-usada');
+     * Cuenta las puestas Y las ya hechas, porque una tarea hecha deja de estar
+     * pendiente: si no, la franja seguiría pidiendo lo que el jugador acaba de
+     * hacer. Sin colegio no hay tareas, y con las del mes cubiertas la franja
+     * se calla en vez de felicitar. */
+    var pendientes = 0;
+    if (e.estudio) {
+      var puestas = Motor.espaciosUsados('tarea') + Motor.espaciosUsados('tarea-usada');
+      pendientes = Math.max(0, CONFIG.experiencia.tareasPorMes - puestas);
+    }
 
     var h = '<div class="calle-barra' + (libres ? '' : ' listo') + '">';
-    if (libres) {
-      h += '<span class="quedan">' + Ico('mas') + ' ' +
-           T('Te quedan {0} jornadas', libres) + '</span>';
-    } else {
+    if (pendientes) {
+      h += '<span class="pendientes">' + Ico('libro') + ' ' +
+           T('Tareas pendientes: {0}', pendientes) + '</span>';
+    } else if (!libres) {
       h += '<span class="listo">' + Ico('visto') + ' ' + T('Mes repartido') + '</span>';
-    }
-    if (e.estudio) {
-      h += '<span class="cuenta-tareas' + (tareas ? ' hay' : '') + '">' + Ico('libro') + ' ' +
-           (tareas === 0 ? T('sin tareas')
-            : (tareas === 1 ? T('1 tarea') : T('{0} tareas', tareas))) + '</span>';
     }
     /* El botón solo grita cuando el mes ya está repartido.
      *
@@ -511,10 +524,13 @@ var UI = (function () {
     // Y justo debajo, si el jugador tocó un negocio o el lote
     h += hojaDeNegocio();
 
-    if (Motor.enGracia()) {
-      h += '<div class="aprendizaje">' +
-        T('Tu primer año es tranquilo. No van a caer imprevistos mientras agarras el ritmo.') + '</div>';
-    }
+    /* Aquí iba un aviso de que el primer año no trae imprevistos.
+     *
+     * Se quitó porque anunciar que no va a pasar nada malo es contar el final:
+     * el año de gracia existe para que el jugador agarre el ritmo sin saberlo,
+     * y el día que empiecen a caer imprevistos lo va a notar sin que nadie se
+     * lo diga. Los meses de gracia siguen en CONFIG.mesesDeGracia; lo que se
+     * fue es el cartel. */
 
     h += '<div class="tarjeta">';
     if (etapa.mesesPorTurno > 1) {
@@ -572,8 +588,12 @@ var UI = (function () {
     // Mientras el juego no hable de dinero, esta tarjeta no tiene qué decir
     if (!sinDineroTodavia()) h += tarjetaLoQueViene(e, t, v, puedeTrabajar);
 
-    h += '<div class="btn-fila" style="margin-top:8px"><button class="btn-chico" id="adelantar" style="flex:1">' + Ico('adelantar') + ' ' +
-         T('Adelantar hasta que pase algo') + '</button></div>';
+    /* Y aquí iba "Adelantar hasta que pase algo".
+     *
+     * Saltaba hasta veinticuatro turnos repartiendo el mes por su cuenta. En
+     * un juego que pregunta una sola cosa —en qué se te va el tiempo— un botón
+     * que gasta el tiempo por ti no es una comodidad: es jugar sin jugar, y
+     * encima con un reparto que el jugador no eligió. */
     return h;
   }
 
@@ -3343,7 +3363,7 @@ var UI = (function () {
         '[data-ver-perfil],[data-mejora],' +
         '[data-abrir-negocio],[data-subir-negocio],[data-contratar],[data-despedir],' +
         '[data-traspasar],' +
-        '#cerrar-turno,#adelantar,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
+        '#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
         '#pedir-tarjeta,#pedir-informal,#gastar-tarjeta,#pagar-tarjeta,#alternar-minimo,' +
         '#abrir-pension,#cambiar-pension,#retirar-pension,#migrar,#regresar,' +
         '#ver-glosario,#ver-reporte,#ver-reporte-final');
@@ -3735,15 +3755,6 @@ var UI = (function () {
       if (el.id === 'ver-glosario') return mostrarGlosario();
       if (el.id === 'ver-reporte') return mostrarReporte();
       if (el.id === 'ver-reporte-final') return mostrarReporteFinal(function () { render(); });
-
-      if (el.id === 'adelantar') {
-        var turnos = Motor.adelantar();
-        if (!turnos.length) return;
-        var ultimo = turnos[turnos.length - 1];
-        var totalMeses = turnos.reduce(function (a, t) { return a + t.mesesCubiertos; }, 0);
-        ultimo.eventos.unshift(T('Adelantaste {0} meses.', totalMeses));
-        return procesarTurno(ultimo);
-      }
 
       if (el.id === 'cerrar-turno') {
         if (Motor.espaciosLibres() === CONFIG.jornadasPorMes) {

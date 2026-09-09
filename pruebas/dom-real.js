@@ -185,16 +185,53 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
  *
  * Si un paso apunta a algo que no está en pantalla, o a algo que al tocarlo no
  * hace nada, este bucle se atasca y la prueba falla diciendo en qué paso.
- */
+ *
+ * Y el tutorial tiene un HUECO en medio: entre la primera tarea y la apertura
+ * del trabajo pasan cuatro meses de colegio en los que la cinta se apaga a
+ * propósito. Así que la condición de parada no es "ya no hay cinta" —eso pasa
+ * a mitad de camino— sino que estén cumplidos todos los pasos del tutorial.
+ * Con la cinta apagada, lo que hace un jugador es cerrar el mes, y eso es lo
+ * que hace este paseo. Si el hueco no se cerrara nunca, el bucle llega al tope
+ * y la prueba falla diciendo dónde se quedó. */
 (function seguirLaCinta() {
   const pasosVistos = [];
   let toques = 0;
+  let esperas = 0;
+  /* Lo que NO puede haber en pantalla durante la espera. Se cuenta en vez de
+   * comprobarse mes a mes, para no soltar cuatro líneas iguales. */
+  const durante = { velo: 0, meta: 0, pestanas: 0, sinPista: 0, dinero: 0 };
+  const pasosGuia = w.PROGRESO.filter(p => p.guia).map(p => p.id);
+  const terminado = () => pasosGuia.every(id => w.Motor.get().peldanos[id]);
 
   /* El tope subió de 40 a 90 cuando los meses de colegio dejaron de ser un
    * botón repetido: ahora cada mes son varios toques de verdad —casilla,
    * actividad, casilla, actividad, cerrar— por cuatro meses. Si el tutorial se
    * atasca de verdad, el bucle sigue parando y diciendo en qué paso. */
-  while (w.document.querySelector('.guia') && toques < 90) {
+  while (!terminado() && toques < 90) {
+    if (!w.document.querySelector('.guia')) {
+      // El hueco: la cinta calla y el mes es del jugador. Se cierra y ya.
+      const cerrar = w.document.querySelector('#cerrar-turno');
+      if (!cerrar) break;
+      /* Y con la cinta apagada la pantalla tiene que quedar limpia de verdad:
+       * sin velo, sin tarjeta de metas hablándole del banco, con las dos
+       * pestañas del colegio y nada más, y con la única pista que sí sirve. */
+      if (w.document.querySelector('.foco')) durante.velo++;
+      if (w.document.querySelector('.tarjeta.sigue')) durante.meta++;
+      if (w.document.querySelectorAll('nav.pestanas [data-pestana]').length > 2) durante.pestanas++;
+      /* Y la pista solo se pide cuando de verdad queda algo pendiente: con la
+       * tarea del mes ya puesta, la franja se calla en vez de felicitar. */
+      const barra = w.document.querySelector('.calle-barra');
+      const puestas = w.Motor.espaciosUsados('tarea') + w.Motor.espaciosUsados('tarea-usada');
+      const dice = barra && barra.textContent.indexOf('Tareas pendientes') >= 0;
+      if (puestas === 0 && !dice) durante.sinPista++;
+      if (puestas > 0 && dice) durante.sinPista++;
+      if (w.document.querySelector('main').textContent.indexOf('Q') >= 0) durante.dinero++;
+      clic(w, cerrar);
+      cerrarModales(w);
+      esperas++;
+      toques++;
+      continue;
+    }
     const paso = w.document.querySelector('.guia-paso');
     const txt = w.document.querySelector('.guia-txt');
     const etiqueta = (paso ? paso.textContent : '?') + ' ' +
@@ -242,8 +279,25 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
     toques++;
   }
 
-  ok(!w.document.querySelector('.guia'),
+  ok(terminado(),
      'el tutorial se completa tocando solo lo que señala (' + toques + ' toques)');
+  /* Y por el camino la cinta se apagó de verdad. Si esto fuera cero, el hueco
+   * de los cuatro meses de colegio no existiría y el tutorial estaría otra vez
+   * llevando al jugador de la mano por meses que son suyos. */
+  ok(esperas >= 3,
+     'y se apaga durante los ' + esperas + ' meses de colegio que son del jugador');
+  ok(durante.velo === 0, 'con la cinta apagada no queda velo encima de la pantalla');
+  ok(durante.meta === 0,
+     'ni una tarjeta de metas hablándole del banco a un chico que no gana nada');
+  ok(durante.pestanas === 0,
+     'y esos meses son Mes y Estudio: ni banco ni noticias ni trabajo todavía');
+  ok(durante.dinero === 0, 'y no aparece un solo quetzal en pantalla');
+  /* La pista que sustituye a la cinta. Es lo único que el juego pide en esos
+   * meses, y si desapareciera el jugador se quedaría sin saber qué hacer con
+   * la pantalla apagada y sin instrucciones. */
+  ok(durante.sinPista === 0,
+     'lo que queda es una pista de dos palabras, y solo mientras haya algo pendiente');
+  ok(!w.document.querySelector('.guia'), 'y al final no queda cinta en pantalla');
   /* Y al terminarlo la pantalla queda limpia.
    *
    * El velo del foco lo dibuja un elemento aparte de la cinta, así que al

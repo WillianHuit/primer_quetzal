@@ -115,9 +115,14 @@ de escala según la etapa de vida.
 
 Total: **220 turnos**. Los años mensuales son los de las decisiones que definen todo
 —estudiar o no, qué diversificado, el primer empleo, la primera cuenta— y bajar el
-corte de los 30 a los 22 hizo sitio a los nueve años de niñez sin alargar la partida. Además existe un botón de **adelantar** que salta hasta el próximo
-evento o decisión pendiente. Adelantar cinco años y ver el salto del saldo es la
-demostración más contundente del interés compuesto que puede dar el juego.
+corte de los 30 a los 22 hizo sitio a los nueve años de niñez sin alargar la partida.
+
+Hubo además un botón de **adelantar** que saltaba hasta el próximo evento o decisión
+pendiente, y se quitó. La idea era enseñar el interés compuesto de un tirón; lo que hacía
+en la práctica era repartir el mes por el jugador durante dos años seguidos. En un juego
+cuya única pregunta es en qué se te va el tiempo, un botón que gasta el tiempo por ti es
+la forma de jugar sin jugar. La compresión por etapa —trimestres a los 22, años a los
+45— ya hace ese trabajo, y lo hace sin quitarle a nadie la decisión.
 
 ## 4. Recursos del jugador
 
@@ -1341,7 +1346,8 @@ Cuarenta y nueve decisiones acordadas en cinco rondas de entrevista, el 4 de sep
 ### Dos tensiones detectadas y resueltas durante el diseño
 
 1. El arco de 47 años en turnos mensuales daba 564 turnos, más de tres horas de juego. Se
-   resolvió con compresión por etapa de vida y botón de adelantar.
+   resolvió con compresión por etapa de vida. (El botón de adelantar que la acompañaba se
+   quitó después: ver §3.)
 2. El ingreso mediano nacional deja Q17 de margen sobre la canasta ampliada, lo que haría
    el juego matemáticamente imposible de ganar. Se resolvió situando al jugador en el
    escenario formal urbano y convirtiendo el escenario mediano en el modo difícil.

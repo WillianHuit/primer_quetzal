@@ -18,16 +18,12 @@ var TEXTOS_EN = {
     'debe {0}': 'owes {0}',
     'Tu {0}': 'Your {0}',
     'Terminar el {0}': 'End the {0}',
-    'Adelantar hasta que pase algo': 'Skip ahead until something happens',
-    'Adelantaste {0} meses.': 'You skipped {0} months.',
     'Este reparto se repite los {0} meses del {1}.': 'This split repeats for all {0} months of the {1}.',
 
     // week slots
     'Trabajo': 'Work', 'Estudio': 'School', 'Extra': 'Side gig', 'Hecho': 'Done',
     'Descanso': 'Rest', 'Libre': 'Free', 'Mes': 'Month', 'Banco': 'Bank',
     'Trabajar': 'Work', 'Estudiar': 'Study', 'Descansar': 'Rest', 'Vaciar': 'Clear',
-    'Tu primer año es tranquilo. No van a caer imprevistos mientras agarras el ritmo.':
-      'Your first year is calm. Nothing bad will hit you while you learn the ropes.',
 
     // month preview
     '{0} y gastos': '{0} and expenses',

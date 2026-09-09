@@ -194,10 +194,18 @@ var CONFIG = {
    *                    sentado. Es lo que hace que valga la jornada que
    *                    cuesta, y lo que abre ingenieria y la maestria, que el
    *                    camino pasivo NO alcanza. Ahi esta la decision.
+   *   tareasPorMes     cuantas tareas te deja el colegio cada mes. Es lo unico
+   *                    que el juego le pide mientras el jugador solo estudia,
+   *                    y sale como "Tareas pendientes: 1" en la franja de la
+   *                    calle. NO es una obligacion: nadie castiga por dejarla,
+   *                    la cuenta la pasa despues la carrera que pide
+   *                    experiencia que no tienes. Subirlo a 2 hace el colegio
+   *                    mas exigente sin tocar una linea de codigo.
    */
   experiencia: {
     porMesInscrito: 3,
-    maximaPorTarea: 25
+    maximaPorTarea: 25,
+    tareasPorMes: 1
   },
 
   prestaciones: {
@@ -247,9 +255,7 @@ var CONFIG = {
       { hastaEdad: 45, mesesPorTurno: 3,  turno: 'trimestre', plural: 'trimestres' },
       { hastaEdad: 999, mesesPorTurno: 12, turno: 'año',       plural: 'años' }
     ],
-    edadJubilacion: 65,
-    // Cuantos turnos como maximo salta el boton de adelantar antes de parar
-    maxTurnosAdelantar: 24
+    edadJubilacion: 65
   },
 
   // El primer año es tranquilo: sin eventos malos y con mas explicaciones.

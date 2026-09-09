@@ -2160,30 +2160,14 @@ var Motor = (function () {
     return m;
   }
 
-  // Adelanta turnos hasta que pase algo que merezca atencion.
-  function adelantar() {
-    var turnos = [];
-    for (var i = 0; i < CONFIG.tiempo.maxTurnosAdelantar; i++) {
-      if (estado.jubilado) break;
-      /* Repite un reparto razonable: lo que el colegio tenga tomado se
-       * queda, y de lo que sobra se trabaja todo menos dos jornadas de
-       * descanso. Sin las dos de descanso el jugador se enfermaba solo. */
-      var t = trabajoActual();
-      var libres = [];
-      for (var j = 0; j < estado.espacios.length; j++) {
-        if (espacioBloqueado(j)) estado.espacios[j] = 'estudio';
-        else libres.push(j);
-      }
-      for (var jl = 0; jl < libres.length; jl++) {
-        var trabaja = t && jl < libres.length - 2;
-        estado.espacios[libres[jl]] = trabaja ? 'trabajo' : 'descanso';
-      }
-      var m = cerrarTurno();
-      turnos.push(m);
-      if (m.decisiones.length || m.mora || m.graduacion || m.jubilacion || m.deudaHogar > 0) break;
-    }
-    return turnos;
-  }
+  /* Aquí vivía `adelantar()`: cerraba hasta veinticuatro turnos seguidos,
+   * repartiendo el mes por su cuenta, hasta que pasara algo.
+   *
+   * Se quitó entero. El juego pregunta una sola cosa —en qué se te va el
+   * tiempo— y una función que la contesta sola, con un reparto que el jugador
+   * no eligió, convierte la partida en mirar cómo pasan los años. Si algún día
+   * hace falta saltar tiempo, que sea por algo del juego —un viaje, una
+   * carrera a tiempo completo— y no por un botón de esperar. */
 
   // ---------- reportes ----------
 
@@ -2355,7 +2339,7 @@ var Motor = (function () {
     archivarPartida: archivarPartida, historial: historial,
     exportar: exportar, importar: importar,
 
-    cerrarTurno: cerrarTurno, adelantar: adelantar, aplicarDecision: aplicarDecision,
+    cerrarTurno: cerrarTurno, aplicarDecision: aplicarDecision,
     asignarEspacio: asignarEspacio, limpiarEspacios: limpiarEspacios,
     espacioBloqueado: espacioBloqueado, semanaDe: semanaDe, jornadaDe: jornadaDe,
     indiceDe: indiceDe, esMenor: esMenor, aperturaMinima: aperturaMinima,

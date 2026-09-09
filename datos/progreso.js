@@ -119,8 +119,13 @@ var PROGRESO = [
 
   // ---------- el tutorial: un toque por paso ----------
   //
-  // Nueve peldaños, un toque cada uno, en el orden en que se vive: primero el
+  // Diez peldaños, un toque cada uno, en el orden en que se vive: primero el
   // colegio, después el trabajo, después repartir el mes y cerrarlo.
+  //
+  // Y en medio hay un HUECO a propósito: entre la primera tarea y la apertura
+  // del trabajo pasan cuatro meses en los que la cinta se apaga y el jugador
+  // reparte solo. Un paso del tutorial es un movimiento; esperar no lo es, y
+  // una franja negra que pide esperar es una franja negra que estorba.
   //
   // El tutorial TERMINA ahí, y eso es a propósito. Antes seguía dos pasos más
   // ("entra al Banco", "abre tu cuenta") y con eso le regalaba al jugador de 13
@@ -231,23 +236,26 @@ var PROGRESO = [
       if (!e.estudio) return true;
       return e.mesesJugados >= MESES_SOLO_COLEGIO;
     },
-    pista: 'Estos meses son tuyos: reparte el mes como quieras y ciérralo cuando estés listo. El trabajo llega en unos meses.',
-    guia: true,
-    /* SIN foco, y es una decisión sobre cómo se enseña.
+    /* SIN pista y SIN cinta, y es LA decisión de cómo se enseña este juego.
      *
-     * Este paso pasó por los dos extremos y los dos estaban mal. Señalando
+     * Este paso pasó por los tres extremos y los tres estaban mal. Señalando
      * siempre el botón de cerrar, el tutorial le enseñaba al jugador a
      * saltarse el juego: cinco toques al mismo sitio sin repartir nada.
-     * Señalando cada casilla y cada actividad de los cuatro meses, lo llevaba
-     * de la mano por algo que ya le enseñó el paso anterior, y eso es tratarlo
-     * como si no hubiera entendido.
+     * Señalando cada casilla de los cuatro meses, lo llevaba de la mano por
+     * algo que el paso anterior ya le enseñó. Y dejando la cinta encendida
+     * como una nota, el tutorial se quedaba clavado en el paso 4 con la
+     * franja negra tapando la pantalla durante cuatro meses seguidos,
+     * pidiendo algo que no se puede tocar: esperar.
      *
-     * La primera tarea la enseña `primeraTarea`, con foco y todo. De ahí en
-     * adelante la cinta se queda como una nota —dice qué está pasando y qué
-     * viene— y la pantalla no se apaga. El jugador reparte estos meses como
+     * Un paso del tutorial es un MOVIMIENTO. Esto es una espera, así que no
+     * es un paso: la cinta se apaga con la primera tarea y no vuelve hasta
+     * que se abre el trabajo, que es cuando hay algo nuevo que enseñar.
+     *
+     * Lo que queda en su lugar es una pista sutil —"Tareas pendientes: 1" en
+     * la franja de la calle— y nada más. El jugador reparte estos meses como
      * quiera, incluido no hacer ninguna tarea: eso también es una decisión, y
      * la va a pagar cuando una carrera le pida experiencia que no tiene. */
-    senala: null,
+    pista: null,
     pestana: 'casa',
     titulo: 'Se abrió el trabajo',
     texto: 'Llevas unos meses en clases y ya puedes buscar algo para las tardes. A tu edad no hay sueldos: hay tres trabajitos por tu cuenta, sin contrato y sin patrón.',
@@ -256,9 +264,17 @@ var PROGRESO = [
   },
 
   {
+    /* Encadenados desde aquí hasta el final del tutorial, y hace falta.
+     *
+     * En medio del tutorial hay ahora una espera de cuatro meses. Sin la
+     * cadena, en cuanto el jugador hace su primera tarea la cinta salta al
+     * primer paso que todavía no se cumple y se pone a señalar la pestaña de
+     * Trabajo —que no existe— o a pedirle que llene las ocho casillas de un
+     * mes que es suyo. La cadena es lo que hace que la cinta se calle durante
+     * la espera y vuelva justo cuando el trabajo se abre. */
     id: 'verTrabajo',
     llaves: [],
-    requiere: 'primeraTarea',
+    requiere: 'primerTrabajo',
     cuando: function (e, M, vista) { return vista.pestana === 'trabajo'; },
     pista: 'Ahora toca Trabajo. A los 13 no hay sueldos, pero sí hay trabajitos.',
     guia: true,
@@ -269,6 +285,7 @@ var PROGRESO = [
     id: 'empleo',
     llaves: [],
     cuando: function (e) { return e.empleo !== null; },
+    requiere: 'verTrabajo',
     pista: 'Los tres son tuyos para elegir. Pagan unos pocos quetzales por jornada: eso es lo que hay a tu edad.',
     guia: true,
     senala: '[data-tomar]',
@@ -288,6 +305,7 @@ var PROGRESO = [
   {
     id: 'tocarJornada',
     llaves: [],
+    requiere: 'verMes',
     cuando: function (e, M, vista) {
       // typeof y no !== null: quien llame sin vista manda undefined, y
       // undefined !== null es true, así que el paso se cerraba solo.
@@ -305,6 +323,7 @@ var PROGRESO = [
   {
     id: 'ponerTrabajo',
     llaves: [],
+    requiere: 'tocarJornada',
     cuando: function (e) {
       return e.espacios.some(function (x) { return x && x !== 'estudio'; });
     },
@@ -317,6 +336,7 @@ var PROGRESO = [
   {
     id: 'jornadas',
     llaves: [],
+    requiere: 'ponerTrabajo',
     cuando: function (e) { return e.espacios.every(function (x) { return !!x; }); },
     pista: 'Llena las casillas que quedan. Trabajar todo paga más, pero te deja sin energía, y enfermarte cuesta más que una jornada.',
     guia: true,
@@ -337,6 +357,7 @@ var PROGRESO = [
   {
     id: 'primerMes',
     llaves: [],
+    requiere: 'jornadas',
     cuando: function (e) { return e.mesesJugados >= 1; },
     pista: 'Cierra el mes y mira el resumen: te va a mostrar en una barra a dónde se fue cada quetzal.',
     guia: true,
@@ -383,19 +404,23 @@ var PROGRESO = [
   {
     id: 'banco',
     llaves: ['banco', 'ahorro'],
-    /* Y ninguna de las tres cuenta mientras el juego no hable de dinero.
+    /* Y ninguna de las tres cuenta mientras no entre un quetzal.
      *
      * Un chico en su primer año de básicos no tiene nada que hacer con una
      * cuenta de ahorro: no gana, no gasta lo suyo y no puede mover nada. Se
      * abría igual, porque cuatro meses de clases bastan para que el efectivo
      * se le vaya en gastos hormiga, y aparecía una pestaña de banco delante de
-     * alguien que todavía está aprendiendo a restar. */
-    cuando: function (e, M) {
-      /* Quien ya tiene un empleo pasa aunque no haya tocado el tutorial: lo
-       * que importa es si trabaja, no por qué puerta entró. */
-      if (e.empleo === null && !M.desbloqueado('trabajo')) return false;
-      return (e.totales && e.totales.fugaEfectivo >= 30) ||
-             (e.empleo !== null && e.empleo.formal) ||
+     * alguien que todavía está aprendiendo a restar.
+     *
+     * El primer intento midió esto con la LLAVE del trabajo, y no alcanzaba:
+     * la llave se abre el mes cinco y el banco salía el mismo día, delante de
+     * alguien que todavía no había aceptado ningún trabajito. Lo que importa
+     * no es poder buscar trabajo, es tener de dónde te entre algo. Por eso se
+     * mide con el empleo, y a los 18 se abre igual: a esa edad, tener cuenta
+     * ya es parte de la vida aunque no estés ganando. */
+    cuando: function (e) {
+      if (e.empleo === null) return e.edad >= CONFIG.mayoriaDeEdad;
+      return (e.totales && e.totales.fugaEfectivo >= 30) || e.empleo.formal ||
              e.edad >= CONFIG.mayoriaDeEdad;
     },
     pista: 'Fíjate cuánto se te va del efectivo cada mes en el resumen. Cuando eso empiece a doler, el banco va a tener sentido.',
@@ -425,9 +450,18 @@ var PROGRESO = [
   },
 
   {
+    /* Las noticias tampoco, mientras solo se estudie.
+     *
+     * Salían al segundo mes cerrado, o sea en medio de los cuatro meses en que
+     * el juego es Mes y Estudio y nada más. Lo que hay dentro —el mercado
+     * laboral, las promociones del banco— no le sirve de nada a alguien que
+     * todavía no puede ni buscar trabajo ni abrir cuenta: es una pestaña más
+     * que mirar y descartar. Llegan cuando ya hay a qué compararlas. */
     id: 'noticias',
     llaves: ['noticias'],
-    cuando: function (e) { return e.mesesJugados >= 2; },
+    cuando: function (e, M) {
+      return e.mesesJugados >= 2 && (e.empleo !== null || M.desbloqueado('trabajo'));
+    },
     pista: 'Cierra otro mes. Con dos meses de rodaje ya vas a ver qué te alcanza y qué no.',
     titulo: 'Se abrieron las noticias',
     texto: 'El mercado laboral, las promociones que el banco tiene vigentes y todo lo que te ha pasado, mes por mes.',
