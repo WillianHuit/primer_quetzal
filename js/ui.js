@@ -131,6 +131,22 @@ var UI = (function () {
 
   // =============== barra superior ===============
 
+  /* Los primeros meses el juego no habla de dinero.
+   *
+   * Mientras el trabajo no exista, el jugador es un chico de trece en clases:
+   * lo suyo es la experiencia y lo que le falta para la carrera, no un
+   * patrimonio de Q120 que no puede mover ni gastar en nada. Enseñarle una
+   * cifra de dinero antes de que tenga forma de cambiarla es enseñarle a
+   * mirar un número que no responde.
+   *
+   * Se acaba cuando se abre el trabajo, y ahí el dinero aparece de golpe. Eso
+   * también dice algo: el dinero entra en tu vida cuando empiezas a ganarlo.
+   *
+   * Va atado a la LLAVE y no a la cinta del tutorial a propósito: quien se
+   * salta el tutorial pero sigue en clases tampoco tiene nada que hacer con
+   * un número de dinero. */
+  function sinDineroTodavia() { return !Motor.desbloqueado('trabajo'); }
+
   function barra() {
     var e = Motor.get();
     var t = Motor.trabajoActual();
@@ -153,9 +169,12 @@ var UI = (function () {
             Muneco({ trabajo: t ? t.id : null, estudia: !!e.estudio,
                      graduado: e.carrerasTerminadas.length > 0 && !e.estudio }) +
           '</button>' +
-          '<span class="dinero">' + Q0(Motor.patrimonio()) + '</span>' +
+          (sinDineroTodavia()
+            ? '<span class="dinero exp">' + Ico('birrete') + ' ' + Motor.experiencia() + '</span>'
+            : '<span class="dinero">' + Q0(Motor.patrimonio()) + '</span>') +
           '<span class="chip">' + Ico('rayo') + ' ' + Math.round(e.energia) + '</span>' +
-          (deuda > 0 ? '<span class="chip alerta">' + T('debe {0}', Q0(deuda)) + '</span>' : '') +
+          (deuda > 0 && !sinDineroTodavia()
+            ? '<span class="chip alerta">' + T('debe {0}', Q0(deuda)) + '</span>' : '') +
         '</div>' +
         '<div class="energia-barra"><div class="energia-relleno' + baja +
           '" style="width:' + energiaPct + '%"></div></div>' +
@@ -538,7 +557,8 @@ var UI = (function () {
      * cerrar, porque el botón se subió a la calle. Siguen aquí y no se quitan:
      * son la consecuencia de lo que se acaba de repartir, y quien quiera
      * mirarlas antes de cerrar las tiene a un dedo de scroll. */
-    h += tarjetaLoQueViene(e, t, v, puedeTrabajar);
+    // Mientras el juego no hable de dinero, esta tarjeta no tiene qué decir
+    if (!sinDineroTodavia()) h += tarjetaLoQueViene(e, t, v, puedeTrabajar);
 
     h += '<div class="btn-fila" style="margin-top:8px"><button class="btn-chico" id="adelantar" style="flex:1">' + Ico('adelantar') + ' ' +
          T('Adelantar hasta que pase algo') + '</button></div>';
@@ -2797,7 +2817,51 @@ var UI = (function () {
 
   // =============== resumen del turno ===============
 
+  /* El cierre del mes cuando el juego todavía no habla de dinero.
+   *
+   * Es una boleta, no un estado de cuenta: cuánta experiencia ganaste y cuánto
+   * te falta de carrera. Poner las dos barras de entró y salió aquí sería
+   * contestar una pregunta que el jugador no se ha hecho todavía, y encima con
+   * cifras que no puede mover: a los trece el dinero entra y sale solo. */
+  function boletaDelMes(m) {
+    var e = Motor.get();
+    var gano = Math.round(m.experiencia || 0);
+
+    var h = '<span class="icono">' + Ico('birrete') + '</span>' +
+      '<h2 style="text-transform:capitalize">' + esc(m.mes) + ' ' + m.anio +
+      (m.mesesCubiertos > 1 ? ' · ' + T('{0} meses', m.mesesCubiertos) : '') + '</h2>';
+
+    h += '<div class="tres-cifras">' +
+      '<div><span class="etq">' + T('Experiencia') + '</span><b class="pos">+' + gano + '</b></div>' +
+      '<div class="queda"><span class="etq">' + T('Llevas') + '</span><b>' +
+        Motor.experiencia() + '</b></div></div>';
+
+    if (e.estudio) {
+      var car = buscar(CARRERAS, e.estudio.carreraId);
+      var av = Math.min(1, e.estudio.mesesAvanzados / car.mesesRequeridos);
+      var faltan = Math.max(0, Math.ceil(car.mesesRequeridos - e.estudio.mesesAvanzados));
+      h += '<div class="fila"><span class="etq">' + Ico(car.icono) + ' ' +
+           esc(D(car, 'nombre')) + '</span><span class="val sutil">' +
+           T('Faltan {0} meses', faltan) + '</span></div>';
+      h += '<div class="progreso"><div class="progreso-relleno" style="width:' +
+           Math.round(av * 100) + '%"></div></div>';
+    }
+    return h;
+  }
+
   function resumenTurno(m, pendientes) {
+    /* Sin dinero en pantalla, el cierre del mes es otra cosa. */
+    if (sinDineroTodavia()) {
+      var hb = boletaDelMes(m);
+      if (m.eventos.length) {
+        hb += '<ul class="eventos">';
+        m.eventos.forEach(function (t) { hb += '<li>' + esc(t) + '</li>'; });
+        hb += '</ul>';
+      }
+      return hb + '<button class="btn-primario" data-cerrar style="margin-top:16px">' +
+             (pendientes ? T('Siguiente') : T('Seguir')) + '</button>';
+    }
+
     var h = '<span class="icono">' + Ico('calendario') + '</span><h2 style="text-transform:capitalize">' +
             esc(m.mes) + ' ' + m.anio +
             (m.mesesCubiertos > 1 ? ' · ' + T('{0} meses', m.mesesCubiertos) : '') + '</h2>';
@@ -3132,7 +3196,7 @@ var UI = (function () {
 
   // =============== minijuegos ===============
 
-  function jugarMinijuego(id) {
+  function jugarMinijuego(id, alCerrar) {
     var caja = document.createElement('div');
     caja.className = 'velo';
     var interior = document.createElement('div');
@@ -3179,8 +3243,71 @@ var UI = (function () {
           esc(D(res.def, 'ensena')) + '</div>' : '') +
         '<button class="btn-primario" data-cerrar>' + T('Listo') + '</button>';
       var b = interior.querySelector('[data-cerrar]');
-      if (b) b.addEventListener('click', function () { caja.remove(); render(); });
+      if (b) b.addEventListener('click', function () {
+        caja.remove();
+        /* `alCerrar` es lo que encadena una tarea con la siguiente al terminar
+         * el mes. Sin él, cada actividad terminaba en la pantalla y el jugador
+         * tenía que volver a buscar la siguiente. */
+        if (alCerrar) alCerrar(); else render();
+      });
     });
+  }
+
+  /* -------------------------------------------------------------------------
+   * Lo que dejaste pendiente este mes
+   * -------------------------------------------------------------------------
+   * Repartir el mes y cerrarlo no puede ser el mismo gesto. Una jornada puesta
+   * en tareas es una promesa: dijiste que ibas a estudiar esa media semana. Si
+   * el mes se cierra sin más, esa casilla no fue una decisión, fue un adorno, y
+   * el jugador acaba tocando el mismo botón cinco veces sin hacer nada.
+   *
+   * Así que al terminar el mes, primero se hace lo que se prometió. Una por
+   * una, y con la lista delante para elegir cuál. Dejarlas también se puede
+   * —el jugador manda— pero se dice en voz alta lo que cuesta.
+   *
+   * `alTerminar` se llama cuando ya no queda nada pendiente. Es lo que deja
+   * que esto se meta ANTES del cierre del mes sin que el cierre sepa nada.
+   */
+  function hacerPendientes(alTerminar) {
+    var e = Motor.get();
+    var faltan = Motor.espaciosUsados('tarea');
+    if (!faltan) return alTerminar();
+
+    var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas,
+      e.estudio ? e.estudio.carreraId : null).filter(esDeEstudio);
+    // Sin ninguna clase disponible no hay nada que hacer y no se castiga
+    if (!lista.length) return alTerminar();
+
+    var h = '<span class="icono">' + Ico('libro') + '</span>' +
+      '<h2>' + (faltan === 1 ? T('Te toca hacer una tarea')
+                             : T('Te tocan {0} tareas', faltan)) + '</h2>' +
+      '<p>' + (faltan === 1
+        ? T('Pusiste una jornada en tareas. Hazla antes de cerrar el mes.')
+        : T('Pusiste {0} jornadas en tareas. Elige cuál haces primero.', faltan)) + '</p>';
+    lista.forEach(function (j) {
+      h += '<button class="btn-primario claro tarea-elegir" data-tarea="' + j.id + '">' +
+           Ico(j.icono) + ' ' + esc(D(j, 'nombre')) +
+           '<span class="etiqueta ok">+' + (j.experienciaMaxima || 0) + '</span></button>';
+    });
+    h += '<div class="btn-fila" style="margin-top:10px">' +
+         '<button class="btn-chico" data-dejarlas>' + T('Dejarlas para otro mes') +
+         '</button></div>' +
+         '<p class="sutil centrado">' +
+         T('Si las dejas, esas jornadas se pierden: el tiempo no se guarda.') + '</p>';
+
+    var d = modal(h, null);
+    d.querySelectorAll('[data-tarea]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        d.remove();
+        // Al terminar la tarea se vuelve a preguntar: quedan las que queden
+        jugarMinijuego(b.getAttribute('data-tarea'), function () {
+          hacerPendientes(alTerminar);
+        });
+      });
+    });
+    var dejar = d.querySelector('[data-dejarlas]');
+    if (dejar) dejar.addEventListener('click', function () { d.remove(); alTerminar(); });
+    return null;
   }
 
   // =============== eventos de la interfaz ===============
@@ -3596,11 +3723,15 @@ var UI = (function () {
       }
 
       if (el.id === 'cerrar-turno') {
-        latirBarra = true;
         if (Motor.espaciosLibres() === CONFIG.jornadasPorMes) {
           return aviso(T('No has hecho nada'), T('Reparte al menos una jornada antes de cerrar.'));
         }
-        return procesarTurno(Motor.cerrarTurno());
+        /* Primero lo que prometiste, y después el mes. Ese orden es lo que
+         * convierte repartir las jornadas en una decisión y no en un trámite. */
+        return hacerPendientes(function () {
+          latirBarra = true;
+          procesarTurno(Motor.cerrarTurno());
+        });
       }
     });
   }

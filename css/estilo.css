@@ -947,6 +947,18 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
 
 .grafica-caja { padding: 12px 13px 8px; }
 
+/* La experiencia en la barra de arriba, en el sitio donde despues va el
+   dinero. Mismo peso visual: es la cifra que manda en esta etapa. */
+.barra .dinero.exp { display: inline-flex; align-items: center; gap: 6px; }
+.barra .dinero.exp .ic { width: 22px; height: 22px; }
+
+/* Los botones de elegir que tarea hacer al cerrar el mes */
+.tarea-elegir {
+  display: flex; align-items: center; gap: 9px;
+  text-align: left; margin-top: 8px;
+}
+.tarea-elegir .etiqueta { margin-left: auto; }
+
 /* El desglose linea por linea del cierre de mes, plegado.
    Las dos barras ya cuentan el mes; esto es la auditoria, y se pide. */
 .desglose { margin-top: 14px; border-top: 1.5px solid var(--linea); padding-top: 10px; }

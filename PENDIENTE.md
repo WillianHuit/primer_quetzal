@@ -7,6 +7,35 @@ aporta al juego, no por lo que es más fácil.
 
 ## 0. Lo que se cerró hoy
 
+### Repartir el mes es una promesa, y ahora el juego la cobra
+
+Los cuatro turnos de colegio se podían pasar tocando el mismo botón cinco veces sin hacer
+nada. Una jornada puesta en tareas era un adorno, no una decisión.
+
+- **Al terminar de repartir, el juego lleva a hacer lo que prometiste.** Si pusiste dos
+  jornadas en tareas, salen las dos, una por una, con la lista delante para elegir cuál.
+  El mes **no se cierra** hasta que se resuelva.
+- **Dejarlas también se puede** —el jugador manda— pero se dice en voz alta lo que cuesta:
+  esas jornadas se pierden, el tiempo no se guarda. Y no hay botón de cerrar: o la haces o
+  la dejas, porque salirse sin decidir dejaría la promesa en el aire.
+- El mismo enganche sirve para lo que viene: cuando entren los turnos de trabajo, se hacen
+  ahí mismo.
+
+### En clases, el juego no habla de dinero
+
+Mientras el trabajo no exista, el jugador es un chico de trece en clases. Enseñarle un
+patrimonio de Q120 que no puede mover ni gastar es enseñarle a mirar un número que no
+responde.
+
+- **La barra de arriba lleva su experiencia**, en el sitio exacto donde después va el dinero.
+- **La tarjeta de lo que entra y sale no sale**, y el cierre del mes es una **boleta**:
+  cuánta experiencia ganaste y cuánto te falta de carrera, no dos barras de entró y salió.
+- **En cuanto se abre el trabajo, el dinero aparece de golpe.** Eso también dice algo: el
+  dinero entra en tu vida cuando empiezas a ganarlo.
+- Va atado a la **llave** y no a la cinta del tutorial: quien se salta el tutorial pero sigue
+  en clases tampoco tiene nada que hacer con una cifra de dinero.
+
+
 ### El juego empieza en clases, y nada más
 
 El tutorial abría el trabajo, el imperio y los extras casi de golpe. Ahora:

@@ -121,7 +121,13 @@ function repartirJornadas(w) {
 function cerrarModales(w) {
   let n = 0;
   while (modalAbierto(w) && n < 12) {
-    const b = w.document.querySelector('.velo [data-cerrar]');
+    /* La ventana de "te toca hacer una tarea" NO tiene botón de cerrar, y es a
+     * propósito: repartir una jornada en tareas es una promesa, y salirse de
+     * ahí sin decidir dejaría la promesa en el aire. Se sale eligiendo una
+     * tarea o dejándolas. Un jugador con prisa las deja, así que eso es lo
+     * que hace este paseo. */
+    const b = w.document.querySelector('.velo [data-cerrar]') ||
+              w.document.querySelector('.velo [data-dejarlas]');
     if (!b) { w.document.querySelector('.velo').remove(); }
     else clic(w, b);
     n++;
@@ -314,6 +320,98 @@ const puerta = w.CARRERAS.find(c => c.requiere === 'primaria');
 ok(!puerta.experienciaRequerida,
    `${puerta.nombre} no pide experiencia: la puerta de entrada no se cierra`);
 
+// ---------- repartir el mes es una promesa, y el juego la cobra ----------
+
+/* La regla: una jornada puesta en tareas NO es un adorno. Al terminar el mes,
+ * el juego lleva a hacer lo que se prometió, una por una. Sin esto, repartir
+ * las casillas era un trámite y el jugador acababa tocando el mismo botón
+ * cinco veces sin hacer nada. */
+(function laPromesaSeCobra() {
+  const { w: w3 } = abrirJuego('es');
+  const M3 = w3.Motor;
+  M3.iniciar('normal', 1, 'apoyo');
+  M3.inscribirse('basicos', false);
+  M3.get().vistos.guiaSaltada = true;
+  M3.guardar();
+  w3.UI.iniciar();
+  /* UI.iniciar() dibuja la portada; al juego se entra por 'seguir',
+   * igual que hace pruebas/vista.html. */
+  clic(w3, w3.document.querySelector('[data-seguir="1"]'));
+
+  clic(w3, w3.document.querySelector('[data-pestana="casa"]'));
+
+  /* Cerrar el mes SIN tareas puestas no interrumpe: no hay nada prometido. */
+  const libres3 = () => [...w3.document.querySelectorAll('.jornada:not(.lleno):not(.bloqueado)')];
+  clic(w3, libres3()[0]);
+  clic(w3, w3.document.querySelector('[data-poner="descanso"]'));
+  clic(w3, w3.document.querySelector('#cerrar-turno'));
+  const sinPromesa = modalAbierto(w3);
+  ok(!!sinPromesa && sinPromesa.textContent.indexOf('tarea') < 0,
+     'sin tareas puestas, cerrar el mes no interrumpe con nada');
+  cerrarModales(w3);
+
+  /* Con dos jornadas en tareas, sí: y dice cuántas son. */
+  clic(w3, w3.document.querySelector('[data-pestana="casa"]'));
+  for (let n = 0; n < 2; n++) {
+    clic(w3, libres3()[0]);
+    clic(w3, w3.document.querySelector('[data-poner="tarea"]'));
+  }
+  ok(M3.espaciosUsados('tarea') === 2, 'quedan dos jornadas puestas en tareas');
+
+  clic(w3, w3.document.querySelector('#cerrar-turno'));
+  const pide = modalAbierto(w3);
+  ok(!!pide && pide.textContent.indexOf('2 tareas') >= 0,
+     'al terminar de repartir, el juego lleva a hacer las dos tareas');
+  ok(pide.querySelectorAll('[data-tarea]').length === 3,
+     'y deja elegir cuál de las tres se hace ahora');
+  ok(!pide.querySelector('[data-cerrar]'),
+     'no hay forma de escaparse sin decidir: o la haces o la dejas');
+  ok(!!pide.querySelector('[data-dejarlas]'),
+     'y dejarlas también se puede, pero se dice lo que cuesta');
+
+  /* El mes NO se cerró todavía: primero lo prometido. */
+  ok(M3.get().mesesJugados === 1,
+     'y el mes no se cierra hasta que se resuelva lo que se prometió');
+
+  clic(w3, pide.querySelector('[data-dejarlas]'));
+  ok(M3.get().mesesJugados === 2, 'al dejarlas, el mes sí se cierra');
+})();
+
+// ---------- el juego no habla de dinero mientras el chico está en clases ----------
+
+(function todaviaSinDinero() {
+  const { w: w4 } = abrirJuego('es');
+  const M4 = w4.Motor;
+  M4.iniciar('normal', 1, 'apoyo');
+  M4.inscribirse('basicos', false);
+  M4.get().vistos.guiaSaltada = true;
+  M4.guardar();
+  w4.UI.iniciar();
+  /* UI.iniciar() dibuja la portada; al juego se entra por 'seguir',
+   * igual que hace pruebas/vista.html. */
+  clic(w4, w4.document.querySelector('[data-seguir="1"]'));
+
+  ok(!M4.desbloqueado('trabajo'), 'el chico está en clases y el trabajo no existe todavía');
+  const barra = w4.document.querySelector('.barra .dinero');
+  ok(!!barra && barra.classList.contains('exp'),
+     'la barra de arriba enseña experiencia, no un patrimonio que no puede mover');
+  ok(barra.textContent.indexOf('Q') < 0, 'y no hay un solo quetzal en ella');
+
+  const mes = w4.document.querySelector('main').textContent;
+  ok(mes.indexOf('ENTRA') < 0 && mes.indexOf('Entra') < 0,
+     'ni la tarjeta de lo que entra y sale: eso llega con el trabajo');
+
+  /* Y en cuanto se abre el trabajo, el dinero aparece. */
+  M4.get().mesesJugados = 9;
+  M4.revisarProgreso();
+  M4.guardar();
+  w4.UI.iniciar();
+  clic(w4, w4.document.querySelector('[data-seguir="1"]'));
+  const barra2 = w4.document.querySelector('.barra .dinero');
+  ok(M4.desbloqueado('trabajo') && !barra2.classList.contains('exp'),
+     'y en cuanto se abre el trabajo, el dinero aparece: entra en tu vida cuando lo ganas');
+})();
+
 // ---------- el que estudia empieza en clases, y nada más ----------
 
 /* La regla que este bloque existe para fijar: quien elige estudiar pasa los
@@ -457,17 +555,25 @@ const cajaResumen = modalAbierto(w);
 const resumen = cajaResumen.textContent;
 ok(resumen.indexOf('Salario') >= 0, 'el resumen muestra el salario cobrado');
 
-/* El desglose línea por línea llega PLEGADO.
+/* Y en esta etapa el cierre del mes es una BOLETA, no un estado de cuenta.
  *
- * Las dos barras ya cuentan el mes entero, y debajo venían hasta veintiséis
- * filas repitiendo lo mismo partido más fino. Era la pantalla más cargada del
- * juego, y aparecía en el único momento en que el jugador sí quiere leer. */
-const desglose = cajaResumen.querySelector('details.desglose');
-ok(!!desglose, 'el resumen del mes trae el desglose línea por línea');
-ok(!desglose.hasAttribute('open'),
-   'y llega plegado: primero las dos barras y lo que te quedó, el detalle se pide');
-ok(cajaResumen.querySelector('.flujo-barra'),
-   'lo que sí llega abierto son las barras de entró y salió');
+ * Mientras el trabajo no exista, el jugador es un chico en clases: lo suyo es
+ * la experiencia y lo que le falta de carrera. Enseñarle dos barras de entró y
+ * salió con cifras que no puede mover sería contestarle una pregunta que
+ * todavía no se ha hecho. */
+if (!w.Motor.desbloqueado('trabajo')) {
+  ok(!cajaResumen.querySelector('.flujo-barra'),
+     'todavía sin trabajo, el cierre del mes no enseña dinero');
+  ok(resumen.indexOf('Experiencia') >= 0,
+     'enseña la experiencia ganada, que es lo que sí depende de él');
+} else {
+  const desglose = cajaResumen.querySelector('details.desglose');
+  ok(!!desglose, 'con el dinero ya en juego, el resumen trae el desglose línea por línea');
+  ok(!desglose.hasAttribute('open'),
+     'y llega plegado: primero las dos barras y lo que te quedó, el detalle se pide');
+  ok(!!cajaResumen.querySelector('.flujo-barra'),
+     'lo que sí llega abierto son las barras de entró y salió');
+}
 cerrarModales(w);
 ok(w.Motor.get().mesesJugados === mesAntes + 1, 'el mes avanzó');
 ok(w.Motor.desbloqueado('noticias'),

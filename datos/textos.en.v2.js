@@ -747,6 +747,21 @@
   /* Las tareas del colegio y la experiencia: la tarea no paga, ensena, y lo
    * que ensena es lo que despues abre las carreras que piden mas. */
   ui['Las tareas'] = 'Homework';
+
+  /* Al cerrar el mes, primero se hace lo que se prometio. */
+  ui['Te toca hacer una tarea'] = 'You have one homework to do';
+  ui['Te tocan {0} tareas'] = 'You have {0} homeworks to do';
+  ui['Pusiste una jornada en tareas. Hazla antes de cerrar el mes.'] =
+    'You put a half-day into homework. Do it before closing the month.';
+  ui['Pusiste {0} jornadas en tareas. Elige cuál haces primero.'] =
+    'You put {0} half-days into homework. Pick which one you do first.';
+  ui['Dejarlas para otro mes'] = 'Leave them for another month';
+  ui['Si las dejas, esas jornadas se pierden: el tiempo no se guarda.'] =
+    'If you leave them, those half-days are gone: time does not carry over.';
+
+  /* Y la boleta del mes, mientras el juego todavia no habla de dinero. */
+  ui['Experiencia'] = 'Experience';
+  ui['Llevas'] = 'You have';
   ui['Las tareas son del colegio. Inscríbete en algo y aparecen.'] =
     'Homework belongs to school. Enroll in something and it shows up.';
   ui['{0} todavía no tiene tareas propias. La experiencia sigue subiendo por estar inscrito.'] =
