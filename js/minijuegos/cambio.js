@@ -15,9 +15,12 @@ Minijuegos.registrar({
   icono: 'moneda',
   tipo: 'clase',
   paraCarrera: 'basicos',
+  /* No es la primera: hay que saber sumar antes de dar cambio. Se abre con
+   * la experiencia que dan las dos tareas de aritmetica. */
+  desdeExperiencia: 30,
   descripcion: 'Te compran algo y te pagan de más. ¿Cuánto devuelves?',
   ensena: 'Si no sabes cuánto tienes que devolver, no sabes cuánto ganaste.',
-  duracion: 70,
+  duracion: 35,
   pagoMaximo: 0,
   experienciaMaxima: 20,
   puntosParaPagoMaximo: 100,

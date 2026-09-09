@@ -39,9 +39,10 @@ var Minijuegos = (function () {
    * Es la diferencia entre "ya lo aprendi" y "lo estoy aprendiendo", y por eso
    * son dos campos y no uno.
    */
-  function disponibles(nivelEducativo, carrerasTerminadas, carreraActual) {
+  function disponibles(nivelEducativo, carrerasTerminadas, carreraActual, experiencia) {
     var orden = NIVELES_EDUCATIVOS;
     var hechas = carrerasTerminadas || [];
+    var xp = experiencia || 0;
     return registro.filter(function (j) {
       if (j.requiereNivel && orden.indexOf(nivelEducativo) < orden.indexOf(j.requiereNivel)) return false;
       if (j.requiereCarrera && hechas.indexOf(j.requiereCarrera) < 0) return false;
@@ -49,6 +50,13 @@ var Minijuegos = (function () {
         var para = [].concat(j.paraCarrera);
         if (!carreraActual || para.indexOf(carreraActual) < 0) return false;
       }
+      /* Y las clases de una misma carrera tienen su propio orden.
+       *
+       * Basicos dura tres anos y no puede empezar con la tarea de calcular el
+       * cambio de una compra con centavos: eso no es la primera clase, es la
+       * quinta. Se empieza sumando, y las de mas arriba se abren con la
+       * experiencia que dieron las de abajo. */
+      if (j.desdeExperiencia && xp < j.desdeExperiencia) return false;
       return true;
     });
   }

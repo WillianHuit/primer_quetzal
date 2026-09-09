@@ -190,7 +190,11 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
   const pasosVistos = [];
   let toques = 0;
 
-  while (w.document.querySelector('.guia') && toques < 40) {
+  /* El tope subió de 40 a 90 cuando los meses de colegio dejaron de ser un
+   * botón repetido: ahora cada mes son varios toques de verdad —casilla,
+   * actividad, casilla, actividad, cerrar— por cuatro meses. Si el tutorial se
+   * atasca de verdad, el bucle sigue parando y diciendo en qué paso. */
+  while (w.document.querySelector('.guia') && toques < 90) {
     const paso = w.document.querySelector('.guia-paso');
     const txt = w.document.querySelector('.guia-txt');
     const etiqueta = (paso ? paso.textContent : '?') + ' ' +
@@ -243,7 +247,7 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
   ok(!w.document.querySelector('.foco'), 'y el velo oscuro se apaga con ella');
   ok(!w.document.querySelector('.foco-flecha'), 'y la flecha también');
   ok(!w.document.querySelector('.senala'), 'y no queda nada señalado');
-  ok(pasosVistos.length >= 8,
+  ok(pasosVistos.length >= 7,
      'y pasa por ' + pasosVistos.length + ' instrucciones distintas, no una sola');
   const z = w.Motor.get();
   ok(z.decisionEstudio !== null,
@@ -362,8 +366,14 @@ ok(!puerta.experienciaRequerida,
   const pide = modalAbierto(w3);
   ok(!!pide && pide.textContent.indexOf('2 tareas') >= 0,
      'al terminar de repartir, el juego lleva a hacer las dos tareas');
-  ok(pide.querySelectorAll('[data-tarea]').length === 3,
-     'y deja elegir cuál de las tres se hace ahora');
+  /* Y solo salen las que ya se abrieron. Con la experiencia en cero son las
+   * dos de aritmética: básicos dura tres años y no puede empezar pidiendo
+   * calcular el cambio de una compra con centavos. */
+  const aElegir = pide.querySelectorAll('[data-tarea]');
+  ok(aElegir.length === 2,
+     `y deja elegir entre las ${aElegir.length} tareas que ya se abrieron, las más sencillas`);
+  ok(pide.textContent.indexOf('cambio') < 0,
+     'la de dar el cambio todavía no: esa se abre con la experiencia de las primeras');
   ok(!pide.querySelector('[data-cerrar]'),
      'no hay forma de escaparse sin decidir: o la haces o la dejas');
   ok(!!pide.querySelector('[data-dejarlas]'),

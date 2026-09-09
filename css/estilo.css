@@ -952,6 +952,35 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
 .barra .dinero.exp { display: inline-flex; align-items: center; gap: 6px; }
 .barra .dinero.exp .ic { width: 22px; height: 22px; }
 
+/* La operacion de la suma rapida: grande, porque es lo unico que hay que leer
+   y hay quince segundos para varias. */
+.mj-mensaje.mj-grande {
+  font-size: 30px; font-weight: 800; text-align: center;
+  letter-spacing: .5px; padding: 14px 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Los billetes y monedas de "cuanto hay". Se reconocen por la FORMA antes que
+   por el numero: la moneda es redonda y la de billete es un rectangulo. */
+.mj-plata {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  align-items: center; justify-content: center;
+  padding: 16px 8px; min-height: 78px;
+}
+.mj-pieza {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 15px; color: var(--tinta);
+  border: 2px solid var(--tinta);
+}
+.mj-pieza.moneda {
+  width: 46px; height: 46px; border-radius: 99px;
+  background: linear-gradient(160deg, #f0d68a, #cfa94e);
+}
+.mj-pieza.billete {
+  min-width: 74px; height: 42px; border-radius: 5px;
+  background: linear-gradient(160deg, #d8ece1, #a9cfbd);
+}
+
 /* Los botones de elegir que tarea hacer al cerrar el mes */
 .tarea-elegir {
   display: flex; align-items: center; gap: 9px;

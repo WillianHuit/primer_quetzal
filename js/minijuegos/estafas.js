@@ -10,9 +10,12 @@ Minijuegos.registrar({
   icono: 'anzuelo',
   tipo: 'clase',
   paraCarrera: 'basicos',
+  /* La ultima de basicos: pide leer un mensaje entero y decidir, que es
+   * bastante mas que una resta. */
+  desdeExperiencia: 85,
   descripcion: 'Te llegan mensajes. Decide cuáles son fraude.',
   ensena: 'Ningún banco pide claves por mensaje, y la urgencia es la señal de alarma.',
-  duracion: 60,
+  duracion: 45,
   /* Una CLASE no paga: da experiencia. Antes esto soltaba Q400 por
    * resolver un presupuesto, y eso decia algo que no es verdad —que
    * hacer la tarea da dinero—. Lo que da la tarea es lo que despues te

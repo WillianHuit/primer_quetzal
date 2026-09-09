@@ -7,6 +7,32 @@ aporta al juego, no por lo que es más fácil.
 
 ## 0. Lo que se cerró hoy
 
+### La cinta dejaba de pedir tareas después de la primera
+
+El paso de los meses de colegio señalaba **siempre** el botón de cerrar el mes, así que
+después de la primera tarea el tutorial le enseñaba al jugador a saltarse el juego: tocar
+cinco veces el mismo botón sin repartir nada. Ahora la cinta señala **lo que toca**, y en
+estos meses eso cambia tres veces dentro del mismo turno: hay casillas libres, hay una
+elegida, o ya está todo repartido.
+
+### Las primeras tareas eran de quinta clase, no de primera
+
+`Da el cambio` pedía calcular el cambio de una compra con centavos, y duraba setenta
+segundos. Eso no es la primera tarea de un chico que acaba de salir de primaria.
+
+- **Dos tareas nuevas de verdad sencillas, de quince segundos**: `Suma rápida` (sumar y
+  restar quetzales, generadas al vuelo para que no se aprendan de memoria) y `¿Cuánto hay?`
+  (reconocer billetes y monedas y sumarlos; se distinguen por la **forma** —la moneda es
+  redonda y dorada, el billete un rectángulo— porque lo que se practica es reconocer).
+- **Sin explicación entre pregunta y pregunta**: en una suma no hay nada que explicar, se
+  marca la correcta y se pasa. Un cartel de dos segundos se comería la mitad de la tarea.
+- **Las clases de una carrera ahora tienen su propio orden**, con `desdeExperiencia`. Básicos
+  dura tres años: se empieza sumando (0), después dar el cambio (30), comparar precios (55) y
+  al final reconocer una estafa (85), que pide leer un mensaje entero y decidir.
+- Y las que ya estaban se acortaron: `Da el cambio` y `¿Cuál conviene?` de 70 a 35 segundos,
+  `Caza-estafas` de 60 a 45.
+
+
 ### Repartir el mes es una promesa, y ahora el juego la cobra
 
 Los cuatro turnos de colegio se podían pasar tocando el mismo botón cinco veces sin hacer

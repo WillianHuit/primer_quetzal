@@ -2131,7 +2131,7 @@ var UI = (function () {
      * Las clases van con la carrera que estás haciendo, no con el título que
      * ya tienes: la tarea de básicos se hace en básicos. */
     var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas,
-        e.estudio ? e.estudio.carreraId : null)
+        e.estudio ? e.estudio.carreraId : null, Motor.experiencia())
       .filter(filtro || function () { return true; });
     if (!lista.length) return '';
 
@@ -2186,7 +2186,8 @@ var UI = (function () {
     h += listaMinijuegos(null);
 
     var bloqueados = Minijuegos.todos().length -
-      Minijuegos.disponibles(Motor.get().educacion, Motor.get().carrerasTerminadas).length;
+      Minijuegos.disponibles(Motor.get().educacion, Motor.get().carrerasTerminadas,
+        Motor.get().estudio ? Motor.get().estudio.carreraId : null, Motor.experiencia()).length;
     if (bloqueados > 0) {
       h += '<p class="sutil centrado">' +
         T('Hay {0} más que se abren al subir de nivel educativo.', bloqueados) + '</p>';
@@ -3274,7 +3275,7 @@ var UI = (function () {
     if (!faltan) return alTerminar();
 
     var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas,
-      e.estudio ? e.estudio.carreraId : null).filter(esDeEstudio);
+      e.estudio ? e.estudio.carreraId : null, Motor.experiencia()).filter(esDeEstudio);
     // Sin ninguna clase disponible no hay nada que hacer y no se castiga
     if (!lista.length) return alTerminar();
 

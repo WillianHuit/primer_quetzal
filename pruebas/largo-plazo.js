@@ -154,7 +154,7 @@ ok(!Motor.estaFuera(), 'ya no estás fuera');
  * estás INSCRITO en esa carrera: la tarea de básicos se hace en básicos, no
  * después. Es la diferencia entre "ya lo aprendí" y "lo estoy aprendiendo". */
 const cuantos = Minijuegos.todos().length;
-ok(cuantos === 10, `hay ${cuantos} minijuegos registrados`);
+ok(cuantos === 12, `hay ${cuantos} minijuegos registrados`);
 
 /* Sin estar inscrito en nada no hay clases: las clases son del colegio. */
 const sinColegio = Minijuegos.disponibles('diversificado', [], null);
@@ -163,16 +163,33 @@ ok(sinColegio.every(j => j.tipo !== 'clase'),
 ok(sinColegio.length === 2,
    `y quedan los ${sinColegio.length} trabajos de oficio abiertos a todos`);
 
-/* En básicos salen las tres sencillas y generales, y NO la de cuadrar un
- * sueldo entero: a los trece no hay sueldo que cuadrar. */
-const enBasicos = Minijuegos.disponibles('primaria', [], 'basicos')
+/* Básicos dura TRES AÑOS, así que sus tareas también tienen orden.
+ *
+ * Con la experiencia en cero salen las dos de aritmética y nada más: no se
+ * puede empezar pidiéndole a un chico de trece que calcule el cambio de una
+ * compra con centavos. Eso no es la primera clase, es la quinta. */
+const alEmpezar = Minijuegos.disponibles('primaria', [], 'basicos', 0)
   .filter(j => j.tipo === 'clase').map(j => j.id).sort();
-ok(enBasicos.length === 3, `básicos tiene ${enBasicos.length} tareas: ${enBasicos.join(', ')}`);
-ok(enBasicos.indexOf('presupuesto') < 0,
-   'y la de cuadrar el sueldo no está: esa es de diversificado');
+ok(alEmpezar.length === 2 && alEmpezar.join(',') === 'contar,sumas',
+   `al empezar básicos solo hay las dos de aritmética: ${alEmpezar.join(', ')}`);
+
+/* Y con experiencia encima se abren las de más arriba, hasta las cuatro. */
+const conOficio = Minijuegos.disponibles('primaria', [], 'basicos', 200)
+  .filter(j => j.tipo === 'clase').map(j => j.id).sort();
+ok(conOficio.length === 5, `con experiencia encima básicos llega a sus ${conOficio.length} tareas`);
+ok(conOficio.indexOf('cambio') >= 0 && conOficio.indexOf('estafas') >= 0,
+   'y entre ellas las que piden leer y calcular, que son las de después');
+ok(conOficio.indexOf('presupuesto') < 0,
+   'la de cuadrar el sueldo sigue sin estar: esa es de diversificado');
+
+/* Las primeras tienen que ser CORTAS. Una suma se hace de memoria o no se
+ * hace, y darle un minuto la convierte en una pantalla de espera. */
+const primeras = Minijuegos.todos().filter(j => alEmpezar.indexOf(j.id) >= 0);
+ok(primeras.every(j => j.duracion <= 15),
+   `las primeras tareas duran ${primeras.map(j => j.duracion + 's').join(' y ')}, no un minuto`);
 
 /* Y en diversificado sale la especializada y desaparecen las de básicos. */
-const enBachillerato = Minijuegos.disponibles('basicos', ['basicos'], 'bachillerato')
+const enBachillerato = Minijuegos.disponibles('basicos', ['basicos'], 'bachillerato', 500)
   .filter(j => j.tipo === 'clase').map(j => j.id);
 ok(enBachillerato.indexOf('presupuesto') >= 0,
    'en bachillerato aparece la tarea especializada de cuadrar el sueldo');

@@ -536,7 +536,7 @@
   pl.primeraTarea = 'Money gets spent; what you learned does not. It is the one thing in this game that, once you have it, is yours.';
 
   /* El trabajo llega despues: los primeros cuatro turnos son solo colegio. */
-  pp.primerTrabajo = 'You are in class. Close the months and do your homework: work comes later.';
+  pp.primerTrabajo = 'You are in class. Spread out the month, do your homework and close it: work comes later.';
   pt.primerTrabajo = 'Work is open';
   px.primerTrabajo = 'You have been in class a few months and can now look for something for the afternoons. At your age there are no wages: there are three odd jobs on your own, no contract and no boss.';
   pl.primerTrabajo = 'Every half-day you give to work is one you do not give to homework. Nobody will tell you which is better, because it depends on where you want to end up.';

@@ -19,6 +19,7 @@ const ARCHIVOS = [
   'js/idioma.js', 'js/iconos.js', 'js/arte.js', 'js/personaje.js', 'js/escena.js',
   'js/sonido.js', 'js/motor.js',
   'js/minijuegos/marco.js', 'js/minijuegos/reparto.js', 'js/minijuegos/tienda.js',
+  'js/minijuegos/sumas.js', 'js/minijuegos/contar.js',
   'js/minijuegos/cambio.js', 'js/minijuegos/precios.js',
   'js/minijuegos/estafas.js', 'js/minijuegos/presupuesto.js', 'js/minijuegos/caja.js',
   'js/minijuegos/conciliacion.js', 'js/minijuegos/obra.js', 'js/minijuegos/inversion.js',

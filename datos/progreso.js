@@ -231,9 +231,22 @@ var PROGRESO = [
       if (!e.estudio) return true;
       return e.mesesJugados >= MESES_SOLO_COLEGIO;
     },
-    pista: 'Estás en clases. Cierra los meses y haz tus tareas: el trabajo llega después.',
+    pista: 'Estás en clases. Reparte el mes, haz tus tareas y ciérralo: el trabajo llega después.',
     guia: true,
-    senala: '#cerrar-turno',
+    /* La cinta señala lo que TOCA, y en estos meses lo que toca cambia tres
+     * veces dentro del mismo turno: hay casillas libres, hay una elegida, o ya
+     * está todo repartido.
+     *
+     * Apuntaba siempre al botón de cerrar, y eso vaciaba los cuatro meses de
+     * colegio: el jugador tocaba cinco veces el mismo botón sin repartir nada
+     * y sin hacer una sola tarea. La cinta le estaba enseñando a saltarse el
+     * juego. */
+    senala: function (e, vista) {
+      if (typeof vista.espacioSel === 'number') return '[data-poner="tarea"]';
+      var libres = e.espacios.filter(function (x) { return !x; }).length;
+      if (libres > 0) return '.jornada:not(.lleno):not(.bloqueado)';
+      return '#cerrar-turno';
+    },
     pestana: 'casa',
     titulo: 'Se abrió el trabajo',
     texto: 'Llevas unos meses en clases y ya puedes buscar algo para las tardes. A tu edad no hay sueldos: hay tres trabajitos por tu cuenta, sin contrato y sin patrón.',

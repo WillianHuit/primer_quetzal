@@ -323,6 +323,12 @@ var TEXTOS_EN = {
 
     reparto: { nombre: 'Motorcycle delivery',
       descripcion: 'Dodge traffic and get the orders there on time.' },
+    sumas: { nombre: 'Quick sums',
+      descripcion: 'Adding and subtracting quetzales, against the clock.',
+      ensena: 'Everything else about money rests on this.' },
+    contar: { nombre: 'How much is there?',
+      descripcion: 'Look at the notes and coins, and say what they add up to.',
+      ensena: 'Counting what you have comes first. Nobody looks after what they cannot count.' },
     cambio: { nombre: 'Give the change',
       descripcion: 'Someone buys something and overpays. How much do you give back?',
       ensena: 'If you do not know what to hand back, you do not know what you earned.' },
