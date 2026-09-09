@@ -70,17 +70,47 @@ var Minijuegos = (function () {
     var duracion = def.duracion || 45;
     var restante = duracion;
 
+    /* Las CLASES se pueden reprobar.
+     *
+     * Es lo que las convierte en una tarea y no en un botón que da puntos: si
+     * da igual cómo te salga, no estás estudiando, estás cobrando. Al cuarto
+     * error la clase se acaba, no da experiencia, y la jornada se gastó igual
+     * —eso es lo que duele y lo que hace que la siguiente se haga con
+     * atención—. Se puede repetir el mes que viene.
+     *
+     * Los trabajos de oficio NO se reprueban: ahí el mal resultado ya se paga
+     * solo, cobrando menos. */
+    var fallos = 0;
+    var topeFallos = def.fallosParaPerder || 0;
+    var reprobado = false;
+
     caja.innerHTML =
       '<div class="mj-cabecera">' +
         '<span class="mj-nombre">' + Ico(def.icono) + ' ' + def.nombre + '</span>' +
         '<span class="mj-reloj" id="mj-reloj">' + duracion + 's</span>' +
       '</div>' +
-      '<div class="mj-marcador"><span id="mj-puntos">0</span> puntos</div>' +
+      '<div class="mj-marcador"><span id="mj-puntos">0</span> puntos' +
+        (def.fallosParaPerder
+          ? '<span class="mj-vidas" id="mj-vidas"></span>' : '') +
+      '</div>' +
       '<div class="mj-lienzo" id="mj-lienzo"></div>';
 
     var lienzo = caja.querySelector('#mj-lienzo');
     var elReloj = caja.querySelector('#mj-reloj');
     var elPuntos = caja.querySelector('#mj-puntos');
+    var elVidas = caja.querySelector('#mj-vidas');
+
+    /* Los errores que quedan, dibujados. Un número diciendo "llevas 2 de 3
+     * fallos" hay que leerlo; tres puntos que se apagan se ven. */
+    function pintarVidas() {
+      if (!elVidas) return;
+      var h = '';
+      for (var i = 0; i < topeFallos; i++) {
+        h += '<span class="mj-vida' + (i < fallos ? ' ida' : '') + '"></span>';
+      }
+      elVidas.innerHTML = h;
+    }
+    pintarVidas();
 
     var cronometro = setInterval(function () {
       restante--;
@@ -96,9 +126,21 @@ var Minijuegos = (function () {
         if (acerto !== false) aciertos++;
         if (puntos < 0) puntos = 0;
         elPuntos.textContent = puntos;
+        pintarVidas();
         Sonido.tono(acerto === false ? 'error' : 'acierto');
       },
-      fallo: function (n) { api.puntos(-Math.abs(n || 0), false); },
+      fallo: function (n) {
+        // El contador sube ANTES de pintar, o los puntos que se apagan van
+        // siempre un fallo por detrás de lo que acaba de pasar
+        fallos++;
+        api.puntos(-Math.abs(n || 0), false);
+        if (topeFallos && fallos > topeFallos) {
+          reprobado = true;
+          setTimeout(terminar, 700);
+        }
+      },
+      fallos: function () { return fallos; },
+      topeFallos: function () { return topeFallos; },
       tiempoRestante: function () { return restante; },
       mostrar: function (html) { lienzo.innerHTML = html; },
       lienzo: lienzo,
@@ -113,7 +155,8 @@ var Minijuegos = (function () {
       var pago = Math.round(def.pagoMaximo * Math.max(0, Math.min(1, puntos / (def.puntosParaPagoMaximo || 100))));
       alTerminar({
         id: def.id, puntos: puntos, aciertos: aciertos, total: total,
-        precision: precision, pago: pago, def: def
+        precision: precision, pago: reprobado ? 0 : pago, def: def,
+        fallos: fallos, reprobado: reprobado
       });
     }
 

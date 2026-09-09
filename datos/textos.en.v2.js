@@ -536,7 +536,7 @@
   pl.primeraTarea = 'Money gets spent; what you learned does not. It is the one thing in this game that, once you have it, is yours.';
 
   /* El trabajo llega despues: los primeros cuatro turnos son solo colegio. */
-  pp.primerTrabajo = 'You are in class. Spread out the month, do your homework and close it: work comes later.';
+  pp.primerTrabajo = 'These months are yours: spread them out however you like and close them when you are ready. Work arrives in a few months.';
   pt.primerTrabajo = 'Work is open';
   px.primerTrabajo = 'You have been in class a few months and can now look for something for the afternoons. At your age there are no wages: there are three odd jobs on your own, no contract and no boss.';
   pl.primerTrabajo = 'Every half-day you give to work is one you do not give to homework. Nobody will tell you which is better, because it depends on where you want to end up.';
@@ -747,6 +747,12 @@
   /* Las tareas del colegio y la experiencia: la tarea no paga, ensena, y lo
    * que ensena es lo que despues abre las carreras que piden mas. */
   ui['Las tareas'] = 'Homework';
+  ui['sin tareas'] = 'no homework';
+  ui['1 tarea'] = '1 homework';
+  ui['{0} tareas'] = '{0} homeworks';
+  ui['No pasaste esta tarea'] = 'You did not pass this one';
+  ui['Cuatro errores y se acabó. La jornada se gastó igual, pero la puedes repetir el mes que viene.'] =
+    'Four mistakes and that is it. The half-day is spent all the same, but you can retake it next month.';
 
   /* Al cerrar el mes, primero se hace lo que se prometio. */
   ui['Te toca hacer una tarea'] = 'You have one homework to do';

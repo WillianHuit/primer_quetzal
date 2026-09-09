@@ -981,6 +981,67 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
   background: linear-gradient(160deg, #d8ece1, #a9cfbd);
 }
 
+/* Los errores que quedan en una tarea: tres puntos que se apagan. Un numero
+   diciendo "llevas 2 de 3" hay que leerlo; esto se ve. */
+.mj-vidas { display: inline-flex; gap: 5px; margin-left: auto; }
+.mj-vida {
+  width: 11px; height: 11px; border-radius: 99px;
+  background: var(--verde); border: 1.5px solid var(--tinta);
+}
+.mj-vida.ida { background: var(--rojo); opacity: .35; }
+.mj-marcador { display: flex; align-items: center; gap: 7px; }
+
+/* "Cual es mas": dos cantidades enfrentadas */
+.mj-versus {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 4px;
+}
+.mj-versus .mj-lado {
+  flex: 1; font-size: 24px; font-weight: 800; padding: 22px 8px;
+  font-variant-numeric: tabular-nums; text-align: center;
+}
+.mj-versus .mj-o { font-size: 13px; color: var(--gris); font-weight: 700; }
+
+/* "Cual es distinto": cuatro figuras dibujadas con CSS */
+.mj-figuras {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  padding: 12px 4px;
+}
+.mj-figura {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 78px; padding: 8px;
+  background: var(--fondo); border: 2px solid var(--linea);
+  border-radius: 14px; cursor: pointer;
+}
+.mj-figura.bien { border-color: var(--verde); background: var(--verde-claro); }
+.mj-figura.mal { border-color: var(--rojo); }
+.fig { display: block; width: 44px; height: 44px; }
+.fig.circulo  { border-radius: 99px; }
+.fig.cuadrado { border-radius: 5px; }
+.fig.rombo    { border-radius: 5px; transform: rotate(45deg); }
+.fig.triangulo {
+  width: 0; height: 0; background: none !important;
+  border-left: 24px solid transparent; border-right: 24px solid transparent;
+}
+.fig.verde  { background: var(--verde); }
+.fig.azul   { background: var(--azul); }
+.fig.ambar  { background: var(--ambar); }
+.fig.rojo   { background: var(--rojo); }
+.fig.triangulo.verde { border-bottom: 42px solid var(--verde); }
+.fig.triangulo.azul  { border-bottom: 42px solid var(--azul); }
+.fig.triangulo.ambar { border-bottom: 42px solid var(--ambar); }
+.fig.triangulo.rojo  { border-bottom: 42px solid var(--rojo); }
+
+/* Cuantas tareas llevas puestas este mes, en la barra de la calle */
+.cuenta-tareas {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700; color: var(--gris);
+  padding: 4px 9px; border-radius: 99px;
+  background: var(--fondo); border: 1.5px solid var(--linea);
+}
+.cuenta-tareas.hay { color: var(--verde); border-color: var(--verde-borde); }
+.cuenta-tareas svg { width: 14px; height: 14px; }
+
 /* Los botones de elegir que tarea hacer al cerrar el mes */
 .tarea-elegir {
   display: flex; align-items: center; gap: 9px;

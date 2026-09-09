@@ -231,22 +231,23 @@ var PROGRESO = [
       if (!e.estudio) return true;
       return e.mesesJugados >= MESES_SOLO_COLEGIO;
     },
-    pista: 'Estás en clases. Reparte el mes, haz tus tareas y ciérralo: el trabajo llega después.',
+    pista: 'Estos meses son tuyos: reparte el mes como quieras y ciérralo cuando estés listo. El trabajo llega en unos meses.',
     guia: true,
-    /* La cinta señala lo que TOCA, y en estos meses lo que toca cambia tres
-     * veces dentro del mismo turno: hay casillas libres, hay una elegida, o ya
-     * está todo repartido.
+    /* SIN foco, y es una decisión sobre cómo se enseña.
      *
-     * Apuntaba siempre al botón de cerrar, y eso vaciaba los cuatro meses de
-     * colegio: el jugador tocaba cinco veces el mismo botón sin repartir nada
-     * y sin hacer una sola tarea. La cinta le estaba enseñando a saltarse el
-     * juego. */
-    senala: function (e, vista) {
-      if (typeof vista.espacioSel === 'number') return '[data-poner="tarea"]';
-      var libres = e.espacios.filter(function (x) { return !x; }).length;
-      if (libres > 0) return '.jornada:not(.lleno):not(.bloqueado)';
-      return '#cerrar-turno';
-    },
+     * Este paso pasó por los dos extremos y los dos estaban mal. Señalando
+     * siempre el botón de cerrar, el tutorial le enseñaba al jugador a
+     * saltarse el juego: cinco toques al mismo sitio sin repartir nada.
+     * Señalando cada casilla y cada actividad de los cuatro meses, lo llevaba
+     * de la mano por algo que ya le enseñó el paso anterior, y eso es tratarlo
+     * como si no hubiera entendido.
+     *
+     * La primera tarea la enseña `primeraTarea`, con foco y todo. De ahí en
+     * adelante la cinta se queda como una nota —dice qué está pasando y qué
+     * viene— y la pantalla no se apaga. El jugador reparte estos meses como
+     * quiera, incluido no hacer ninguna tarea: eso también es una decisión, y
+     * la va a pagar cuando una carrera le pida experiencia que no tiene. */
+    senala: null,
     pestana: 'casa',
     titulo: 'Se abrió el trabajo',
     texto: 'Llevas unos meses en clases y ya puedes buscar algo para las tardes. A tu edad no hay sueldos: hay tres trabajitos por tu cuenta, sin contrato y sin patrón.',
@@ -382,7 +383,17 @@ var PROGRESO = [
   {
     id: 'banco',
     llaves: ['banco', 'ahorro'],
-    cuando: function (e) {
+    /* Y ninguna de las tres cuenta mientras el juego no hable de dinero.
+     *
+     * Un chico en su primer año de básicos no tiene nada que hacer con una
+     * cuenta de ahorro: no gana, no gasta lo suyo y no puede mover nada. Se
+     * abría igual, porque cuatro meses de clases bastan para que el efectivo
+     * se le vaya en gastos hormiga, y aparecía una pestaña de banco delante de
+     * alguien que todavía está aprendiendo a restar. */
+    cuando: function (e, M) {
+      /* Quien ya tiene un empleo pasa aunque no haya tocado el tutorial: lo
+       * que importa es si trabaja, no por qué puerta entró. */
+      if (e.empleo === null && !M.desbloqueado('trabajo')) return false;
       return (e.totales && e.totales.fugaEfectivo >= 30) ||
              (e.empleo !== null && e.empleo.formal) ||
              e.edad >= CONFIG.mayoriaDeEdad;

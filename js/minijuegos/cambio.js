@@ -23,6 +23,8 @@ Minijuegos.registrar({
   duracion: 35,
   pagoMaximo: 0,
   experienciaMaxima: 20,
+  // Al cuarto error se reprueba: la jornada se gasta y no da nada
+  fallosParaPerder: 3,
   puntosParaPagoMaximo: 100,
 
   jugar: function (caja, api) {

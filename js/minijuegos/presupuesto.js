@@ -13,6 +13,7 @@ Minijuegos.registrar({
    * y las dos carreras de diversificado la comparten porque las dos
    * llevan contabilidad basica. */
   paraCarrera: ['bachillerato', 'perito'],
+  desdeExperiencia: 0,
   descripcion: 'Reparte el sueldo. Van a caer imprevistos.',
   ensena: 'Sin un colchón, cualquier imprevisto se vuelve deuda.',
   duracion: 75,
@@ -22,6 +23,8 @@ Minijuegos.registrar({
    * deja entrar donde quieres entrar. */
   pagoMaximo: 0,
   experienciaMaxima: 25,
+  // Al cuarto error se reprueba: la jornada se gasta y no da nada
+  fallosParaPerder: 3,
   puntosParaPagoMaximo: 90,
 
   jugar: function (caja, api) {

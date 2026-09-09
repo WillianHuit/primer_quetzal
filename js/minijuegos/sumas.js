@@ -22,6 +22,8 @@ Minijuegos.registrar({
   duracion: 15,
   pagoMaximo: 0,
   experienciaMaxima: 12,
+  // Al cuarto error se reprueba: la jornada se gasta y no da nada
+  fallosParaPerder: 3,
   /* Cuatro aciertos llenan la barra. Con quince segundos no da para diez, y
    * dejar el tope en cien haría que la tarea nunca pague completo. */
   puntosParaPagoMaximo: 40,
@@ -31,15 +33,18 @@ Minijuegos.registrar({
 
     /* Se generan al vuelo y no salen de una lista: son operaciones, no
      * contenido, y una lista fija se aprende de memoria en tres partidas. */
+    /* UN SOLO DÍGITO, los dos números. Es la primera tarea del juego y tiene
+     * que poder hacerse de memoria: la versión anterior sumaba hasta 25 más 20
+     * y eso ya es cuenta de papel, no de cabeza. */
     function pregunta() {
       var suma = Math.random() < 0.55;
       var a, b;
       if (suma) {
-        a = entero(3, 25); b = entero(2, 20);
+        a = entero(1, 9); b = entero(1, 9);
         return { t: 'Q' + a + ' + Q' + b, r: a + b };
       }
       // En la resta el primero SIEMPRE es mayor: a esta edad no hay negativos
-      a = entero(8, 40); b = entero(2, a - 1);
+      a = entero(2, 9); b = entero(1, a - 1);
       return { t: 'Q' + a + ' − Q' + b, r: a - b };
     }
 
@@ -47,7 +52,7 @@ Minijuegos.registrar({
       var v = [r];
       while (v.length < 3) {
         // Los errores creíbles caen cerca: prestar mal, contar de más
-        var d = entero(1, 4) * (Math.random() < 0.5 ? -1 : 1);
+        var d = entero(1, 3) * (Math.random() < 0.5 ? -1 : 1);
         var x = r + d;
         if (x > 0 && v.indexOf(x) < 0) v.push(x);
       }

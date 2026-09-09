@@ -229,8 +229,13 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
          `y las ${ofertas} ofertas de trabajo se señalan todas (señala ${marcadas})`);
     }
 
+    /* Un paso puede NO señalar nada, y eso es legítimo: hay momentos en que
+     * la cinta explica qué pasa y deja al jugador repartir a su gusto en vez
+     * de apagarle la pantalla. Ahí lo que hace un jugador es cerrar el mes,
+     * así que eso es lo que hace este paseo. */
     const objetivo = w.document.querySelector('.senala') ||
-                     w.document.querySelector('[data-guia-ir]');
+                     w.document.querySelector('[data-guia-ir]') ||
+                     w.document.querySelector('#cerrar-turno');
     if (!objetivo) break;
     clic(w, objetivo);
     cerrarModales(w);                     // tarjetas educativas y anuncios de la ruta
@@ -370,7 +375,7 @@ ok(!puerta.experienciaRequerida,
    * dos de aritmética: básicos dura tres años y no puede empezar pidiendo
    * calcular el cambio de una compra con centavos. */
   const aElegir = pide.querySelectorAll('[data-tarea]');
-  ok(aElegir.length === 2,
+  ok(aElegir.length === 4,
      `y deja elegir entre las ${aElegir.length} tareas que ya se abrieron, las más sencillas`);
   ok(pide.textContent.indexOf('cambio') < 0,
      'la de dar el cambio todavía no: esa se abre con la experiencia de las primeras');
@@ -888,8 +893,8 @@ clic(w, w.document.querySelector('[data-pestana="casa"]'));
 clic(w, jornadasLibres(w)[0]);
 clic(w, w.document.querySelector('[data-poner="tarea"]'));
 clic(w, w.document.querySelector('[data-pestana="estudio"]'));
-const bJugar = w.document.querySelector('[data-jugar="cambio"]');
-ok(!!bJugar, 'la tarea de dar el cambio está disponible en Estudio');
+const bJugar = w.document.querySelector('[data-jugar="sumas"]');
+ok(!!bJugar, 'la tarea de sumar está disponible en Estudio');
 ok(!bJugar.disabled, 'y con la jornada de tarea puesta, se puede hacer');
 
 const dineroAntes = w.Motor.patrimonio();
@@ -898,9 +903,23 @@ clic(w, bJugar);
 const mj = w.document.querySelector('.velo .modal.mj');
 ok(!!mj, 'la tarea abre su ventana');
 ok(!!w.document.querySelector('#mj-reloj'), 'y muestra su cronómetro');
-ok(!!w.document.querySelector('.mj-mensaje'), 'y dibuja su primera compra');
+ok(!!w.document.querySelector('.mj-mensaje'), 'y dibuja su primera operación');
 ok(w.document.querySelectorAll('.velo [data-v]').length === 3,
-   'con tres cifras para elegir, y solo una es el cambio correcto');
+   'con tres cifras para elegir, y solo una es la buena');
+ok(!!w.document.querySelector('#mj-vidas'),
+   'y los tres errores que tiene de margen, dibujados');
+
+/* Se contesta BIEN a propósito. Antes esta prueba tocaba la primera opción a
+ * ciegas, y desde que las tareas se reprueban al cuarto error eso terminaba la
+ * clase a media prueba: lo que se quiere medir aquí es la cadena de
+ * temporizadores, no si el robot sabe restar. */
+function resolverSuma(w2) {
+  const t = w2.document.querySelector('.mj-mensaje').textContent;
+  const m = t.match(/Q(\d+)\s*([+−-])\s*Q(\d+)/);
+  if (!m) return null;
+  const r = m[2] === '+' ? Number(m[1]) + Number(m[3]) : Number(m[1]) - Number(m[3]);
+  return w2.document.querySelector('.velo [data-v="' + r + '"]');
+}
 
 function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -912,25 +931,27 @@ function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
   /* Las tres opciones de cambio son cifras: se toca la primera, acierte o no.
    * Lo que se comprueba no es que el jugador sepa restar, es que el juego
    * conteste. */
-  clic(w, w.document.querySelector('.velo [data-v]'));
-  ok(w.document.querySelector('#mj-explica').textContent.length > 10,
-     'al responder, la tarea explica de inmediato la resta');
+  clic(w, resolverSuma(w) || w.document.querySelector('.velo [data-v]'));
+  ok(w.document.querySelector('#mj-puntos').textContent === '10',
+     'al acertar, la tarea suma sus diez puntos sin cartel de por medio');
 
   const puntosTrasUna = w.document.querySelector('#mj-puntos').textContent;
   ok(puntosTrasUna !== '0' || true, `el marcador se actualiza (${puntosTrasUna} puntos)`);
 
-  await esperar(2200);   // el minijuego espera 1.9s antes de la siguiente
+  await esperar(900);   // la tarea encadena a los 650 ms
   const segundoMensaje = w.document.querySelector('.mj-mensaje');
   ok(!!segundoMensaje && segundoMensaje.textContent !== primerMensaje,
      'la cadena de temporizadores avanza a la siguiente pregunta');
 
   // Responder unas cuantas más y dejar que se acabe el tiempo
   for (let i = 0; i < 3; i++) {
-    const b = w.document.querySelector('.velo [data-v]');
+    const b = resolverSuma(w);
     if (!b) break;
     clic(w, b);
-    await esperar(1800);
+    await esperar(800);
   }
+  ok(!w.document.querySelector('.velo .mj-vida.ida'),
+     'contestando bien no se gasta ninguno de los tres errores');
 
   const reloj = w.document.querySelector('#mj-reloj');
   ok(!!reloj && reloj.textContent !== '60s', `el cronómetro corre de verdad (${reloj ? reloj.textContent : '?'})`);

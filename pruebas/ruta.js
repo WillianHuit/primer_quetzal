@@ -40,7 +40,12 @@ PROGRESO.forEach(function (p) {
   if (!p.titulo && p.llaves.length && !p.pista) {
     malos.push(p.id + ': abre algo y no lo cuenta ni lo persigue');
   }
-  if (p.guia && !p.senala) malos.push(p.id + ': va en la cinta pero no señala nada');
+  /* Un peldaño de la cinta puede NO señalar nada, y eso es legítimo: hay
+   * momentos del juego en que la cinta explica qué está pasando y deja al
+   * jugador repartir a su gusto, en vez de apagarle la pantalla y llevarlo de
+   * la mano. Lo que sí tiene que traer es la pista, porque si no, la cinta
+   * sale vacía. */
+  if (p.guia && !p.pista) malos.push(p.id + ': va en la cinta y no dice nada');
   if (p.guia && !p.pista) malos.push(p.id + ': va en la cinta pero no dice nada');
 });
 ok(malos.length === 0, malos.length === 0
@@ -193,9 +198,25 @@ ok(!!segundo && segundo.peldano.id === 'verMes',
   M5.iniciar('normal', 6, 'apoyo');
   const z = M5.get();
   ok(!M5.desbloqueado('banco'), 'una partida nueva no tiene banco');
+
+  /* Y el efectivo fugado NO basta mientras el chico siga solo en clases.
+   *
+   * Un chico en su primer año de básicos no tiene nada que hacer con una
+   * cuenta de ahorro: no gana, no gasta lo suyo y no puede mover nada. El
+   * banco se abría igual, porque cuatro meses de clases bastan para que se le
+   * vayan Q30 en gastos hormiga, y le aparecía una pestaña de banco delante
+   * mientras todavía estaba aprendiendo a restar. */
   z.totales.fugaEfectivo = 31;
+  M5.revisarProgreso();
+  ok(!M5.desbloqueado('banco'),
+     'y con Q31 fugados TAMPOCO, mientras siga solo en clases: no gana nada que guardar');
+
+  // En cuanto entra al mundo del trabajo, el mismo agujero sí abre el banco
+  z.decisionEstudio = 'no';
   const abrio = M5.revisarProgreso();
-  ok(abrio.some(p => p.id === 'banco'), 'con Q31 fugados del efectivo, se abre');
+  ok(M5.desbloqueado('trabajo'), 'al decidir que no estudia se le abre el trabajo');
+  ok(abrio.some(p => p.id === 'banco'),
+     'y ahí sí: con el trabajo en la mano, Q31 fugados abren el banco');
   ok(M5.desbloqueado('ahorro') && !M5.desbloqueado('monetaria'),
      'y lo que abre es la cuenta de AHORRO, no la monetaria');
 })();

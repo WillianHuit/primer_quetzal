@@ -287,12 +287,24 @@ var UI = (function () {
      *
      * Y cambia de cara según si queda mes por repartir, porque son dos
      * momentos distintos: uno dice "te falta", el otro dice "ya, dale". */
+    /* Cuántas tareas llevas puestas este mes.
+     *
+     * Faltaba, y era justo el número que el jugador necesita para decidir: sin
+     * él, repartir el mes es a ciegas y "haz tus tareas" no se puede seguir
+     * porque no se sabe si ya están puestas o no. */
+    var tareas = Motor.espaciosUsados('tarea') + Motor.espaciosUsados('tarea-usada');
+
     var h = '<div class="calle-barra' + (libres ? '' : ' listo') + '">';
     if (libres) {
       h += '<span class="quedan">' + Ico('mas') + ' ' +
            T('Te quedan {0} jornadas', libres) + '</span>';
     } else {
       h += '<span class="listo">' + Ico('visto') + ' ' + T('Mes repartido') + '</span>';
+    }
+    if (e.estudio) {
+      h += '<span class="cuenta-tareas' + (tareas ? ' hay' : '') + '">' + Ico('libro') + ' ' +
+           (tareas === 0 ? T('sin tareas')
+            : (tareas === 1 ? T('1 tarea') : T('{0} tareas', tareas))) + '</span>';
     }
     /* El botón solo grita cuando el mes ya está repartido.
      *
@@ -3221,11 +3233,17 @@ var UI = (function () {
        * sube, y es lo que después te deja entrar donde quieres entrar. */
       var gano = 0;
       if (clase) {
-        var tope = res.def.experienciaMaxima || 0;
-        var parte = Math.max(0, Math.min(1, res.puntos / (res.def.puntosParaPagoMaximo || 100)));
-        gano = Math.max(1, Math.round(tope * parte));
-        Motor.sumarExperiencia(gano);
-        Sonido.tono('logro');
+        if (res.reprobado) {
+          /* Reprobada: cero. La jornada se gastó igual, y eso es lo que hace
+           * que la siguiente se haga con atención. */
+          Sonido.tono('error');
+        } else {
+          var tope = res.def.experienciaMaxima || 0;
+          var parte = Math.max(0, Math.min(1, res.puntos / (res.def.puntosParaPagoMaximo || 100)));
+          gano = Math.max(1, Math.round(tope * parte));
+          Motor.sumarExperiencia(gano);
+          Sonido.tono('logro');
+        }
       } else if (res.pago > 0) {
         if (e.monetaria !== null) e.monetaria += res.pago; else e.efectivo += res.pago;
         Sonido.tono('moneda');
@@ -3233,11 +3251,15 @@ var UI = (function () {
       }
       Motor.guardar();
       interior.innerHTML =
-        '<span class="icono">' + Ico(res.def.icono) + '</span><h2>' + esc(D(res.def, 'nombre')) + '</h2>' +
+        '<span class="icono">' + Ico(res.reprobado ? 'alerta' : res.def.icono) + '</span>' +
+        '<h2>' + (res.reprobado ? T('No pasaste esta tarea') : esc(D(res.def, 'nombre'))) + '</h2>' +
+        (res.reprobado
+          ? '<p>' + T('Cuatro errores y se acabó. La jornada se gastó igual, pero la puedes repetir el mes que viene.') + '</p>'
+          : '') +
         fila(T('Puntos'), res.puntos) +
         fila(T('Aciertos'), T('{0} de {1}', res.aciertos, res.total)) +
         (clase
-          ? fila(T('Experiencia ganada'), '+' + gano, 'pos') +
+          ? fila(T('Experiencia ganada'), (res.reprobado ? '0' : '+' + gano), res.reprobado ? 'neg' : 'pos') +
             fila(T('Experiencia total'), String(Motor.experiencia()))
           : fila(T('Te pagaron'), Q(res.pago), 'pos')) +
         (res.def.ensena ? '<div class="aprendizaje"><strong>' + T('Lo que practicaste.') + '</strong> ' +

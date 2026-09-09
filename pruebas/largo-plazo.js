@@ -154,7 +154,7 @@ ok(!Motor.estaFuera(), 'ya no estás fuera');
  * estás INSCRITO en esa carrera: la tarea de básicos se hace en básicos, no
  * después. Es la diferencia entre "ya lo aprendí" y "lo estoy aprendiendo". */
 const cuantos = Minijuegos.todos().length;
-ok(cuantos === 12, `hay ${cuantos} minijuegos registrados`);
+ok(cuantos === 14, `hay ${cuantos} minijuegos registrados`);
 
 /* Sin estar inscrito en nada no hay clases: las clases son del colegio. */
 const sinColegio = Minijuegos.disponibles('diversificado', [], null);
@@ -170,13 +170,19 @@ ok(sinColegio.length === 2,
  * compra con centavos. Eso no es la primera clase, es la quinta. */
 const alEmpezar = Minijuegos.disponibles('primaria', [], 'basicos', 0)
   .filter(j => j.tipo === 'clase').map(j => j.id).sort();
-ok(alEmpezar.length === 2 && alEmpezar.join(',') === 'contar,sumas',
-   `al empezar básicos solo hay las dos de aritmética: ${alEmpezar.join(', ')}`);
+ok(alEmpezar.length === 4 && alEmpezar.join(',') === 'contar,figuras,mayor,sumas',
+   `al empezar básicos hay las cuatro de primero: ${alEmpezar.join(', ')}`);
+
+/* Y las cuatro se pueden REPROBAR. Es lo que las convierte en una tarea y no
+ * en un botón que da puntos: si da igual cómo te salga, no estás estudiando. */
+const reprobables = Minijuegos.todos().filter(j => j.tipo === 'clase');
+ok(reprobables.every(j => j.fallosParaPerder === 3),
+   `las ${reprobables.length} clases se reprueban al cuarto error`);
 
 /* Y con experiencia encima se abren las de más arriba, hasta las cuatro. */
 const conOficio = Minijuegos.disponibles('primaria', [], 'basicos', 200)
   .filter(j => j.tipo === 'clase').map(j => j.id).sort();
-ok(conOficio.length === 5, `con experiencia encima básicos llega a sus ${conOficio.length} tareas`);
+ok(conOficio.length === 7, `con experiencia encima básicos llega a sus ${conOficio.length} tareas`);
 ok(conOficio.indexOf('cambio') >= 0 && conOficio.indexOf('estafas') >= 0,
    'y entre ellas las que piden leer y calcular, que son las de después');
 ok(conOficio.indexOf('presupuesto') < 0,

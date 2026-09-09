@@ -323,6 +323,12 @@ var TEXTOS_EN = {
 
     reparto: { nombre: 'Motorcycle delivery',
       descripcion: 'Dodge traffic and get the orders there on time.' },
+    mayor: { nombre: 'Which is more?',
+      descripcion: 'Two amounts. Tap the bigger one.',
+      ensena: 'Comparing two numbers sits underneath every other decision.' },
+    figuras: { nombre: 'Which one is different?',
+      descripcion: 'Three shapes the same and one that is not. Find it.',
+      ensena: 'Noticing the small detail is what later saves you from a scam.' },
     sumas: { nombre: 'Quick sums',
       descripcion: 'Adding and subtracting quetzales, against the clock.',
       ensena: 'Everything else about money rests on this.' },

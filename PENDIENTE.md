@@ -7,6 +7,34 @@ aporta al juego, no por lo que es más fácil.
 
 ## 0. Lo que se cerró hoy
 
+### El colegio deja de llevar al jugador de la mano
+
+- **El mes dice cuántas tareas lleva puestas.** Faltaba, y era justo el número que hace falta
+  para decidir: sin él, repartir es a ciegas.
+- **El tutorial guía la PRIMERA tarea y después suelta.** El paso de los meses de colegio
+  pasó por los dos extremos y los dos estaban mal: señalando siempre el botón de cerrar le
+  enseñaba a saltarse el juego; señalando cada casilla de los cuatro meses lo llevaba de la
+  mano por algo que ya había aprendido. Ahora la cinta se queda como una nota y la pantalla
+  no se apaga. Repartir esos meses —incluido no hacer ninguna tarea— es del jugador.
+- **El banco ya no se abre en clases.** Cuatro meses bastaban para que el efectivo se fuera en
+  gastos hormiga, y le aparecía una pestaña de banco a alguien que no gana nada que guardar.
+  Ahora espera al trabajo. Quien ya tiene empleo pasa igual, aunque no haya tocado el tutorial.
+
+### Las tareas se pueden reprobar
+
+Al **cuarto error** la clase se acaba, no da experiencia, y la jornada se gastó igual. Se
+repite el mes siguiente. Es lo que las convierte en una tarea y no en un botón que da puntos:
+si da igual cómo salga, no estás estudiando, estás cobrando. Los tres errores de margen van
+dibujados como puntos que se apagan.
+
+### Cuatro tareas de primero, de quince segundos
+
+`Suma rápida` (**un solo dígito**, generadas al vuelo), `¿Cuál es más?` (comparar dos
+cantidades, con los casos que engañan: Q90 contra Q100, Q9.50 contra Q9.05), `¿Cuál es
+distinto?` (tres figuras iguales y una que no — entrena fijarse, que es el hilo que acaba en
+`Caza-estafas`) y `¿Cuánto hay?` (reconocer billetes y monedas).
+
+
 ### La cinta dejaba de pedir tareas después de la primera
 
 El paso de los meses de colegio señalaba **siempre** el botón de cerrar el mes, así que
