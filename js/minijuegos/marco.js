@@ -102,6 +102,10 @@ var Minijuegos = (function () {
         '<span class="mj-nombre">' + Ico(def.icono) + ' ' + def.nombre + '</span>' +
         '<span class="mj-reloj" id="mj-reloj">' + duracion + 's</span>' +
       '</div>' +
+      /* La barra de tiempo, que es la mitad del nervio.
+       * El reloj en segundos hay que leerlo; una barra que se vacia se ve por
+       * el rabillo del ojo mientras se juega, que es cuando importa. */
+      '<div class="mj-tiempo"><i id="mj-tiempo-relleno"></i></div>' +
       '<div class="mj-marcador"><span id="mj-puntos">0</span> puntos' +
         (def.fallosParaPerder
           ? '<span class="mj-vidas" id="mj-vidas"></span>' : '') +
@@ -112,6 +116,29 @@ var Minijuegos = (function () {
     var elReloj = caja.querySelector('#mj-reloj');
     var elPuntos = caja.querySelector('#mj-puntos');
     var elVidas = caja.querySelector('#mj-vidas');
+    var elTiempo = caja.querySelector('#mj-tiempo-relleno');
+
+    /* Reinicia una animacion de CSS en un elemento que ya existe.
+     * Sin el `offsetWidth` de en medio el navegador junta el quitar y el poner
+     * en un solo repintado y la animacion no vuelve a correr. */
+    function repetir(el, clase) {
+      if (!el || !el.classList) return;
+      el.classList.remove(clase);
+      try { void el.offsetWidth; } catch (err) {}
+      el.classList.add(clase);
+    }
+
+    /* Un destello de color sobre toda la pantalla al acertar o al fallar.
+     * Es lo que convierte un cambio de numero en un golpe. */
+    function destello(clase) {
+      if (typeof document === 'undefined' || !document.createElement) return;
+      var d = document.createElement('div');
+      d.className = 'mj-destello ' + clase;
+      caja.appendChild(d);
+      setTimeout(function () {
+        if (d.parentNode) d.parentNode.removeChild(d);
+      }, 480);
+    }
 
     /* Los errores que quedan, dibujados. Un número diciendo "llevas 2 de 3
      * fallos" hay que leerlo; tres puntos que se apagan se ven. */
@@ -128,6 +155,7 @@ var Minijuegos = (function () {
     var cronometro = setInterval(function () {
       restante--;
       elReloj.textContent = restante + 's';
+      if (elTiempo) elTiempo.style.width = Math.max(0, (restante / duracion) * 100) + '%';
       if (restante <= 5) elReloj.classList.add('urgente');
       if (restante <= 0) terminar();
     }, 1000);
@@ -139,6 +167,8 @@ var Minijuegos = (function () {
         if (acerto !== false) aciertos++;
         if (puntos < 0) puntos = 0;
         elPuntos.textContent = puntos;
+        repetir(elPuntos, 'sube');
+        destello(acerto === false ? 'mal' : 'ok');
         pintarVidas();
         Sonido.tono(acerto === false ? 'error' : 'acierto');
       },

@@ -801,6 +801,16 @@
   ui['Las tareas'] = 'Homework';
   ui['Tareas pendientes: {0}'] = 'Homework due: {0}';
 
+  /* Las tareas del turno salen sorteadas, y hay que decirlo: sin eso, ver tres
+   * de las once que existen parece un fallo, no la regla. */
+  ui['Tus tareas de este {0}'] = 'Your homework for this {0}';
+  ui['El colegio te dejó {0} de sus {1}, al azar. Cambian cada {2}: no eliges cuál te toca.'] =
+    'School set you {0} of its {1}, at random. They change every {2}: you do not pick which.';
+  ui['Estas son todas las que tienes abiertas por ahora. Al abrirse más, cada {0} te tocan unas cuantas.'] =
+    'These are all the ones open to you so far. As more open up, each {0} you get a few of them.';
+  ui['hecha'] = 'done';
+  ui['Ya la hiciste'] = 'Already done';
+
   /* Elegir rama del diversificado: siete ramas, diecinueve titulos y las notas
    * que ordenan la lista. */
   ui['Lo que se te dio mejor'] = 'What you were best at';

@@ -49,11 +49,11 @@ Minijuegos.registrar({
       var h = '<div class="mj-mensaje">¿Cuál entra justo en el hueco?</div>';
       h += '<div class="mj-hueco"><span class="mj-hueco-vano" style="width:' +
            r.hueco + 'px"></span></div>';
-      h += '<div class="mj-piezas">';
+      h += '<div class="mj-encajes">';
       r.piezas.forEach(function (p, i) {
-        h += '<button class="mj-pieza" data-i="' + i + '" data-ok="' + (p.ok ? '1' : '0') +
+        h += '<button class="mj-encaje" data-i="' + i + '" data-ok="' + (p.ok ? '1' : '0') +
              '" aria-label="pieza ' + (i + 1) + '">' +
-             '<span class="mj-pieza-barra" style="width:' + p.ancho + 'px"></span></button>';
+             '<span class="mj-encaje-barra" style="width:' + p.ancho + 'px"></span></button>';
       });
       api.mostrar(h + '</div>');
 

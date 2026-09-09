@@ -169,9 +169,18 @@ var UI = (function () {
             Muneco({ trabajo: t ? t.id : null, estudia: !!e.estudio,
                      graduado: e.carrerasTerminadas.length > 0 && !e.estudio }) +
           '</button>' +
+          /* Las dos monedas del juego, y las dos a la vista.
+           *
+           * Antes la experiencia era la cifra grande MIENTRAS no había dinero
+           * y desaparecía en cuanto entraba el primer quetzal, como si al
+           * empezar a trabajar dejara de importar lo que sabes. Es justo al
+           * revés: es entonces cuando empieza a decidir a qué puestos puedes
+           * aplicar. Así que el dinero toma el sitio grande y la experiencia
+           * se queda al lado, en su ficha, sin irse nunca. */
           (sinDineroTodavia()
             ? '<span class="dinero exp">' + Ico('birrete') + ' ' + Motor.experiencia() + '</span>'
-            : '<span class="dinero">' + Q0(Motor.patrimonio()) + '</span>') +
+            : '<span class="dinero">' + Q0(Motor.patrimonio()) + '</span>' +
+              '<span class="chip saber">' + Ico('birrete') + ' ' + Motor.experiencia() + '</span>') +
           '<span class="chip">' + Ico('rayo') + ' ' + Math.round(e.energia) + '</span>' +
           (deuda > 0 && !sinDineroTodavia()
             ? '<span class="chip alerta">' + T('debe {0}', Q0(deuda)) + '</span>' : '') +
@@ -1284,7 +1293,7 @@ var UI = (function () {
   function estudioPracticar() {
     var e = Motor.get();
     var lista = listaMinijuegos(esDeEstudio);
-    var h = '<h3>' + T('Las tareas') + '</h3>';
+    var h = '<h3>' + T('Tus tareas de este {0}', turnoNombre()) + '</h3>';
 
     /* Sin carrera en curso no hay tareas, y eso no es un hueco: es que las
      * tareas son del colegio. Se dice, en vez de dejar la sección vacía. */
@@ -1301,7 +1310,22 @@ var UI = (function () {
         T('{0} todavía no tiene tareas propias. La experiencia sigue subiendo por estar inscrito.',
           esc(D(car, 'nombre'))) + '</div>';
     }
+    /* Y que se VEA que salen al azar.
+     *
+     * Sin decirlo, un jugador que abre esta pantalla y encuentra tres tareas
+     * de las once que existen cree que el juego se rompió o que las otras
+     * están bloqueadas. Decir de cuántas son y que cambian convierte lo que
+     * parece un error en la regla que es: el colegio manda la tarea, no la
+     * eliges. */
+    var dejadas = Motor.tareasDelMes().length;
+    var posibles = Motor.tareasPosibles();
+    var sorteo = posibles > dejadas
+      ? T('El colegio te dejó {0} de sus {1}, al azar. Cambian cada {2}: no eliges cuál te toca.',
+          dejadas, posibles, turnoNombre())
+      : T('Estas son todas las que tienes abiertas por ahora. Al abrirse más, cada {0} te tocan unas cuantas.',
+          turnoNombre());
     return h +
+      '<p class="sutil">' + Ico('mando') + ' ' + sorteo + '</p>' +
       '<p class="sutil">' +
       T('No pagan nada: dan experiencia, y la experiencia es lo que te deja entrar a las carreras que piden más. Cada una cuesta una jornada.') +
       '</p>' + lista;
@@ -2277,10 +2301,16 @@ var UI = (function () {
        * leerla dos veces. */
       var clase = j.tipo === 'clase';
       var libres = Motor.espaciosUsados(clase ? 'tarea' : 'minijuego');
-      var etiqueta = clase ? T('clase')
-                   : (j.tipo === 'generico' ? T('paga') : T('de tu profesión'));
-      h += '<div class="opcion"><div class="titulo">' + Ico(j.icono) + ' ' + esc(D(j, 'nombre')) +
-           '<span class="etiqueta">' + etiqueta + '</span></div>';
+      /* Una tarea del turno que ya se hizo se queda a la vista y apagada: si
+       * desapareciera, la lista cambiaría sola a mitad del turno y el jugador
+       * no sabría si la hizo o si el juego se la comió. */
+      var hecha = clase && Motor.tareasSinHacer().indexOf(j.id) < 0;
+      var etiqueta = hecha ? T('hecha')
+                   : (clase ? T('clase')
+                   : (j.tipo === 'generico' ? T('paga') : T('de tu profesión')));
+      h += '<div class="opcion' + (hecha ? ' bloqueada' : '') + '"><div class="titulo">' +
+           Ico(hecha ? 'visto' : j.icono) + ' ' + esc(D(j, 'nombre')) +
+           '<span class="etiqueta' + (hecha ? ' ok' : '') + '">' + etiqueta + '</span></div>';
       h += '<p class="sutil" style="margin:6px 0">' + esc(D(j, 'descripcion')) + '</p>';
       h += pastillas([
         clase ? pastilla('birrete', T('hasta +{0} de experiencia', j.experienciaMaxima || 0), 'ok')
@@ -2290,14 +2320,15 @@ var UI = (function () {
       /* En `sutil` y no en `aviso`: no es un error, es una instrucción. El
        * rojo de aviso está para cuando algo va mal, y gastarlo en "te falta
        * una jornada" es gritar donde solo hacía falta decir. */
-      if (libres === 0) {
+      if (libres === 0 && !hecha) {
         h += '<p class="sutil">' + (clase
           ? T('Ponle una jornada a las tareas en la pestaña del mes.')
           : T('Ponle una jornada a Extra en la pestaña del mes.')) + '</p>';
       }
       h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-jugar="' +
-           j.id + '"' + (libres > 0 ? '' : ' disabled') + '>' +
-           Ico(clase ? 'libro' : 'mando') + ' ' + T('Hacerlo') + '</button></div></div>';
+           j.id + '"' + (libres > 0 && !hecha ? '' : ' disabled') + '>' +
+           Ico(clase ? 'libro' : 'mando') + ' ' +
+           (hecha ? T('Ya la hiciste') : T('Hacerlo')) + '</button></div></div>';
     });
     return h;
   }
@@ -3340,10 +3371,17 @@ var UI = (function () {
   // =============== minijuegos ===============
 
   function jugarMinijuego(id, alCerrar) {
+    /* Mientras se juega, la ventana ocupa la pantalla entera.
+     *
+     * Una tarea de quince segundos metida en una hoja de la mitad de abajo se
+     * juega mirando por encima el resto del juego, y eso le quita justamente
+     * lo que tiene que tener: que durante quince segundos no exista nada más.
+     * Al terminar vuelve a ser una hoja normal, porque el resultado sí es
+     * algo que se lee con calma. */
     var caja = document.createElement('div');
-    caja.className = 'velo';
+    caja.className = 'velo mj-lleno';
     var interior = document.createElement('div');
-    interior.className = 'modal mj';
+    interior.className = 'modal mj jugando';
     caja.appendChild(interior);
     document.body.appendChild(caja);
 
@@ -3393,6 +3431,8 @@ var UI = (function () {
         monedaVuela(interior);
       }
       Motor.guardar();
+      caja.className = 'velo';
+      interior.className = 'modal mj';
       interior.innerHTML =
         '<span class="icono">' + Ico(res.reprobado ? 'alerta' : res.def.icono) + '</span>' +
         '<h2>' + (res.reprobado ? T('No pasaste esta tarea') : esc(D(res.def, 'nombre'))) + '</h2>' +

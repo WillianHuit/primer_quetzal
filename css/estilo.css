@@ -134,6 +134,14 @@ body {
   display: inline-flex; align-items: center; gap: 5px;
 }
 
+/* La ficha de experiencia, al lado del dinero. Va en ambar y no en el gris de
+   las demas fichas porque es la otra moneda del juego, no un dato mas. */
+.barra .chip.saber {
+  background: rgba(0,0,0,.16);
+  border-color: rgba(255,255,255,.34);
+  color: #ffe6b0; font-weight: 800;
+}
+
 .energia-barra {
   height: 7px; background: rgba(0,0,0,.24);
   border: 1px solid rgba(255,255,255,.16);
@@ -579,7 +587,114 @@ label.sutil { display: block; margin-bottom: 4px; }
 
 /* ---------- minijuegos ---------- */
 
-.modal.mj { padding-bottom: 18px; }
+.modal.mj { padding-bottom: 18px; position: relative; overflow: hidden; }
+
+/* -------------------------------------------------------------------------
+   Una tarea ocupa la pantalla entera mientras dura
+   -------------------------------------------------------------------------
+   Son quince o treinta segundos y la gracia es que en esos segundos no exista
+   nada mas. En media pantalla se juega de reojo. La clase se quita al terminar
+   y la ventana vuelve a ser una hoja normal para el resultado, que si se lee
+   con calma. */
+.velo.mj-lleno { align-items: stretch; padding: 0; }
+.modal.mj.jugando {
+  max-width: none; width: 100%;
+  height: 100vh; height: 100dvh; max-height: none;
+  border: 0; border-radius: 0;
+  padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column;
+  animation: mj-abre .2s ease both;
+}
+.modal.mj.jugando::before { display: none; }   /* el asa no va: no se arrastra */
+/* `space-evenly` y no `center`: con el tablero y las respuestas centrados
+   juntos, en una pantalla alta quedaban los dos flotando en medio con un hueco
+   arriba y otro abajo. Repartido, el tablero cae en el tercio de arriba y las
+   respuestas en el de abajo, que ademas es donde llega el pulgar. */
+.modal.mj.jugando .mj-lienzo {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column; justify-content: space-evenly;
+}
+@keyframes mj-abre { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; } }
+
+/* Y con la pantalla entera, todo crece. Lo que en media hoja tenia que ser
+   pequenio para caber aqui puede ocupar lo que le toca: el tablero se ve desde
+   lejos y los botones son del tamanio de un pulgar, que en quince segundos es
+   la diferencia entre acertar y errar el toque. */
+.modal.mj.jugando .mj-mensaje { font-size: 17px; padding: 16px; }
+.modal.mj.jugando .mj-mensaje.mj-grande { font-size: 38px; padding: 20px 12px; }
+.modal.mj.jugando .mj-opcion { padding: 17px 15px; font-size: 17px; }
+.modal.mj.jugando .mj-opciones { gap: 11px; }
+.modal.mj.jugando .mj-plata { gap: 13px; }
+.modal.mj.jugando .mj-pieza.moneda { width: 62px; height: 62px; font-size: 18px; }
+.modal.mj.jugando .mj-pieza.billete { min-width: 100px; height: 56px; font-size: 18px; }
+.modal.mj.jugando .mj-figura { min-height: 116px; }
+.modal.mj.jugando .fig { width: 58px; height: 58px; }
+/* El triangulo no tiene ancho: es un borde. Crece por ahi o se queda chico
+   al lado de las demas figuras. */
+.modal.mj.jugando .fig.triangulo {
+  width: 0; height: 0;
+  border-left-width: 32px; border-right-width: 32px; border-bottom-width: 56px;
+}
+.modal.mj.jugando .mj-carril { font-size: 42px; }
+
+/* La barra de tiempo, debajo de la cabecera. Se vacia sola con el reloj. */
+.mj-tiempo {
+  height: 6px; border-radius: 99px; overflow: hidden;
+  background: var(--linea); margin: -4px 0 10px;
+  box-shadow: inset 0 1px 3px rgba(22,33,29,.2);
+}
+.mj-tiempo i {
+  display: block; height: 100%; width: 100%;
+  border-radius: 99px; transition: width 1s linear;
+  background: linear-gradient(90deg, var(--verde), color-mix(in srgb, var(--verde) 55%, var(--ambar)));
+}
+
+/* El destello de toda la pantalla al acertar o al fallar. Va por encima de
+   todo y no se puede tocar: es un golpe de color, no un elemento. */
+.mj-destello {
+  position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  animation: mj-flash .46s ease both;
+}
+.mj-destello.ok  { background: radial-gradient(circle at 50% 58%, rgba(31,122,90,.26), transparent 68%); }
+.mj-destello.mal { background: radial-gradient(circle at 50% 58%, rgba(178,58,42,.26), transparent 68%); }
+@keyframes mj-flash { from { opacity: 1; } to { opacity: 0; } }
+
+/* Lo que se dibuja en cada pregunta entra, en vez de aparecer de golpe. Como
+   el lienzo se reescribe entero en cada ronda, esto corre solo. */
+@keyframes mj-entra {
+  from { opacity: 0; transform: translateY(16px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+.mj-lienzo > * { animation: mj-entra .24s cubic-bezier(.2,.8,.3,1) both; }
+.mj-opciones > *, .mj-figuras > *, .mj-encajes > *, .mj-plata > * {
+  animation: mj-entra .28s cubic-bezier(.2,.8,.3,1) both;
+}
+.mj-opciones > *:nth-child(2), .mj-figuras > *:nth-child(2),
+.mj-encajes > *:nth-child(2), .mj-plata > *:nth-child(2) { animation-delay: .05s; }
+.mj-opciones > *:nth-child(3), .mj-figuras > *:nth-child(3),
+.mj-encajes > *:nth-child(3), .mj-plata > *:nth-child(3) { animation-delay: .1s; }
+.mj-opciones > *:nth-child(n+4), .mj-figuras > *:nth-child(n+4),
+.mj-plata > *:nth-child(n+4) { animation-delay: .15s; }
+
+/* Y la respuesta se siente: la buena da un salto, la mala se sacude. Las
+   clases se ponen sobre elementos que ya estan en pantalla, asi que la
+   animacion arranca sola. */
+@keyframes mj-acierta { 0% { transform: scale(1); } 45% { transform: scale(1.05); } 100% { transform: scale(1); } }
+@keyframes mj-falla {
+  0%,100% { transform: translateX(0); }
+  18% { transform: translateX(-8px); } 38% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); } 82% { transform: translateX(5px); }
+}
+.mj-opcion.bien, .mj-figura.bien, .mj-encaje.bien, .mj-carril.bien {
+  animation: mj-acierta .34s ease both;
+}
+.mj-opcion.mal, .mj-figura.mal, .mj-encaje.mal, .mj-carril.mal {
+  animation: mj-falla .4s ease both;
+}
+
+/* El marcador salta cuando cambia: un numero que cambia sin moverse no se ve */
+@keyframes mj-pop { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.mj-marcador span.sube { display: inline-block; animation: mj-pop .32s ease both; }
 
 .mj-cabecera {
   display: flex; justify-content: space-between; align-items: center;
@@ -596,6 +711,11 @@ label.sutil { display: block; margin-bottom: 4px; }
 .mj-reloj.urgente {
   background: #f7e2dd; color: var(--rojo);
   border-color: color-mix(in srgb, #f7e2dd 62%, var(--rojo));
+  animation: latir .75s ease infinite;
+}
+/* Y con el reloj en rojo, la barra tambien */
+.mj-cabecera:has(.mj-reloj.urgente) + .mj-tiempo i {
+  background: linear-gradient(90deg, var(--rojo), color-mix(in srgb, var(--rojo) 60%, var(--ambar)));
 }
 .mj-marcador { font-size: 13px; color: var(--gris); margin-bottom: 10px; }
 .mj-marcador span { font-weight: 800; color: var(--tinta); font-size: 18px; }
@@ -1065,21 +1185,25 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
   box-shadow: inset 0 0 0 2px var(--tinta);
   flex: 0 0 auto;
 }
-.mj-piezas { display: flex; flex-direction: column; gap: 9px; align-items: center; }
-.mj-pieza {
+/* Ojo con el nombre: estas piezas se llamaron `.mj-pieza` un rato y eso pisaba
+   los BILLETES de "cuanto hay", que ya usaban esa clase. Los billetes salieron
+   como barras blancas de ancho completo durante una version entera. Una clase
+   generica en una hoja compartida es una colision esperando. */
+.mj-encajes { display: flex; flex-direction: column; gap: 9px; align-items: center; }
+.mj-encaje {
   display: flex; justify-content: center; align-items: center;
   width: 100%; padding: 9px 6px; cursor: pointer;
-  background: var(--tarjeta, #fff); border: 1.5px solid var(--linea);
+  background: #fff; border: 1.5px solid var(--linea);
   border-radius: 10px; overflow-x: auto;
 }
-.mj-pieza-barra {
+.mj-encaje-barra {
   display: block; height: 22px; border-radius: 5px;
   background: var(--ambar); flex: 0 0 auto;
 }
-.mj-pieza.bien { border-color: var(--verde); }
-.mj-pieza.bien .mj-pieza-barra { background: var(--verde); }
-.mj-pieza.mal { border-color: var(--rojo); }
-.mj-pieza.mal .mj-pieza-barra { background: var(--rojo); }
+.mj-encaje.bien { border-color: var(--verde); }
+.mj-encaje.bien .mj-encaje-barra { background: var(--verde); }
+.mj-encaje.mal { border-color: var(--rojo); }
+.mj-encaje.mal .mj-encaje-barra { background: var(--rojo); }
 
 /* -------------------------------------------------------------------------
    Los titulos de una rama del diversificado

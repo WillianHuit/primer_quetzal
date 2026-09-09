@@ -1150,6 +1150,9 @@ var Motor = (function () {
     guardar();
   }
 
+  // Cuantas tareas EXISTEN ahora mismo, de las que el sorteo saca unas cuantas
+  function tareasPosibles() { return poolDeTareas().length; }
+
   /* Cuantas de las tareas del turno siguen sin jornada. Es lo unico que el
    * juego le pide al jugador mientras solo estudia, y sale en la franja de la
    * calle como "Tareas pendientes: 1". */
@@ -2488,6 +2491,7 @@ var Motor = (function () {
     apuntarNota: apuntarNota, aptitudes: aptitudes,
     tareasDelMes: tareasDelMes, tareasPendientes: tareasPendientes,
     tareasSinHacer: tareasSinHacer, marcarTareaHecha: marcarTareaHecha,
+    tareasPosibles: tareasPosibles,
     asignarEspacio: asignarEspacio, limpiarEspacios: limpiarEspacios,
     espacioBloqueado: espacioBloqueado, semanaDe: semanaDe, jornadaDe: jornadaDe,
     indiceDe: indiceDe, esMenor: esMenor, aperturaMinima: aperturaMinima,

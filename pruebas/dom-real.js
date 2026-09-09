@@ -554,15 +554,19 @@ ok(!w.Motor.desbloqueado('mejoras') && !w.Motor.desbloqueado('extra'),
    ' en la mano todavía no hay con qué abrir nada');
 ok(!w.document.querySelector('[data-pestana="mejoras"]'), 'ni su pestaña');
 
-/* El banco sí, y no por tutorial: cuatro meses de clases bastaron para que el
- * efectivo se le fuera solo, y ESE es el momento en que el banco tiene
- * sentido. La ruta no lo regala: espera a que duela. */
-ok(w.Motor.desbloqueado('banco'),
-   'el banco se abrió solo, porque ya se le fueron Q' +
-   Math.round(w.Motor.get().totales.fugaEfectivo) + ' de la bolsa');
+/* Y el banco TAMPOCO, aunque el efectivo ya se le esté yendo.
+ *
+ * Cuatro meses de clases bastan para que se le vayan unos quetzales solos, y
+ * durante una versión eso abría el banco: una pestaña de banco delante de un
+ * chico de trece cuyo único ingreso posible es un trabajito informal que se
+ * cobra en efectivo. El agujero duele igual —esa es la lección— pero todavía
+ * no hay a dónde llevarse el dinero. */
+ok(!w.Motor.desbloqueado('banco'),
+   'y el banco tampoco, aunque ya se le hayan ido Q' +
+   Math.round(w.Motor.get().totales.fugaEfectivo) + ' de la bolsa: en básicos todo es efectivo');
 
 const cuantasPestanas = pestanasVisibles(w).length;
-ok(cuantasPestanas === 5, `van ${cuantasPestanas} pestañas, no las siete de golpe`);
+ok(cuantasPestanas === 4, `van ${cuantasPestanas} pestañas, no las siete de golpe`);
 
 /* Y el imperio se abre con dinero, no con tutorial. */
 w.Motor.get().efectivo += 1200;
@@ -570,9 +574,16 @@ w.Motor.revisarProgreso();
 ok(w.Motor.desbloqueado('mejoras'),
    'y en cuanto junta con qué, el imperio se abre solo');
 
-/* El banco llega cuando duele no tenerlo. Se le adelanta la fuga de efectivo,
- * que es lo que el juego mira, y se cierra un mes para que la ruta lo vea. */
+/* El banco llega cuando duele no tenerlo Y hay algo que llevar.
+ *
+ * Las dos condiciones: el agujero del efectivo, que es lo que el juego mira, y
+ * haber salido de básicos, porque hasta ahí todo lo que se gana es informal y
+ * en efectivo. Se le dan las dos a mano —el título de básicos es lo que el
+ * juego le daría dos años después— y se vuelve al mes para que la ruta lo vea. */
 w.Motor.get().totales.fugaEfectivo = 40;
+/* Se le da el nivel y NO se le quita el colegio: sigue inscrito, que es lo
+ * que deja que el resto de la prueba haga una tarea más abajo. */
+w.Motor.get().educacion = 'basicos';
 clic(w, w.document.querySelector('[data-pestana="casa"]'));
 ok(!!w.document.querySelector('[data-pestana="banco"]'),
    'con el efectivo yéndose, la pestaña del banco aparece');

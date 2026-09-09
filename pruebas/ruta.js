@@ -261,11 +261,23 @@ ok(!!segundo && segundo.peldano.id === 'verMes',
   ok(!M5.desbloqueado('banco'),
      'y abrirle el trabajo TAMPOCO abre el banco: todavía no ha aceptado nada');
 
-  // En cuanto entra un quetzal, el mismo agujero sí abre el banco
+  /* Y con el trabajito aceptado TAMPOCO, mientras siga en edad de básicos.
+   *
+   * Lo único que existe a los trece son los tres trabajitos por cuenta propia:
+   * informales, en efectivo y de unos pocos quetzales. No hay nada que
+   * depositar y no hay a quién pedirle una cuenta siendo menor y sin patrono.
+   * El agujero del efectivo duele igual, y esa es la lección; lo que no hay
+   * todavía es a dónde llevárselo. */
   M5.tomarTrabajo('dulces');
+  M5.revisarProgreso();
+  ok(!M5.desbloqueado('banco'),
+     'y con el trabajito tampoco: es informal, se cobra en efectivo y él sigue en básicos');
+
+  // Con básicos terminado, el mismo agujero sí abre el banco
+  z.educacion = 'basicos';
   const abrio = M5.revisarProgreso();
   ok(abrio.some(p => p.id === 'banco'),
-     'y ahí sí: con un trabajito en la mano, Q31 fugados abren el banco');
+     'con básicos en la mano y Q31 fugados, el banco se abre');
   ok(M5.desbloqueado('ahorro') && !M5.desbloqueado('monetaria'),
      'y lo que abre es la cuenta de AHORRO, no la monetaria');
 })();

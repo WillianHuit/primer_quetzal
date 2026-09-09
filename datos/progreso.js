@@ -473,9 +473,17 @@ var PROGRESO = [
      * mide con el empleo, y a los 18 se abre igual: a esa edad, tener cuenta
      * ya es parte de la vida aunque no estés ganando. */
     cuando: function (e) {
-      if (e.empleo === null) return e.edad >= CONFIG.mayoriaDeEdad;
-      return (e.totales && e.totales.fugaEfectivo >= 30) || e.empleo.formal ||
-             e.edad >= CONFIG.mayoriaDeEdad;
+      /* Un patrono formal te pide cuenta, y a los 18 tener cuenta ya es parte
+       * de la vida aunque no estés ganando. Esas dos abren el banco siempre. */
+      if (e.empleo && e.empleo.formal) return true;
+      if (e.edad >= CONFIG.mayoriaDeEdad) return true;
+      /* Y mientras no haya terminado básicos, no. Lo único que existe a esa
+       * edad son los tres trabajitos por cuenta propia: informales, en
+       * efectivo y de unos pocos quetzales. No hay nada que depositar, no hay
+       * a quién pedirle una cuenta siendo menor y sin patrono, y una pestaña
+       * de banco delante de eso es una pestaña que se abre y se cierra. */
+      if (e.educacion === 'primaria') return false;
+      return e.empleo !== null && e.totales && e.totales.fugaEfectivo >= 30;
     },
     pista: 'Fíjate cuánto se te va del efectivo cada mes en el resumen. Cuando eso empiece a doler, el banco va a tener sentido.',
     titulo: 'Se abrió el banco',
