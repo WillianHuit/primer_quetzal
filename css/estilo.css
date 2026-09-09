@@ -411,6 +411,11 @@ nav.pestanas button.activa .ic-caja {
   white-space: nowrap; overflow: hidden;
 }
 .sub-pestanas .sub span { overflow: hidden; text-overflow: ellipsis; }
+/* Con cuatro apartados no caben cuatro nombres: el activo lleva el suyo y los
+   demas se quedan en su icono. */
+.sub-pestanas.apretado .sub { flex: 0 0 auto; padding: 9px 13px; }
+.sub-pestanas.apretado .sub:not(.activa) span { display: none; }
+.sub-pestanas.apretado .sub.activa { flex: 1 1 auto; }
 .sub-pestanas .sub:active { transform: translateY(1px); box-shadow: none; }
 .sub-pestanas .sub.activa {
   background: #fff; color: var(--verde);

@@ -7,6 +7,27 @@ aporta al juego, no por lo que es más fácil.
 
 ## 0. Lo que se cerró hoy
 
+### Estudio y Trabajo dejaron de ser pantallas de solo mirar
+
+Las dos eran un estado y **un solo botón, que además destruía** —renunciar, dejar de
+estudiar—. Te inscribías una vez y pasabas treinta y seis meses sin nada que tocar ahí,
+mientras las actividades del juego vivían guardadas en un cajón llamado "Extra".
+
+- **Trabajo** tiene un apartado de **Turnos**: los seis minijuegos de oficio, donde tienen
+  sentido. Y **pedir que te pongan en planilla**, que es la acción más de este juego que
+  existe: pone al jugador del otro lado de la decisión que ya toma como patrón. Informal le
+  dan 5% más en la mano cada mes; formal le dan Bono 14 y aguinaldo, que son **dos sueldos
+  más al año**, más IGSS y más historial. Pueden decir que no, y la probabilidad va escrita
+  antes de tocar el botón: a ciegas sería una tragamonedas.
+- **Estudio** tiene **Practicar** —los dos minijuegos que enseñan, presupuesto y estafas— y
+  el botón de **ponerle una jornada** a la carrera, que hasta ahora obligaba a volver a la
+  pestaña del mes, tocar una casilla y buscar "Estudiar" en la lista.
+- Un **trabajito de niño no ofrece contrato**: vender dulces en el bus no lo contrata nadie,
+  y ofrecerlo sería mentir sobre cómo funciona eso. Están marcados `soloInformal` en los
+  datos y la tarjeta no se dibuja.
+- La pestaña **Extra** se queda como el catálogo completo, incluidos los que aún no se abren.
+  Ya no es donde se encuentran las actividades; es donde se ve qué hay más adelante.
+
 ### El tutorial ya no contesta por el jugador
 
 El foco apaga la pantalla menos lo señalado, y lo señalado salía de `querySelector`: **el

@@ -934,9 +934,84 @@ var Motor = (function () {
   }
 
   function tomarTrabajo(id, formal) {
-    estado.empleo = { id: id, formal: !!formal, mesesEnPuesto: 0 };
+    estado.empleo = { id: id, formal: !!formal, mesesEnPuesto: 0, pidioPlanilla: null };
   }
   function renunciar() { estado.empleo = null; }
+
+  /* -------------------------------------------------------------------------
+   * Pedir que te pongan en planilla
+   * -------------------------------------------------------------------------
+   * Es la accion mas de este juego que hay en todo el archivo, porque pone al
+   * jugador del OTRO lado de la decision que ya toma como patron.
+   *
+   * En su imperio contrata sin contrato porque el formal cuesta 1.42 veces el
+   * sueldo, y el juego se lo ensena con numeros. Aqui es el empleado, y ve la
+   * misma cuenta al reves: informal le dan 5% mas en la mano cada mes, formal
+   * le dan Bono 14 y aguinaldo, que son DOS SUELDOS MAS AL ANO, mas IGSS y mas
+   * historial para que un banco le preste. O sea que la informalidad paga mas
+   * hoy y bastante menos siempre.
+   *
+   * Y puede decir que no, porque en la vida dice que no. Lo que el juego SI
+   * hace es ensenar la probabilidad antes de tocar el boton: una apuesta con
+   * las cartas boca arriba es una decision, y a ciegas es una tragamonedas.
+   */
+  var PLANILLA_MESES_MINIMOS = 6;
+  var PLANILLA_ESPERA = 6;        // meses antes de poder volver a pedirlo
+
+  function faltaParaPlanilla() {
+    if (!estado.empleo) return { motivo: 'sinEmpleo', razon: 'Primero necesitas un trabajo.' };
+    if (estado.empleo.formal) return { motivo: 'yaEsta', razon: 'Ya estás en planilla.' };
+    if (!CONFIG.dificultad[estado.dificultad].permiteFormal) {
+      return { motivo: 'modo', razon: 'En la economía informal no hay contratos que pedir.' };
+    }
+    /* Los trabajitos de nino —limonada, periodicos, dulces— estan marcados
+     * `soloInformal` en datos/trabajos.js, y no es un detalle de balance: no
+     * hay patron a quien pedirle nada. Ofrecerle un contrato a quien vende
+     * dulces en el bus seria mentirle sobre como funciona eso. */
+    var t = trabajoActual();
+    if (t && t.soloInformal) {
+      return { motivo: 'soloInformal',
+               razon: 'Esto no lo contrata nadie: lo haces por tu cuenta. Para tener contrato hace falta un empleo de verdad.' };
+    }
+    var m = estado.empleo.mesesEnPuesto || 0;
+    if (m < PLANILLA_MESES_MINIMOS) {
+      return { motivo: 'nuevo',
+               razon: 'Llevas ' + m + (m === 1 ? ' mes' : ' meses') +
+                      ' aquí. Nadie pone en planilla a quien acaba de entrar.' };
+    }
+    var desde = estado.empleo.pidioPlanilla;
+    if (desde !== null && desde !== undefined && estado.mesesJugados - desde < PLANILLA_ESPERA) {
+      return { motivo: 'espera',
+               razon: 'Ya lo pediste hace poco. Deja pasar unos meses antes de volver a preguntar.' };
+    }
+    return null;
+  }
+
+  /* La probabilidad de que digan que si. Sube con los meses en el puesto —lo
+   * unico que de verdad pesa— y baja si el oficio esta flojo en el mercado,
+   * porque un patron con gente haciendo cola formaliza menos. */
+  function probabilidadPlanilla() {
+    if (!estado.empleo) return 0;
+    var m = estado.empleo.mesesEnPuesto || 0;
+    var base = Math.min(0.75, 0.10 + m * 0.04);
+    var t = trabajoActual();
+    var mercado = t ? multiplicadorMercado(t.id) : 1;
+    if (mercado < 1) base *= 0.6;
+    return Math.max(0.05, Math.min(0.9, base));
+  }
+
+  function pedirPlanilla() {
+    var falta = faltaParaPlanilla();
+    if (falta) return { ok: false, razon: falta.razon };
+    var p = probabilidadPlanilla();
+    estado.empleo.pidioPlanilla = estado.mesesJugados;
+    if (Math.random() < p) {
+      estado.empleo.formal = true;
+      return { ok: true, probabilidad: p };
+    }
+    return { ok: false, negado: true, probabilidad: p,
+             razon: 'Te dijeron que no. Pasa, y por eso dos de cada tres personas en el país trabajan sin contrato.' };
+  }
 
   function inscribirse(carreraId, privada, jornada) {
     var c = buscarPorId(CARRERAS, carreraId);
@@ -2212,6 +2287,8 @@ var Motor = (function () {
     decidirEstudio: decidirEstudio,
 
     tomarTrabajo: tomarTrabajo, renunciar: renunciar,
+    faltaParaPlanilla: faltaParaPlanilla, probabilidadPlanilla: probabilidadPlanilla,
+    pedirPlanilla: pedirPlanilla,
     inscribirse: inscribirse, abandonarEstudio: abandonarEstudio,
     abrirCuenta: abrirCuenta, mover: mover, mudarse: mudarse,
     abrirPlazo: abrirPlazo, romperPlazo: romperPlazo,

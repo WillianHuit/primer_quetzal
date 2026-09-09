@@ -536,6 +536,7 @@ var UI = (function () {
    */
   var SUB_TRABAJO = [
     { id: 'empleo',  ic: 'maletin',      tx: 'Mi empleo' },
+    { id: 'turnos',  ic: 'mando',        tx: 'Turnos' },
     { id: 'ofertas', ic: 'portapapeles', tx: 'Ofertas' },
     { id: 'migrar',  ic: 'avion',        tx: 'Irme del país' }
   ];
@@ -547,7 +548,9 @@ var UI = (function () {
   function subTrabajoActivo() {
     var e = Motor.get();
     var visibles = SUB_TRABAJO.filter(function (sp) {
-      return sp.id !== 'migrar' || Motor.desbloqueado('migrar');
+      if (sp.id === 'migrar') return Motor.desbloqueado('migrar');
+      if (sp.id === 'turnos') return Motor.desbloqueado('extra');
+      return true;
     });
     // Sin empleo, la pantalla útil es la de ofertas y no la de "no tienes nada"
     var elegido = subDe.trabajo || (e.empleo ? 'empleo' : 'ofertas');
@@ -558,7 +561,11 @@ var UI = (function () {
   /* Barra de apartados dentro de una pestaña. Genérica a propósito: si mañana
    * otra pestaña se parte, se dibuja igual. */
   function subPestanas(sub) {
-    var h = '<div class="sub-pestanas">';
+    /* Con cuatro apartados los rótulos no caben en un teléfono y salían todos
+     * cortados —"Mi em…", "Turno…", "Irme …"—, que es peor que no ponerlos.
+     * Apretado, el activo lleva su nombre entero y los demás solo su icono:
+     * el que importa se lee, y los otros siguen siendo reconocibles. */
+    var h = '<div class="sub-pestanas' + (sub.visibles.length > 3 ? ' apretado' : '') + '">';
     sub.visibles.forEach(function (sp) {
       h += '<button class="sub' + (sub.id === sp.id ? ' activa' : '') +
            '" data-sub="' + sp.id + '">' + Ico(sp.ic) +
@@ -577,9 +584,70 @@ var UI = (function () {
     var sub = subTrabajoActivo();
     h += subPestanas(sub);
     h += sub.id === 'empleo' ? trabajoMiEmpleo()
+       : sub.id === 'turnos' ? trabajoTurnos()
        : sub.id === 'ofertas' ? trabajoOfertas()
        : trabajoIrme();
     return h;
+  }
+
+  /* Pedir que te pongan en planilla.
+   *
+   * Aquí el jugador está del otro lado de la decisión que ya toma como patrón
+   * en su imperio, y la cuenta es la misma vista al revés: informal le dan un
+   * 5% más en la mano cada mes; formal le dan Bono 14 y aguinaldo, que son dos
+   * sueldos más al año, más IGSS y más historial para que un banco le preste.
+   *
+   * La probabilidad va ESCRITA en la pantalla antes de tocar el botón. Sin
+   * eso, pedirlo sería una tragamonedas; con eso, es una decisión. */
+  function tarjetaPlanilla(e, actual) {
+    if (e.empleo.formal) return '';
+    var falta = Motor.faltaParaPlanilla();
+    /* Y no se dibuja donde no tiene sentido: en modo informal no hay contratos
+     * que pedir, y un trabajito de niño no lo contrata nadie. Una tarjeta que
+     * solo sirve para decir que no, sobra. */
+    if (falta && (falta.motivo === 'modo' || falta.motivo === 'sinEmpleo' ||
+                  falta.motivo === 'soloInformal')) return '';
+
+    var p = Motor.probabilidadPlanilla();
+    var enMano = Motor.salarioEsperado(actual, false) - Motor.salarioEsperado(actual, true);
+    var alAno = Motor.salarioEsperado(actual, true) * 2;   // Bono 14 + aguinaldo
+
+    var h = '<div class="tarjeta">';
+    h += '<div class="titulo">' + Ico('portapapeles') + ' ' + T('Pedir que te pongan en planilla') + '</div>';
+    h += pastillas([
+      pastilla('moneda', T('pierdes {0} al mes', Q0(enMano)), 'mal'),
+      pastilla('billete', T('ganas {0} al año', Q0(alAno)), 'ok'),
+      pastilla('banco', T('y empiezas historial'), 'ok')
+    ]);
+    h += '<p class="sutil">' +
+      T('Bono 14 y aguinaldo son dos sueldos más al año. En la mano recibes menos cada mes; en el año recibes bastante más, y el banco por fin puede comprobar lo que ganas.') +
+      '</p>';
+    if (falta) {
+      h += '<p class="aviso">' + esc(K('planilla_falta', falta.motivo, falta.razon)) + '</p>';
+      h += '<button class="btn-primario" disabled>' + T('Pedirlo') + '</button>';
+    } else {
+      h += '<div class="progreso"><div class="progreso-relleno" style="width:' +
+           Math.round(p * 100) + '%"></div></div>';
+      h += '<div class="fila"><span class="etq sutil">' +
+           T('Con {0} meses aquí, la probabilidad de que digan que sí es', e.empleo.mesesEnPuesto) +
+           '</span><span class="val">' + Math.round(p * 100) + '%</span></div>';
+      h += '<button class="btn-primario" id="pedir-planilla">' + Ico('portapapeles') + ' ' +
+           T('Pedirlo') + '</button>';
+    }
+    return h + '</div>';
+  }
+
+  // ----- apartado: turnos extra -----
+
+  function trabajoTurnos() {
+    var lista = listaMinijuegos(esDeTrabajo);
+    if (!lista) {
+      return '<div class="vacio">' +
+        T('Todavía no hay turnos extra para ti. Se abren al subir de nivel educativo.') + '</div>';
+    }
+    return '<p class="sutil">' +
+      T('Trabajos sueltos que se pagan aparte del sueldo. Cada uno cuesta una jornada de Extra.') +
+      '</p>' + lista;
   }
 
   // ----- apartado: mi empleo -----
@@ -620,6 +688,8 @@ var UI = (function () {
     ]);
     h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" id="renunciar">' +
          T('Renunciar') + '</button></div></div>';
+
+    h += tarjetaPlanilla(e, actual);
 
     if (!e.empleo.formal) {
       h += porQue('informal',
@@ -844,9 +914,9 @@ var UI = (function () {
     var e = Motor.get();
     var h = '<h2>' + T('Estudio') + '</h2>';
 
-    if (e.estudio) return h + estudioEnCurso(e);
+    if (e.estudio) return h + estudioEnCurso(e) + estudioPracticar();
     if (e.decisionEstudio === null) return h + estudioDecidir(e);
-    return h + estudioRutas(e);
+    return h + estudioRutas(e) + estudioPracticar();
   }
 
   /* La primera pantalla del juego: estudias, y qué, o no estudias.
@@ -946,9 +1016,49 @@ var UI = (function () {
         T('Cada jornada que le dedicas avanza un cuarto de mes de carrera. Cuatro al mes es el ritmo normal.') +
         '</p>';
     }
+
+    /* Y el botón que faltaba: adelantar la carrera desde aquí.
+     *
+     * Con horario libre la carrera avanza con las jornadas que le pongas, y
+     * hasta ahora eso solo se podía hacer volviendo a la pestaña del mes,
+     * tocando una casilla y buscando "Estudiar" entre las actividades. Desde
+     * la pantalla donde el jugador está mirando cuánto le falta, un toque.
+     *
+     * Con horario fijo no sale: el colegio ya tiene tomadas sus jornadas y
+     * ponerle más no adelanta nada. Dibujar un botón que no hace nada es peor
+     * que no dibujarlo. */
+    if (!e.estudio.jornada) {
+      var puestas = Motor.espaciosUsados('estudio');
+      var libres = Motor.espaciosLibres();
+      h += '<div class="fila"><span class="etq">' + Ico('birrete') + ' ' +
+           T('Jornadas de estudio este mes') + '</span><span class="val">' + puestas + '</span></div>';
+      h += '<div class="btn-fila" style="margin-top:8px">';
+      h += '<button class="btn-chico" data-poner="estudio"' + (libres ? '' : ' disabled') + '>' +
+           Ico('mas') + ' ' + T('Ponerle una jornada') + '</button>';
+      h += '<button class="btn-chico peligro" id="abandonar">' + T('Dejar de estudiar') + '</button>';
+      h += '</div></div>';
+      return h;
+    }
+
     h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico peligro" id="abandonar">' +
          T('Dejar de estudiar') + '</button></div></div>';
     return h;
+  }
+
+  /* Practicar: los dos minijuegos que ENSEÑAN.
+   *
+   * `presupuesto` y `estafas` no son trabajos, son ejercicios: repartir un
+   * sueldo entre lo que hay que pagar, y reconocer una estafa antes de caer.
+   * Estaban en el cajón de "Extra" junto a los turnos de reparto, y su sitio
+   * es este: pagan poco a propósito, porque lo que dan es la lección. */
+  function estudioPracticar() {
+    if (!Motor.desbloqueado('extra')) return '';
+    var lista = listaMinijuegos(esDeEstudio);
+    if (!lista) return '';
+    return '<h3>' + T('Practicar') + '</h3>' +
+      '<p class="sutil">' +
+      T('Ejercicios que pagan poco y enseñan mucho. Cada uno cuesta una jornada de Extra.') +
+      '</p>' + lista;
   }
 
   /* Dijo que no, o ya terminó algo: la lista de lo que puede estudiar. */
@@ -1880,19 +1990,32 @@ var UI = (function () {
 
   // =============== pestaña: extra ===============
 
-  function vistaExtra() {
+  /* La lista de trabajos extra, filtrada por para qué sirve cada uno.
+   *
+   * Los ocho minijuegos vivían todos juntos en una pestaña llamada "Extra",
+   * que era un cajón de sastre: mientras tanto, Trabajo y Estudio eran dos
+   * pantallas de solo mirar con un único botón, y ese botón destruía
+   * —renunciar, dejar de estudiar—. Las actividades estaban guardadas lejos de
+   * los sitios donde tenían sentido.
+   *
+   * Ahora los de trabajo salen en Trabajo y los que enseñan salen en Estudio.
+   * Es el mismo `data-jugar` de siempre y la misma jornada de Extra: lo que
+   * cambia es dónde se encuentran. */
+  function listaMinijuegos(filtro) {
     var e = Motor.get();
-    var h = '<h2>' + T('Trabajos extra') + '</h2>';
     var libres = Motor.espaciosUsados('minijuego');
+    var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas)
+      .filter(filtro || function () { return true; });
+    if (!lista.length) return '';
+
+    var h = '';
     if (libres === 0) {
       h += '<div class="aprendizaje">' +
-        T('Para jugar uno, primero pon una jornada en Extra en la pestaña del mes.') + '</div>';
+        T('Para hacer uno, primero pon una jornada en Extra en la pestaña del mes.') + '</div>';
     }
-
-    var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas);
-    for (var i = 0; i < lista.length; i++) {
-      var j = lista[i];
-      var etiqueta = j.tipo === 'generico' ? T('paga') : (j.tipo === 'basico' ? T('enseña') : T('de tu profesión'));
+    lista.forEach(function (j) {
+      var etiqueta = j.tipo === 'generico' ? T('paga')
+                   : (j.tipo === 'basico' ? T('enseña') : T('de tu profesión'));
       h += '<div class="opcion"><div class="titulo">' + Ico(j.icono) + ' ' + esc(D(j, 'nombre')) +
            '<span class="etiqueta">' + etiqueta + '</span></div>';
       h += '<p class="sutil" style="margin:6px 0">' + esc(D(j, 'descripcion')) + '</p>';
@@ -1901,10 +2024,31 @@ var UI = (function () {
         j.ensena ? pastilla('libro', esc(D(j, 'ensena'))) : ''
       ]);
       h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-jugar="' +
-           j.id + '"' + (libres > 0 ? '' : ' disabled') + '>' + Ico('mando') + ' ' + T('Jugar') + '</button></div></div>';
-    }
+           j.id + '"' + (libres > 0 ? '' : ' disabled') + '>' + Ico('mando') + ' ' +
+           T('Hacerlo') + '</button></div></div>';
+    });
+    return h;
+  }
 
-    var bloqueados = Minijuegos.todos().length - lista.length;
+  var esDeTrabajo = function (j) { return j.tipo !== 'basico'; };
+  var esDeEstudio = function (j) { return j.tipo === 'basico'; };
+
+  /* La pestaña Extra: los ocho juntos.
+   *
+   * Desde que los de trabajo salen en Trabajo y los que enseñan salen en
+   * Estudio, esta pantalla ya no es donde se encuentran: es donde se ven
+   * TODOS de un vistazo, incluidos los que todavía no están abiertos. Sirve
+   * para saber qué hay más adelante, que es distinto de servir para jugarlos.
+   */
+  function vistaExtra() {
+    var h = '<h2>' + T('Trabajos extra') + '</h2>';
+    h += '<p class="sutil">' +
+      T('Los de oficio salen también en Trabajo y los que enseñan en Estudio, al lado de lo que tienen que ver. Aquí están todos.') +
+      '</p>';
+    h += listaMinijuegos(null);
+
+    var bloqueados = Minijuegos.todos().length -
+      Minijuegos.disponibles(Motor.get().educacion, Motor.get().carrerasTerminadas).length;
     if (bloqueados > 0) {
       h += '<p class="sutil centrado">' +
         T('Hay {0} más que se abren al subir de nivel educativo.', bloqueados) + '</p>';
@@ -2879,7 +3023,7 @@ var UI = (function () {
         '[data-ver-perfil],[data-mejora],' +
         '[data-abrir-negocio],[data-subir-negocio],[data-contratar],[data-despedir],' +
         '[data-traspasar],' +
-        '#cerrar-turno,#adelantar,#renunciar,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
+        '#cerrar-turno,#adelantar,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
         '#pedir-tarjeta,#pedir-informal,#gastar-tarjeta,#pagar-tarjeta,#alternar-minimo,' +
         '#abrir-pension,#cambiar-pension,#retirar-pension,#migrar,#regresar,' +
         '#ver-glosario,#ver-reporte,#ver-reporte-final');
@@ -3254,6 +3398,20 @@ var UI = (function () {
 
       if (d.jugar) return jugarMinijuego(d.jugar);
       if (el.id === 'renunciar') { Motor.renunciar(); Motor.guardar(); return render(); }
+
+      if (el.id === 'pedir-planilla') {
+        var r = Motor.pedirPlanilla();
+        Motor.guardar();
+        render();
+        if (r.ok) {
+          Sonido.tono('logro');
+          return tarjetaEducativa('planilla', 'visto', T('Te pusieron en planilla'),
+            T('Desde este mes cotizas al IGSS y te toca Bono 14 y aguinaldo: dos sueldos más al año. En la mano vas a recibir un poco menos cada mes.'),
+            T('Es la misma cuenta que haces tú cuando contratas a alguien en tus negocios, vista desde el otro lado. Al patrón el formal le cuesta 1.42 veces el sueldo; al trabajador le da dos sueldos más al año y un historial que el banco puede mirar.'));
+        }
+        Sonido.tono('error');
+        return aviso(T('Te dijeron que no'), K('planilla_negado', 'no', r.razon));
+      }
       if (el.id === 'ver-glosario') return mostrarGlosario();
       if (el.id === 'ver-reporte') return mostrarReporte();
       if (el.id === 'ver-reporte-final') return mostrarReporteFinal(function () { render(); });

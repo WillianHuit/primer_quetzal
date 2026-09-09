@@ -345,7 +345,8 @@ ok(dibujadas === 7, `las siete pestañas se dibujan al tocarlas (${dibujadas})`)
 // ---------- el trabajo quedó partido en apartados ----------
 clic(w, w.document.querySelector('[data-pestana="trabajo"]'));
 const subs = w.document.querySelectorAll('.sub-pestanas [data-sub]');
-ok(subs.length === 2, `trabajo tiene dos apartados hasta que se abra migrar (hay ${subs.length})`);
+ok(subs.length === 3,
+   `trabajo tiene mi empleo, turnos extra y ofertas hasta que se abra migrar (hay ${subs.length})`);
 ok(w.document.querySelector('.sub.activa[data-sub="empleo"]'),
    'con empleo, el apartado que abre es Mi empleo');
 ok(w.document.querySelectorAll('[data-tomar]').length === 0,
@@ -437,6 +438,81 @@ ok(!!w.document.querySelector('.escena') && !w.document.querySelector('.escena.v
    'el imperio dibuja la misma calle, pero sin zonas que se toquen');
 
 clic(w, w.document.querySelector('[data-pestana="casa"]'));
+
+// ---------- trabajo y estudio tienen cosas que hacer ----------
+
+/* Las dos eran pantallas de solo mirar, con un unico boton que ademas
+ * destruia: renunciar y dejar de estudiar. Las actividades estaban guardadas
+ * en un cajon aparte llamado "Extra", lejos de donde tenian sentido. */
+clic(w, w.document.querySelector('[data-pestana="trabajo"]'));
+clic(w, w.document.querySelector('[data-sub="turnos"]'));
+ok(w.document.querySelectorAll('[data-jugar]').length > 0,
+   'trabajo tiene turnos extra que se pueden hacer ahí mismo');
+ok(!w.document.querySelector('[data-jugar="presupuesto"]') &&
+   !w.document.querySelector('[data-jugar="estafas"]'),
+   'y los que enseñan no están aquí: esos son de estudio');
+
+clic(w, w.document.querySelector('[data-sub="empleo"]'));
+
+/* Un trabajito de niño NO ofrece contrato, y eso hay que fijarlo: vender
+ * dulces en el bus no lo contrata nadie, así que una tarjeta para pedir
+ * planilla ahí sería mentirle al jugador sobre cómo funciona eso. */
+const oficioNino = w.Motor.trabajoActual();
+if (oficioNino && oficioNino.soloInformal) {
+  ok(!w.document.querySelector('#pedir-planilla') &&
+     w.document.querySelector('main').textContent.indexOf('Pedir que te pongan') < 0,
+     'un trabajito por tu cuenta no ofrece pedir planilla: no hay a quién pedírselo');
+}
+
+/* Y con un empleo de verdad, informal y con meses encima, sí.
+ * Se guarda el empleo anterior y se devuelve al final: lo que sigue en esta
+ * suite cuenta con el que traía, y un trabajo distinto le cambia hasta lo que
+ * el banco le cobra de manejo. */
+const empleoPrevio = JSON.parse(JSON.stringify(w.Motor.get().empleo));
+w.Motor.tomarTrabajo('repartidor', false);
+w.Motor.get().empleo.mesesEnPuesto = 14;
+w.Motor.guardar();
+clic(w, w.document.querySelector('[data-pestana="casa"]'));
+clic(w, w.document.querySelector('[data-pestana="trabajo"]'));
+const empleoTxt = w.document.querySelector('main').textContent;
+ok(empleoTxt.indexOf('Pedir que te pongan en planilla') >= 0,
+   'con un empleo informal de verdad, se puede pedir que te pongan en planilla');
+/* La probabilidad va escrita ANTES de tocar el botón. Sin eso, pedirlo es una
+ * tragamonedas; con eso, es una decisión. */
+ok(/\d+%/.test(empleoTxt),
+   'y la pantalla dice qué probabilidad hay de que digan que sí');
+/* Los dos lados de la cuenta, los dos en pantalla: lo que pierdes cada mes y
+ * lo que ganas al año. Es la lección entera de la informalidad. */
+ok(empleoTxt.indexOf('pierdes') >= 0 && empleoTxt.indexOf('ganas') >= 0,
+   'con lo que pierdes al mes y lo que ganas al año, los dos lados');
+
+clic(w, w.document.querySelector('#pedir-planilla'));
+cerrarModales(w);
+const emp = w.Motor.get().empleo;
+ok(emp.pidioPlanilla !== null && emp.pidioPlanilla !== undefined,
+   'pedirlo queda anotado, para que no se pueda insistir cada mes');
+clic(w, w.document.querySelector('[data-pestana="casa"]'));
+clic(w, w.document.querySelector('[data-pestana="trabajo"]'));
+ok(!w.document.querySelector('#pedir-planilla'),
+   'y no se puede volver a pedir de inmediato, digan que sí o que no');
+
+w.Motor.get().empleo = empleoPrevio;   // devuelto como estaba
+w.Motor.guardar();
+
+clic(w, w.document.querySelector('[data-pestana="estudio"]'));
+const estudioTxt = w.document.querySelector('main').textContent;
+const zEst = w.Motor.get();
+if (zEst.estudio || zEst.decisionEstudio !== null) {
+  ok(w.document.querySelectorAll('[data-jugar]').length > 0 ||
+     !w.Motor.desbloqueado('extra'),
+     'estudio ofrece ejercicios que enseñan, no solo una barra de avance');
+  ok(!w.document.querySelector('[data-jugar="reparto"]'),
+     'y los turnos de reparto no están aquí: esos son de trabajo');
+}
+if (zEst.estudio && !zEst.estudio.jornada) {
+  ok(!!w.document.querySelector('[data-poner="estudio"]'),
+     'y con horario libre se le puede poner una jornada desde aquí mismo');
+}
 
 // ---------- el mercado laboral vive en noticias ----------
 clic(w, w.document.querySelector('[data-pestana="noticias"]'));

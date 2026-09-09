@@ -392,8 +392,6 @@
   ui['Reparte al menos una jornada antes de cerrar.'] = 'Assign at least one half-day before closing.';
   ui['Todavía no tienes trabajo. Búscalo en la pestaña Trabajo.'] =
     'You have no job yet. Look for one under Work.';
-  ui['Para jugar uno, primero pon una jornada en Extra en la pestaña del mes.'] =
-    'To play one, first put a half-day into Side gigs on the month tab.';
 
   // ---------- la decision de estudiar ----------
   ui['Saliste de primaria. ¿Y ahora?'] = 'You finished primary school. Now what?';
@@ -656,6 +654,18 @@
 
   /* Los motivos por los que algo no se puede todavia. Los comparten las
    * mejoras y los negocios, porque en pantalla se leen igual. */
+  /* Por que todavia no puedes pedir la planilla. Las claves son el `motivo`
+   * que devuelve Motor.faltaParaPlanilla(). */
+  X.planilla_falta = {
+    nuevo: 'You have not been here long enough. Nobody puts a brand new hire on the payroll.',
+    espera: 'You asked not long ago. Let a few months pass before asking again.',
+    yaEsta: 'You are already on the payroll.',
+    soloInformal: 'Nobody hires you for this: you do it on your own. A contract needs a real job.'
+  };
+  X.planilla_negado = {
+    no: 'They said no. It happens, and that is why two out of three people in this country work without a contract.'
+  };
+
   X.mejora_falta = {
     dinero: 'Not enough money yet.',
     edad: 'Not until you are older.',
@@ -702,6 +712,40 @@
   ui['Tus negocios'] = 'Your businesses';
   ui['Mejoras para ti'] = 'Upgrades for you';
   ui['Abrir un negocio'] = 'Open a business';
+
+  /* Las actividades de Trabajo y Estudio: los turnos extra, la practica y la
+   * peticion de planilla, que es la leccion del juego vista desde el lado del
+   * trabajador. */
+  ui['Turnos'] = 'Shifts';
+  ui['Los de oficio salen también en Trabajo y los que enseñan en Estudio, al lado de lo que tienen que ver. Aquí están todos.'] =
+    'The trade ones also show up under Work and the teaching ones under Study, next to what they relate to. Here are all of them.';
+  ui['Hacerlo'] = 'Do it';
+  ui['Practicar'] = 'Practice';
+  ui['Para hacer uno, primero pon una jornada en Extra en la pestaña del mes.'] =
+    'To do one, first put a half-day into Extra on the month screen.';
+  ui['Trabajos sueltos que se pagan aparte del sueldo. Cada uno cuesta una jornada de Extra.'] =
+    'Odd jobs paid on top of your wage. Each one costs a half-day of Extra.';
+  ui['Ejercicios que pagan poco y enseñan mucho. Cada uno cuesta una jornada de Extra.'] =
+    'Exercises that pay little and teach a lot. Each one costs a half-day of Extra.';
+  ui['Todavía no hay turnos extra para ti. Se abren al subir de nivel educativo.'] =
+    'No extra shifts for you yet. They open up as your education level rises.';
+  ui['Jornadas de estudio este mes'] = 'Study half-days this month';
+  ui['Ponerle una jornada'] = 'Put a half-day in';
+  ui['Pedir que te pongan en planilla'] = 'Ask to be put on the payroll';
+  ui['Pedirlo'] = 'Ask for it';
+  ui['pierdes {0} al mes'] = 'you lose {0} a month';
+  ui['ganas {0} al año'] = 'you gain {0} a year';
+  ui['y empiezas historial'] = 'and you start a credit history';
+  ui['Bono 14 y aguinaldo son dos sueldos más al año. En la mano recibes menos cada mes; en el año recibes bastante más, y el banco por fin puede comprobar lo que ganas.'] =
+    'Bono 14 and aguinaldo are two extra months of pay a year. In hand you get less each month; over the year you get considerably more, and the bank can finally verify what you earn.';
+  ui['Con {0} meses aquí, la probabilidad de que digan que sí es'] =
+    'With {0} months here, the chance they say yes is';
+  ui['Te pusieron en planilla'] = 'They put you on the payroll';
+  ui['Desde este mes cotizas al IGSS y te toca Bono 14 y aguinaldo: dos sueldos más al año. En la mano vas a recibir un poco menos cada mes.'] =
+    'From this month you pay into social security and you get Bono 14 and aguinaldo: two extra months of pay a year. In hand you will receive a little less each month.';
+  ui['Es la misma cuenta que haces tú cuando contratas a alguien en tus negocios, vista desde el otro lado. Al patrón el formal le cuesta 1.42 veces el sueldo; al trabajador le da dos sueldos más al año y un historial que el banco puede mirar.'] =
+    'It is the same sum you do when you hire someone in your businesses, seen from the other side. To the boss, a formal worker costs 1.42 times the wage; to the worker it gives two extra months of pay a year and a history the bank can look at.';
+  ui['Te dijeron que no'] = 'They said no';
   ui['Administrar este negocio'] = 'Manage this business';
   ui['Por ahora no hay nada que puedas abrir.'] = 'There is nothing you can open right now.';
 
