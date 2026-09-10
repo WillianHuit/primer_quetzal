@@ -986,6 +986,59 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
   50%      { stroke: var(--verde); fill: rgba(31, 122, 90, .10); }
 }
 
+/* -------------------------------------------------------------------------
+   Un color por actividad
+   -------------------------------------------------------------------------
+   Ocho casillas con el mismo fondo y un icono chico se leen una por una. Con
+   color, el reparto del mes se ve de un golpe: cuanto verde de trabajo, cuanto
+   ambar de tarea, cuanto azul de descanso. Es la misma informacion y se tarda
+   un segundo en vez de ocho.
+
+   Los mismos colores van en los botones de asignar, y eso es la mitad del
+   truco: el boton que se toca y la casilla que se pinta son del mismo color,
+   asi que no hay que aprender ninguna leyenda. */
+.jornada.j-trabajo.lleno  { background: #e2f0e9; border-color: var(--verde-borde); }
+.jornada.j-trabajo.lleno  .ic-caja { color: var(--verde); }
+.jornada.j-tarea.lleno    { background: #fbf0d8; border-color: color-mix(in srgb, var(--ambar) 55%, var(--linea)); }
+.jornada.j-tarea.lleno    .ic-caja { color: var(--ambar-hondo); }
+.jornada.j-estudio.lleno  { background: #ece7f7; border-color: #c3b6e4; }
+.jornada.j-estudio.lleno  .ic-caja { color: #6b4fa8; }
+.jornada.j-extra.lleno    { background: #fde8de; border-color: #f0bfa4; }
+.jornada.j-extra.lleno    .ic-caja { color: #b5541f; }
+.jornada.j-descanso.lleno { background: #e0edf7; border-color: #b3d1e8; }
+.jornada.j-descanso.lleno .ic-caja { color: #2b6a99; }
+.jornada.j-negocio.lleno  { background: #fbecef; border-color: #eebfc8; }
+.jornada.j-negocio.lleno  .ic-caja { color: #a33a54; }
+
+/* Y el boton de cada actividad lleva su color en una barra a la izquierda: no
+   pinta el boton entero, que competiria con el de cerrar el mes. */
+.btn-chico.j-trabajo  { box-shadow: inset 3px 0 0 var(--verde); }
+.btn-chico.j-tarea    { box-shadow: inset 3px 0 0 var(--ambar); }
+.btn-chico.j-estudio  { box-shadow: inset 3px 0 0 #6b4fa8; }
+.btn-chico.j-extra    { box-shadow: inset 3px 0 0 #b5541f; }
+.btn-chico.j-descanso { box-shadow: inset 3px 0 0 #2b6a99; }
+.btn-chico.j-negocio  { box-shadow: inset 3px 0 0 #a33a54; }
+
+/* Lo que cuesta de energia, dentro del boton. En rojo lo que quita y en verde
+   lo que devuelve: es el unico sitio donde el jugador ve el precio ANTES. */
+.cuesta {
+  margin-left: auto; font-size: 11.5px; font-weight: 800;
+  padding: 1px 6px; border-radius: 99px;
+  background: #fdf0ec; color: var(--rojo);
+  border: 1px solid color-mix(in srgb, var(--rojo) 26%, var(--linea));
+  font-variant-numeric: tabular-nums;
+}
+.cuesta.gana {
+  background: var(--verde-claro); color: var(--verde);
+  border-color: var(--verde-borde);
+}
+.acciones-jornada .btn-chico { justify-content: flex-start; gap: 7px; }
+
+/* La barra de energia proyectada cuando va mal */
+.progreso-relleno.bajo {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--rojo) 72%, #fff), var(--rojo));
+}
+
 /* La franja de debajo de la calle: lo unico que el juego te esta pidiendo */
 .calle-barra {
   display: flex; align-items: center; gap: 8px;

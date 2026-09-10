@@ -71,10 +71,11 @@ var Motor = (function () {
        * { tecnologia: { hechas, puntos, tope }, ... } y de ahi salen las
        * recomendaciones al elegir carrera. Ver aptitudes(). */
       notas: {},
-      // Las tareas que el colegio dejo este turno, elegidas al azar,
-      // y cuales de ellas ya estan hechas
+      /* Las tareas que el colegio dejo, cuales estan hechas, y si el sorteo
+       * de este turno ya se hizo. Las que quedan sin hacer se acumulan. */
       tareasDelMes: [],
       tareasHechas: [],
+      tareasSorteadas: false,
       // null = todavia no ha decidido si estudia. Es la primera decision del
       // juego, y vuelve a estar en null cada vez que se gradua de algo.
       decisionEstudio: null,
@@ -150,6 +151,47 @@ var Motor = (function () {
   function indiceDe(semana, jornada) {
     return semana * CONFIG.jornadasPorSemana + (jornada === 'pm' ? 1 : 0);
   }
+  function semanaDe(i) { return Math.floor(i / CONFIG.jornadasPorSemana); }
+  function semanasDelMes() { return CONFIG.jornadasPorMes / CONFIG.jornadasPorSemana; }
+
+  /* -------------------------------------------------------------------------
+   * El mes se abre por semanas
+   * -------------------------------------------------------------------------
+   * Ocho casillas vacias el primer dia no son libertad, son un formulario. Y
+   * es la primera pantalla del juego: a un chico de trece que acaba de entrar
+   * hay que darle UNA decision, no ocho.
+   *
+   * Asi que se abre una semana por mes. La primera semana desde el principio,
+   * y para quien estudia eso son exactamente dos casillas —la manana la tiene
+   * tomada el colegio y la tarde es suya—, o sea UNA decision. Al cuarto mes,
+   * que es justo cuando se abre el trabajo, el mes ya esta entero y la
+   * decision es de verdad.
+   *
+   * Las semanas que todavia no se abrieron NO se dibujan. Dibujarlas con un
+   * candado seria ensenar cuatro veces lo mismo. */
+  function semanasAbiertas() {
+    var total = semanasDelMes();
+    if (!estado) return total;
+    /* Pasado el primer anio, el mes esta entero y no se vuelve a hablar de
+     * esto. La apertura por semanas es la pantalla de aprender a jugar, no una
+     * regla del juego: a los catorce el jugador ya reparte los ocho espacios y
+     * la decision es de verdad. Se mide por EDAD y no solo por meses jugados
+     * para que una partida que empiece de adulto —o una prueba de balanceo—
+     * tenga el mes completo desde el primer turno. */
+    if ((estado.edad || 0) > CONFIG.inicio.edad) return total;
+    var desde = CONFIG.semanasAlEmpezar === undefined ? 1 : CONFIG.semanasAlEmpezar;
+    return Math.max(1, Math.min(total, desde + (estado.mesesJugados || 0)));
+  }
+  function espacioAbierto(i) { return semanaDe(i) < semanasAbiertas(); }
+
+  // Cuantas casillas puede repartir de verdad: abiertas y no tomadas por el colegio
+  function espaciosDisponibles() {
+    var n = 0;
+    for (var i = 0; i < CONFIG.jornadasPorMes; i++) {
+      if (espacioAbierto(i) && !espacioBloqueado(i)) n++;
+    }
+    return n;
+  }
 
   /* Una casilla bloqueada es una que el colegio ya tomo.
    *
@@ -166,7 +208,8 @@ var Motor = (function () {
    * solas en el turno siguiente. */
   function aplicarHorarioEstudio() {
     if (!estado || !estado.estudio || !estado.estudio.jornada) return;
-    for (var sem = 0; sem < CONFIG.jornadasPorMes / CONFIG.jornadasPorSemana; sem++) {
+    // Solo en las semanas que ya existen: el colegio no ocupa lo que no se ve
+    for (var sem = 0; sem < semanasAbiertas(); sem++) {
       estado.espacios[indiceDe(sem, estado.estudio.jornada)] = 'estudio';
     }
   }
@@ -367,16 +410,48 @@ var Motor = (function () {
   /* La suma de todo lo que dan las mejoras compradas. */
   function efectosDeMejoras() {
     var t = { bonoJornada: 0, avanceEstudio: 0,
-              costoMensual: 0, energiaExtra: 0 };
+              costoMensual: 0, energiaExtra: 0, ahorroEnergiaTarea: 0 };
     if (!estado || !estado.mejoras) return t;
-    for (var i = 0; i < MEJORAS.length; i++) {
-      var m = MEJORAS[i];
-      if (!estado.mejoras[m.id]) continue;
-      for (var k in m.efecto) {
-        if (t[k] !== undefined) t[k] = redondear(t[k] + m.efecto[k]);
+    // Las dos tiendas suman en el mismo sitio: las de quetzales y las de saber
+    var listas = [MEJORAS];
+    if (typeof MEJORAS_SABER !== 'undefined') listas.push(MEJORAS_SABER);
+    for (var l = 0; l < listas.length; l++) {
+      for (var i = 0; i < listas[l].length; i++) {
+        var m = listas[l][i];
+        if (!estado.mejoras[m.id]) continue;
+        for (var k in m.efecto) {
+          if (t[k] !== undefined) t[k] = redondear(t[k] + m.efecto[k]);
+        }
       }
     }
     return t;
+  }
+
+  /* -------------------------------------------------------------------------
+   * Comprar con experiencia
+   * -------------------------------------------------------------------------
+   * La experiencia dejo de ser solo un contador. Se gana haciendo tareas y se
+   * puede gastar aqui, y por eso cada compra es una decision de verdad: los 40
+   * puntos que te lleva el metodo de estudio son 40 que no tienes para la
+   * carrera que te los va a pedir. */
+  function mejoraDeSaber(id) {
+    if (typeof MEJORAS_SABER === 'undefined') return null;
+    return buscarPorId(MEJORAS_SABER, id);
+  }
+
+  function comprarSaber(id) {
+    var m = mejoraDeSaber(id);
+    if (!m) return { ok: false, razon: 'Esa mejora no existe.' };
+    if (estado.mejoras[id]) return { ok: false, razon: 'Ya la tienes.' };
+    if (experiencia() < m.costoExperiencia) {
+      return { ok: false, motivo: 'experiencia',
+               razon: 'Te faltan ' + (m.costoExperiencia - experiencia()) +
+                      ' de experiencia. Se gana haciendo tareas.' };
+    }
+    estado.experiencia -= m.costoExperiencia;
+    estado.mejoras[id] = true;
+    guardar();
+    return { ok: true, mejora: m };
   }
 
   /* Lo que gana por jornada trabajada, por encima del sueldo: las mejoras de
@@ -886,7 +961,94 @@ var Motor = (function () {
     }
     return n;
   }
-  function espaciosLibres() { return espaciosUsados(''); }
+  /* Libres son las que puede usar Y estan vacias. Las semanas cerradas estan
+   * vacias tambien y no cuentan: no son un hueco, todavia no existen. */
+  function espaciosLibres() {
+    var n = 0;
+    for (var i = 0; i < estado.espacios.length; i++) {
+      if (!estado.espacios[i] && espacioAbierto(i) && !espacioBloqueado(i)) n++;
+    }
+    return n;
+  }
+
+  /* -------------------------------------------------------------------------
+   * La energia, que ahora si se siente
+   * -------------------------------------------------------------------------
+   * Lo que cuesta una jornada, con las mejoras ya aplicadas. Se pide desde la
+   * interfaz para escribirlo en el boton: una jornada que te quita un tercio
+   * del cuerpo tiene que decirlo ANTES de que la pongas, no despues.
+   */
+  function energiaDeEspacio(tipo) {
+    var base = CONFIG.energia.porEspacio[tipo];
+    if (base === undefined) return 0;
+    var mej = efectosDeMejoras();
+    if (tipo === 'descanso') return base + mej.energiaExtra;
+    if (tipo === 'tarea' || tipo === 'tarea-usada') {
+      // El metodo de estudio la abarata; gratis no se pone nunca
+      return Math.min(-6, base + (mej.ahorroEnergiaTarea || 0));
+    }
+    return base;
+  }
+
+  /* Con cuanta energia te va a dejar el reparto que tienes puesto.
+   *
+   * Se simula mes a mes porque un turno puede ser un trimestre y el mismo
+   * reparto se repite en los tres, y porque el techo se aplica cada mes: dos
+   * meses de descanso no guardan energia para el tercero. El suelo NO se
+   * aplica aqui a proposito: que salga negativo es justo lo que hay que poder
+   * ver para prohibirlo. */
+  function balanceDeEnergia() {
+    var suma = 0;
+    for (var i = 0; i < estado.espacios.length; i++) {
+      suma += energiaDeEspacio(tipoDeEspacio(estado.espacios[i]));
+    }
+    return suma;
+  }
+
+  function energiaProyectada() {
+    if (!estado) return 0;
+    var suma = balanceDeEnergia();
+    var e = estado.energia;
+    var meses = mesesDelTurno();
+    for (var k = 0; k < meses; k++) e = Math.min(CONFIG.energia.maxima, e + suma);
+    return Math.round(e);
+  }
+
+  /* Con cuanta te deja UN mes de este reparto.
+   *
+   * Es la que decide si una jornada se puede poner o no, y va por mes y no por
+   * turno a proposito. Un trimestre de ocho jornadas de trabajo suma -144 y
+   * dejaria el reparto de trabajar a tiempo completo prohibido para siempre,
+   * cuando lo que es de verdad es insostenible: se puede un mes, se puede dos,
+   * y al tercero hay que descansar. La pantalla avisa del trimestre entero
+   * —"asi no llegas"— y el jugador decide si aguanta. Prohibir es para lo que
+   * no se puede hacer ni una vez. */
+  function energiaProyectadaMes() {
+    if (!estado) return 0;
+    return Math.round(estado.energia + balanceDeEnergia());
+  }
+
+  /* Si esa casilla puede recibir esa actividad, y si no, por que.
+   *
+   * La interfaz pregunta ANTES de asignar para poder decir el motivo. Y
+   * `asignarEspacio` vuelve a comprobarlo, porque una regla que solo vive en
+   * la interfaz no es una regla. */
+  function puedeAsignar(i, tipo) {
+    if (!estado) return { ok: false, motivo: 'sinpartida' };
+    if (!espacioAbierto(i)) return { ok: false, motivo: 'cerrado' };
+    if (espacioBloqueado(i)) return { ok: false, motivo: 'colegio' };
+    if (tipo === 'estudio' && estado.estudio && estado.estudio.jornada) {
+      return { ok: false, motivo: 'jornadafija' };
+    }
+    if (!tipo) return { ok: true };
+    // Y lo nuevo: un mes no puede dejarte por debajo de cero
+    var antes = estado.espacios[i];
+    estado.espacios[i] = tipo;
+    var queda = energiaProyectadaMes();
+    estado.espacios[i] = antes;
+    if (queda < 0) return { ok: false, motivo: 'energia', energia: queda };
+    return { ok: true };
+  }
 
   function costoMensualEstudio() {
     if (!estado.estudio) return 0;
@@ -937,11 +1099,10 @@ var Motor = (function () {
    * diversificado la jornada que eligio esta ocupada. Lo que queda libre es la
    * otra jornada, y ahi si decide el jugador. */
   function asignarEspacio(i, tipo) {
-    if (espacioBloqueado(i)) return false;
-    /* Y tampoco se le pueden meter jornadas extra a un colegio de jornada:
-     * basicos y diversificado duran los anios que duran, no se aceleran
-     * estudiando por la tarde. La universidad si: ahi no hay jornada. */
-    if (tipo === 'estudio' && estado.estudio && estado.estudio.jornada) return false;
+    /* Todas las reglas viven en `puedeAsignar`, incluidas las de la semana que
+     * todavia no se abre y la de no quedarse sin energia. Vaciar una casilla
+     * (tipo '') no las pide: soltar algo nunca esta prohibido. */
+    if (!puedeAsignar(i, tipo).ok) return false;
     estado.espacios[i] = tipo;
     return true;
   }
@@ -950,8 +1111,22 @@ var Motor = (function () {
     /* Turno nuevo, tareas nuevas. Se vacia aqui y no se rellena: la lista se
      * vuelve a sortear la primera vez que alguien la pide, y asi una partida
      * que se cierra y se abre no gasta un sorteo de mas. */
-    estado.tareasDelMes = [];
+    /* Las tareas que NO hiciste se quedan debiendo.
+     *
+     * Antes se borraban con el mes y el jugador veia "Tareas pendientes: 1"
+     * los treinta y seis meses de básicos, pasara lo que pasara: ignorarlas
+     * salia gratis y el numero no significaba nada. Ahora se acumulan, y ese
+     * numero subiendo es la penalizacion —la unica que un chico de trece
+     * puede sentir— porque cada tarea atrasada es una jornada que le va a
+     * hacer falta el mes que viene. */
+    var hechas = estado.tareasHechas || [];
+    estado.tareasDelMes = (estado.tareasDelMes || []).filter(function (id) {
+      return hechas.indexOf(id) < 0;
+    });
     estado.tareasHechas = [];
+    estado.tareasSorteadas = false;
+    // Y el colegio deja las del turno nuevo aqui mismo, no cuando alguien mire
+    sortearTareas();
     aplicarHorarioEstudio();
   }
 
@@ -1113,26 +1288,45 @@ var Motor = (function () {
     return Math.max(1, porMes * mesesDelTurno());
   }
 
-  function tareasDelMes() {
+  /* El sorteo del turno: a lo que debia se le suman las nuevas, con un tope.
+   *
+   * El tope no perdona nada —lo debido sigue debido— pero evita que quien las
+   * ignoro dos anios se encuentre con un muro de veinte.
+   *
+   * Se llama al CERRAR el turno y no cuando alguien mira la pantalla. La
+   * primera version lo hacia perezoso y tenia un agujero silencioso: quien
+   * cerraba meses sin abrir la pestana de Estudio no acumulaba nada, porque el
+   * sorteo del mes anterior no habia llegado a existir. Una regla del juego no
+   * puede depender de que el jugador haya mirado. */
+  function sortearTareas() {
     if (!estado) return [];
     if (!estado.estudio) { estado.tareasDelMes = []; return []; }
     var pool = poolDeTareas();
     if (!pool.length) { estado.tareasDelMes = []; return []; }
-    var cuantas = Math.min(cuantasTareasDeja(), pool.length);
-    var guardadas = (estado.tareasDelMes || []).filter(function (id) {
+
+    // Lo que quedo debiendo de antes, sin las que ya no se pueden hacer
+    var debidas = (estado.tareasDelMes || []).filter(function (id) {
       return pool.indexOf(id) >= 0;
     });
-    if (guardadas.length === cuantas) return guardadas.slice();
-
-    // Sorteo sin repetir: se baraja una copia del pool y se cortan las primeras
-    var bolsa = pool.slice();
-    var elegidas = [];
+    var tope = (CONFIG.experiencia && CONFIG.experiencia.tareasMaximas) || 4;
+    var cuantas = Math.min(pool.length, tope, debidas.length + cuantasTareasDeja());
+    var bolsa = pool.filter(function (id) { return debidas.indexOf(id) < 0; });
+    var elegidas = debidas.slice();
     while (elegidas.length < cuantas && bolsa.length) {
       elegidas.push(bolsa.splice(azarEntero(0, bolsa.length - 1), 1)[0]);
     }
     estado.tareasDelMes = elegidas;
-    guardar();
+    estado.tareasSorteadas = true;
     return elegidas.slice();
+  }
+
+  function tareasDelMes() {
+    if (!estado) return [];
+    if (!estado.estudio) { estado.tareasDelMes = []; return []; }
+    // El sorteo perezoso queda como respaldo: una partida recien inscrita
+    // todavia no ha cerrado ningun turno
+    if (!estado.tareasSorteadas) { sortearTareas(); guardar(); }
+    return (estado.tareasDelMes || []).slice();
   }
 
   /* Las del turno que todavia no ha hecho. Es lo que se le ofrece al cerrar
@@ -1227,7 +1421,12 @@ var Motor = (function () {
     estado.estudio = { carreraId: carreraId, tituloId: tit ? tit.id : null,
                        mesesAvanzados: 0, privada: !!privada, jornada: j };
     estado.decisionEstudio = 'si';
-    estado.tareasDelMes = [];      // otra carrera, otras tareas
+    /* Otra carrera, otras tareas: se tiran de una y no cuando alguien mire.
+     * El primer mes del juego tiene que llegar con su tarea puesta, o al
+     * cerrarlo no habria nada que quedara debiendo. */
+    estado.tareasDelMes = [];
+    estado.tareasSorteadas = false;
+    sortearTareas();
     aplicarHorarioEstudio();
     return { ok: true };
   }
@@ -1639,11 +1838,8 @@ var Motor = (function () {
       // 'negocio:dulces' gasta lo mismo que 'trabajo': atender tu propio
       // negocio cansa igual que atender el de otro
       var tipo = tipoDeEspacio(estado.espacios[i]);
-      if (tipo && CONFIG.energia.porEspacio[tipo] !== undefined) {
-        estado.energia += CONFIG.energia.porEspacio[tipo];
-        // Una cama de verdad hace que el descanso rinda más
-        if (tipo === 'descanso') estado.energia += mej.energiaExtra;
-      }
+      // Una sola cuenta para el mes y para lo que la pantalla anuncia
+      estado.energia += energiaDeEspacio(tipo);
     }
     estado.energia = limitar(estado.energia, 0, CONFIG.energia.maxima);
 
@@ -2417,6 +2613,7 @@ var Motor = (function () {
       if (!estado.notas) estado.notas = {};
       if (!estado.tareasDelMes) estado.tareasDelMes = [];
       if (!estado.tareasHechas) estado.tareasHechas = [];
+      if (estado.tareasSorteadas === undefined) estado.tareasSorteadas = false;
       // Una partida guardada antes de que la ruta existiera no puede perder
       // de golpe la mitad del juego: se le abre todo lo que ya se ganó.
       revisarProgreso();
@@ -2493,6 +2690,11 @@ var Motor = (function () {
     tareasSinHacer: tareasSinHacer, marcarTareaHecha: marcarTareaHecha,
     tareasPosibles: tareasPosibles,
     asignarEspacio: asignarEspacio, limpiarEspacios: limpiarEspacios,
+    puedeAsignar: puedeAsignar, semanasAbiertas: semanasAbiertas,
+    espacioAbierto: espacioAbierto, espaciosDisponibles: espaciosDisponibles,
+    energiaDeEspacio: energiaDeEspacio, energiaProyectada: energiaProyectada,
+    energiaProyectadaMes: energiaProyectadaMes,
+    comprarSaber: comprarSaber, mejoraDeSaber: mejoraDeSaber,
     espacioBloqueado: espacioBloqueado, semanaDe: semanaDe, jornadaDe: jornadaDe,
     indiceDe: indiceDe, esMenor: esMenor, aperturaMinima: aperturaMinima,
     decidirEstudio: decidirEstudio,

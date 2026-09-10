@@ -79,6 +79,9 @@ informal). De ahí en adelante:
   y pone una flecha sobre lo que hay que tocar. Avanza según lo que ya hiciste, no con un
   botón de siguiente. Se sale de él en un toque, con un enlace chiquito que no compite con
   el paso.
+- **Energía que se acaba**: una tarea cuesta seis veces lo que cuesta trabajar, y un mes no
+  puede dejarte por debajo de cero. Lo que no cabe sale apagado con su costo al lado.
+- **El mes se abre por semanas**: el primero es una sola casilla y al cuarto está entero.
 - **Turnos de ocho jornadas**: cuatro semanas de mañana y tarde. Los colegios de Guatemala
   son de jornada, así que el chico que estudia por la mañana puede trabajar por la tarde, y
   esa es la decisión central del juego. En básicos el colegio te toma una jornada de cada

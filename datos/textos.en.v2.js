@@ -338,6 +338,11 @@
   /* Las siete ramas del diversificado y los diecinueve titulos que el jugador
    * ve dentro de ellas. La rama es la carpeta; el titulo es lo que elige y lo
    * que despues lleva puesto. */
+  // La mejora que se paga con experiencia
+  datos.metodo = { nombre: 'A way of studying',
+    descripcion: 'You learn to study without it costing you your whole day.',
+    leccion: 'More hours is not better studying. What changes your output is method: where you sit, how long at a stretch and in what order. It is the cheapest thing you can improve and almost nobody tries.' };
+
   datos.tecnologia = { nombre: 'Technology and computing',
     descripcion: 'Computing, systems and repair. What the country cannot find.' };
   datos.tit_compu = { nombre: 'High School Diploma with a Major in Computing',
@@ -804,6 +809,42 @@
   /* Las tareas del turno salen sorteadas, y hay que decirlo: sin eso, ver tres
    * de las once que existen parece un fallo, no la regla. */
   ui['Tus tareas de este {0}'] = 'Your homework for this {0}';
+
+  /* La energia, que ahora se siente, y la tienda que se paga con saber. */
+  ui['Cómo vas a quedar'] = 'How you will end up';
+  ui['Así no llegas. Ponle una jornada a descansar o el mes te va a dejar en cero.'] =
+    'You will not make it. Put a half-day into rest or the month will leave you at zero.';
+  ui['Vas a quedar muy cansado, y cansado las tareas rinden la mitad.'] =
+    'You will end up worn out, and worn out homework is worth half.';
+  ui['No te da el cuerpo'] = 'Your body will not take it';
+  ui['No te queda cuerpo para más. Descansar es lo único que cabe: recuperas {0}.'] =
+    'You have nothing left. Resting is the only thing that fits: you get {0} back.';
+  ui['Con esa jornada el mes te dejaría por debajo de cero. Ponle una a descansar primero: recuperas {0}.'] =
+    'With that half-day the month would leave you below zero. Put one into rest first: you get {0} back.';
+  ui['El colegio no se acelera'] = 'School does not speed up';
+  ui['Básicos y el diversificado duran los años que duran. Ponerle más jornadas no los adelanta.'] =
+    'Middle school and high school take the years they take. More half-days will not shorten them.';
+  ui['Esa jornada no está libre.'] = 'That half-day is not free.';
+  ui['La última semana del mes se te abre el mes que viene.'] =
+    'The last week of the month opens up next month.';
+  ui['Las otras {0} semanas del mes se abren una por mes.'] =
+    'The other {0} weeks of the month open up one a month.';
+  ui['La hiciste agotado, y agotado rinde la mitad. Descansa antes de la siguiente.'] =
+    'You did it worn out, and worn out is worth half. Rest before the next one.';
+
+  ui['Lo que puedes mejorar'] = 'What you can improve';
+  ui['Se paga con experiencia, no con dinero. Y lo que gastes aquí es lo que no vas a tener para la carrera que te lo pida.'] =
+    'It is paid with experience, not money. And what you spend here is what you will not have for the course that asks for it.';
+  ui['ya la tienes'] = 'you have it';
+  ui['la tarea te costaría {0} en vez de {1}'] = 'homework would cost you {0} instead of {1}';
+  ui['cuesta {0} de experiencia'] = 'costs {0} experience';
+  ui['Te faltan {0}. Se ganan haciendo tareas.'] = 'You are {0} short. They come from homework.';
+  ui['Cambiar {0} de experiencia'] = 'Trade {0} experience';
+  ui['Aprendiste a estudiar'] = 'You learned how to study';
+  ui['Te costó {0} de experiencia. Ahora cada tarea te quita {1} de energía en vez de {2}.'] =
+    'It cost you {0} experience. Now each piece of homework takes {1} energy instead of {2}.';
+  ui['Se gana haciendo tareas, y más despacio con solo estar inscrito. Se puede gastar en mejorar tu forma de estudiar, y eso es una decisión: lo que gastas no lo tienes para la carrera.'] =
+    'It comes from homework, and more slowly from just being enrolled. It can be spent on improving how you study, and that is a decision: what you spend is not there for the course.';
   ui['El colegio te dejó {0} de sus {1}, al azar. Cambian cada {2}: no eliges cuál te toca.'] =
     'School set you {0} of its {1}, at random. They change every {2}: you do not pick which.';
   ui['Estas son todas las que tienes abiertas por ahora. Al abrirse más, cada {0} te tocan unas cuantas.'] =
@@ -859,8 +900,6 @@
   ui['Con {0} más se abre {1}'] = '{0} more opens up {1}';
   ui['Te alcanza para cualquier carrera del juego. Las tareas ya hicieron su trabajo.'] =
     'You have enough for any course in the game. The homework did its job.';
-  ui['Se gana haciendo tareas, y más despacio con solo estar inscrito. No se gasta y no se pierde nunca.'] =
-    'You earn it doing homework, and more slowly just by being enrolled. It is never spent and never lost.';
   ui['Pide {0} de experiencia'] = 'Asks for {0} experience';
   ui['Experiencia ganada'] = 'Experience earned';
   ui['Experiencia total'] = 'Total experience';

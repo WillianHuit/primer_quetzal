@@ -384,14 +384,24 @@ var PROGRESO = [
     id: 'jornadas',
     llaves: [],
     requiere: 'ponerTrabajo',
-    cuando: function (e) { return e.espacios.every(function (x) { return !!x; }); },
+    /* "Todas llenas" son las que EXISTEN, no las ocho: el mes empieza con una
+     * semana abierta y las demas todavia no se dibujan. Comparando contra ocho
+     * este paso no se cumplia nunca y el tutorial se quedaba clavado. */
+    cuando: function (e, M) { return M.espaciosLibres() === 0; },
     pista: 'Llena las casillas que quedan. Trabajar todo paga más, pero te deja sin energía, y enfermarte cuesta más que una jornada.',
     guia: true,
-    // Este paso son varios toques: casilla, actividad, casilla, actividad. La
-    // cinta tiene que ir señalando el que toca, o apunta a algo que no hace nada.
+    /* Este paso son varios toques: casilla, actividad, casilla, actividad. La
+     * cinta tiene que ir señalando el que toca, o apunta a algo que no hace
+     * nada.
+     *
+     * Y con la casilla elegida señala TODAS las actividades que caben, no solo
+     * "Trabajar". Señalar una sola era contestar por el jugador la pregunta
+     * que este paso existe para hacerle —trabajar paga más y te deja sin
+     * cuerpo—, y encima apuntaba a un botón que la energía puede tener
+     * apagado. */
     senala: function (e, vista) {
       return typeof vista.espacioSel === 'number'
-        ? '[data-poner="trabajo"]'
+        ? '[data-poner]:not([disabled])'
         : '.jornada:not(.lleno):not(.bloqueado)';
     },
     pestana: 'casa',

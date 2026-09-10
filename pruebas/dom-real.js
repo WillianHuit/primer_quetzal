@@ -209,7 +209,22 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
    * atasca de verdad, el bucle sigue parando y diciendo en qué paso. */
   while (!terminado() && toques < 90) {
     if (!w.document.querySelector('.guia')) {
-      // El hueco: la cinta calla y el mes es del jugador. Se cierra y ya.
+      /* El hueco: la cinta calla y el mes es del jugador.
+       *
+       * Y un jugador REPARTE antes de cerrar, porque el juego no deja cerrar un
+       * mes vacío. Así que este paseo hace lo que haría cualquiera: la tarea si
+       * le da el cuerpo y, si no le da, descansar. Esa es exactamente la
+       * decisión que esos meses le están pidiendo, y el bucle se atascaba
+       * noventa veces por no tomarla. */
+      const libre = jornadasLibres(w)[0];
+      if (libre) {
+        clic(w, libre);
+        const bTarea = w.document.querySelector('[data-poner="tarea"]');
+        const bDesc = w.document.querySelector('[data-poner="descanso"]');
+        const cabe = bTarea &&
+          w.Motor.puedeAsignar(Number(libre.getAttribute('data-espacio')), 'tarea').ok;
+        clic(w, cabe ? bTarea : bDesc);
+      }
       const cerrar = w.document.querySelector('#cerrar-turno');
       if (!cerrar) break;
       /* Y con la cinta apagada la pantalla tiene que quedar limpia de verdad:
@@ -218,13 +233,17 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
       if (w.document.querySelector('.foco')) durante.velo++;
       if (w.document.querySelector('.tarjeta.sigue')) durante.meta++;
       if (w.document.querySelectorAll('nav.pestanas [data-pestana]').length > 2) durante.pestanas++;
-      /* Y la pista solo se pide cuando de verdad queda algo pendiente: con la
-       * tarea del mes ya puesta, la franja se calla en vez de felicitar. */
+      /* Y la pista solo se pide cuando de verdad queda algo pendiente: con las
+       * tareas del turno ya puestas, la franja se calla en vez de felicitar.
+       *
+       * Se mide contra `tareasPendientes` y no contra las jornadas puestas,
+       * porque las tareas que no se hacen se acumulan: se puede tener una
+       * jornada puesta y seguir debiendo dos. */
       const barra = w.document.querySelector('.calle-barra');
-      const puestas = w.Motor.espaciosUsados('tarea') + w.Motor.espaciosUsados('tarea-usada');
+      const pend = w.Motor.tareasPendientes();
       const dice = barra && barra.textContent.indexOf('Tareas pendientes') >= 0;
-      if (puestas === 0 && !dice) durante.sinPista++;
-      if (puestas > 0 && dice) durante.sinPista++;
+      if (pend > 0 && !dice) durante.sinPista++;
+      if (pend === 0 && dice) durante.sinPista++;
       if (w.document.querySelector('main').textContent.indexOf('Q') >= 0) durante.dinero++;
       clic(w, cerrar);
       cerrarModales(w);
@@ -355,6 +374,13 @@ ok(xpAntes > 0, `estar inscrito ya dio ${xpAntes} de experiencia`);
  * "Extra": estudiar adelanta los meses de la carrera, la tarea da
  * experiencia. Solo sale mientras esté inscrito, porque no hay tareas sin
  * colegio. */
+/* Con el cuerpo descansado, que es lo que esta comprobacion mide.
+ *
+ * Una tarea cuesta un tercio de la energía y el botón sale apagado cuando no
+ * cabe, así que sin esto la prueba mediría el presupuesto de energía del
+ * paseo de más arriba en vez de lo que dice medir: que la tarea es una casilla
+ * propia, distinta de Estudiar y de Extra. */
+w.Motor.get().energia = w.CONFIG.energia.maxima;
 clic(w, w.document.querySelector('[data-pestana="casa"]'));
 const libreParaTarea = jornadasLibres(w)[0];
 if (libreParaTarea) {

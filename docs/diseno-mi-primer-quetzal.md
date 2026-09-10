@@ -74,12 +74,53 @@ Actividades que consumen jornadas:
 | Actividad | Energía por jornada |
 |---|---|
 | Trabajar | -6 |
-| Estudiar | -5 |
-| Minijuego | -6 |
-| Descansar | +22 |
+| Atender un negocio | -6 |
+| Sentarse en clase | -3 |
+| **Hacer una tarea** | **-35** |
+| Minijuego de oficio | -6 |
+| Descansar | +26 |
 
-Son exactamente la mitad de lo que costaba una semana entera, así que todo el balanceo de
-la versión anterior sigue valiendo.
+**La tarea cuesta seis veces lo que cuesta trabajar, y ahí está la lección.** Costó -5 una
+versión entera y no se sentía: se podían poner cuatro tareas seguidas y sobraba cuerpo. Con
+-35, la primera tarea del juego se lleva un tercio del jugador y la segunda del mes ya no
+cabe sin descansar. Es la primera cosa que este juego enseña, antes que cualquier número de
+dinero: el tiempo no es lo único que se gasta estudiando.
+
+La cuenta que le sale a quien estudia, con las cuatro semanas abiertas: cuatro mañanas de
+colegio (-12), una tarea (-35) y dos descansos (+52) dejan +5 y una jornada libre para
+trabajar. Apretado a propósito, y es lo que la mejora `metodo` afloja.
+
+#### Y no se puede cerrar un mes que te deje en negativo
+
+Antes la energía se recortaba a cero al cerrar el mes y no pasaba nada más: se le podían
+poner ocho jornadas de trabajo a un cuerpo agotado. Ahora **un mes no puede dejarte por
+debajo de cero**, y las actividades que no caben salen apagadas con su costo al lado, no
+se rechazan al tocarlas. El límite se mide por MES y no por turno: un trimestre de ocho
+jornadas de trabajo es insostenible, no imposible —se puede un mes, se puede dos, y al
+tercero hay que descansar— y para eso la pantalla avisa en vez de prohibir.
+
+La otra penalización es la que funciona a los trece, cuando los golpes de dinero los
+absorbe la familia: **cansado se aprende la mitad**. Debajo de 20 de energía, una tarea da
+la mitad de experiencia.
+
+#### El mes se abre por semanas
+
+Ocho casillas vacías el primer día no son libertad, son un formulario, y es la primera
+pantalla del juego. Se abre **una semana por mes** hasta las cuatro:
+
+| Mes | Semanas | Lo que decide quien estudia | Quien no estudia |
+|---|---|---|---|
+| 1 | 1 | una casilla de tarde | dos: mañana y tarde |
+| 2 | 2 | dos tardes | cuatro |
+| 3 | 3 | tres tardes | seis |
+| 4 | 4 | el mes entero | el mes entero |
+
+Al cuarto mes, que es justo cuando se abre el trabajo, el mes ya está completo. Las semanas
+que faltan **no se dibujan con candado** —dibujar tres candados es enseñar tres veces lo
+mismo— y debajo de la rejilla va una línea que dice cuántas faltan.
+
+Pasado el primer año esto no se vuelve a mencionar: la apertura por semanas es la pantalla
+de aprender a jugar, no una regla del juego.
 
 El sueldo se paga **según cuántas jornadas trabajaste**, y no de forma proporcional:
 
@@ -137,7 +178,11 @@ la forma de jugar sin jugar. La compresión por etapa —trimestres a los 22, a�
 - **Energía**: de 0 a 100. Bajo 20 hay riesgo de enfermedad, que cuesta dinero y turnos.
 - **Edad**: avanza con el calendario, visible siempre.
 - **Puntaje de crédito**: de 0 a 100, con medidor en pantalla.
-- **Experiencia**: años acumulados en cada empleo, sube el salario dentro del puesto.
+- **Experiencia de estudio**: se gana haciendo tareas y, más despacio, con solo estar
+  inscrito. Abre las carreras de arriba y **se puede gastar**: es la moneda de la tienda de
+  `datos/mejoras.js` → `MEJORAS_SABER`, la única que no se paga con quetzales. Eso la
+  convierte en una decisión, porque lo que se gasta ahí no está para la carrera que lo pide.
+- **Antigüedad**: años acumulados en cada empleo, sube el salario dentro del puesto.
 
 No hay ánimo ni felicidad. El juego trata de dinero.
 

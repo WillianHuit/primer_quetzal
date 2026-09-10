@@ -43,20 +43,52 @@ var CONFIG = {
     maxima: 100,
     umbralRiesgo: 20,        // debajo de esto puede enfermarse
     costoEnfermedad: 450,    // ESTIMACION
-    // Por JORNADA, o sea la mitad de lo que costaba una semana entera
+    /* Y por debajo de cero no se puede repartir: el mes no se cierra dejandote
+     * en negativo. Ese es el limite duro que convierte la energia en una
+     * decision y no en una barra decorativa. Antes se recortaba a cero al
+     * cerrar el mes y el jugador podia ponerle ocho jornadas de trabajo a un
+     * cuerpo agotado sin que pasara absolutamente nada. */
+    /* Por JORNADA, o sea la mitad de lo que costaba una semana entera.
+     *
+     * OJO con `tarea`: cuesta SIETE veces lo que costaba, y es a proposito.
+     * Una tarea de -5 no se sentia: se podian poner cuatro seguidas y sobraba
+     * energia. Con -35, la primera tarea del juego se lleva un tercio del
+     * cuerpo y la segunda ya no cabe sin descansar. Ahi esta la leccion que
+     * este juego quiere dar antes que ninguna otra: el tiempo no es lo unico
+     * que se gasta estudiando.
+     *
+     * Y es justo lo que la mejora `metodo` baja, que es la primera cosa que se
+     * compra con experiencia en todo el juego. */
     porEspacio: {
       trabajo: -6,
       // Atender tu propio negocio cansa igual que atender el de otro
       negocio: -6,
-      estudio: -5,
-      // Una tarea cansa como estudiar, porque es estudiar
-      tarea: -5,
-      'tarea-usada': -5,
+      /* Sentarse en clase cansa poco: es aburrido, no agotador. Bajo de -5 a
+       * -3 al subir la tarea, porque si no las cuatro mananas del colegio se
+       * comian veinte puntos antes de que el jugador decidiera nada. */
+      estudio: -3,
+      // Una tarea cansa MUCHO: es la unica jornada que se hace con la cabeza
+      tarea: -35,
+      'tarea-usada': -35,
       minijuego: -6,
       'minijuego-usado': -6,
-      descanso: 22
+      /* Y el descanso rinde mas que antes, porque ahora hay algo de que
+       * recuperarse. Con esto la cuenta que le sale al que estudia es una
+       * tarea, dos descansos y una jornada de trabajo: justo el mes apretado
+       * que el juego quiere que sienta. */
+      descanso: 26
     }
   },
+
+  /* Con cuantas semanas del mes empieza el jugador.
+   *
+   * Ocho casillas vacias el primer dia son un formulario, y encima invitan a
+   * repartir un mes que todavia no entiende. Se abre una semana por mes hasta
+   * las cuatro: el primer mes es UNA casilla de tarde —o dos, manana y tarde,
+   * para quien no estudia— y ahi no hay nada que equivocar. Al cuarto mes,
+   * que es cuando se abre el trabajo, el mes ya esta entero.
+   */
+  semanasAlEmpezar: 1,
 
   /* Cuanto del salario cobras segun cuantas JORNADAS trabajaste.
    *
@@ -194,6 +226,11 @@ var CONFIG = {
    *                    sentado. Es lo que hace que valga la jornada que
    *                    cuesta, y lo que abre ingenieria y la maestria, que el
    *                    camino pasivo NO alcanza. Ahi esta la decision.
+   *   tareasMaximas    el tope de tareas que puedes llegar a deber. Las que no
+   *                    haces NO se perdonan: se quedan debiendo y el mes
+   *                    siguiente se les suma la nueva. El tope existe para que
+   *                    quien las ignore tres anios no se encuentre con un muro
+   *                    imposible, solo con un mes muy apretado.
    *   tareasPorMes     cuantas tareas te deja el colegio cada mes. Es lo unico
    *                    que el juego le pide mientras el jugador solo estudia,
    *                    y sale como "Tareas pendientes: 1" en la franja de la
@@ -205,7 +242,12 @@ var CONFIG = {
   experiencia: {
     porMesInscrito: 3,
     maximaPorTarea: 25,
-    tareasPorMes: 1
+    tareasPorMes: 1,
+    tareasMaximas: 4,
+    /* Y cansado se aprende la mitad. Es la otra penalizacion de la energia, y
+     * la unica que funciona a los trece: a esa edad un golpe de dinero lo
+     * absorbe la familia, pero que la tarea rinda la mitad lo paga el. */
+    factorAgotado: 0.5
   },
 
   prestaciones: {

@@ -163,4 +163,33 @@ var MEJORAS = [
 /* Cuánto sube el precio de una mejora cuando la compras siendo mayor.
  * No existe: los precios son los mismos toda la vida. Se deja escrito para
  * que quede claro que es a propósito y no un olvido. */
+/* -------------------------------------------------------------------------
+ * Las mejoras que se pagan con EXPERIENCIA
+ * -------------------------------------------------------------------------
+ * Son otra tienda y otra moneda. Las de arriba se compran con quetzales y
+ * mejoran lo que HACES; estas se compran con lo que sabes y mejoran COMO lo
+ * haces. Viven aparte por dos razones:
+ *
+ *   - Salen en la pestaña de Estudio y desde el primer mes, mucho antes de que
+ *     exista el imperio y su tienda. Un chico de trece no tiene Q220 para una
+ *     herramienta, pero sí tiene lo que aprendió haciendo tareas.
+ *   - Y son la unica cosa del juego que GASTA experiencia. Eso convierte a la
+ *     experiencia en una decision: cada punto que te gastas aqui es un punto
+ *     que no tienes para la carrera que te lo va a pedir. Antes solo subia, y
+ *     un numero que solo sube no se decide, se acumula.
+ *
+ * Agregar otra es agregar un bloque aqui: la pantalla y el motor no cambian.
+ */
+var MEJORAS_SABER = [
+  {
+    id: 'metodo',
+    nombre: 'Método de estudio',
+    icono: 'libro',
+    costoExperiencia: 40,
+    efecto: { ahorroEnergiaTarea: 14 },
+    descripcion: 'Aprendes a estudiar sin dejarte la vida en cada tarea.',
+    leccion: 'Estudiar más horas no es estudiar mejor. Lo que cambia el rendimiento es el método: dónde te sientas, cuánto seguido y en qué orden. Es lo más barato que puedes mejorar y casi nadie lo intenta.'
+  }
+];
+
 var MEJORAS_SUBEN_CON_LA_EDAD = false;

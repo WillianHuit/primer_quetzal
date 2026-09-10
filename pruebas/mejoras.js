@@ -15,7 +15,8 @@
 const { cargar, Marcador, adulto, conAzarSemilla } = require('./comun');
 
 const sb = cargar('es');
-const { Motor, MEJORAS, CADENAS, Iconos, TEXTOS_EN, CONFIG, AVANCE_POR_JORNADA_ESTUDIO } = sb;
+const { Motor, MEJORAS, MEJORAS_SABER, CADENAS, Iconos, TEXTOS_EN, CONFIG,
+        AVANCE_POR_JORNADA_ESTUDIO } = sb;
 const M = new Marcador();
 const ok = M.ok.bind(M);
 
@@ -210,6 +211,122 @@ ok(e.efectivo === 50, 'y no le cobran nada al fallar');
   // 7 jornadas de trabajo (-42), una de descanso (+22) y +4 del escritorio
   ok(z.energia > 20 - 42 + 22,
      `el rincón propio suma energía al descansar (quedó en ${Math.round(z.energia)})`);
+})();
+
+/* ==========================================================================
+ * La energía, que ahora se puede acabar
+ * ==========================================================================
+ * Antes se recortaba a cero al cerrar el mes y no pasaba nada: se le podían
+ * poner ocho jornadas de trabajo a un cuerpo agotado. Ahora un mes no puede
+ * dejarte por debajo de cero, y eso convierte la barra en una decisión.
+ *
+ * Y es LA mecánica del colegio: una tarea cuesta un tercio del cuerpo, así que
+ * la segunda del mes no cabe sin descansar. Esa cuenta es la que hace que
+ * repartir el mes se sienta.
+ */
+(function laEnergiaSeAcaba() {
+  const sbE = cargar('es');
+  const ME = sbE.Motor;
+  ME.iniciar('normal', 1, 'remesas');
+  const z = ME.get();
+
+  ok(ME.energiaDeEspacio('tarea') <= -20,
+     `una tarea cuesta ${Math.abs(ME.energiaDeEspacio('tarea'))} de energía, no cinco`);
+  ok(ME.energiaDeEspacio('descanso') > 0 &&
+     ME.energiaDeEspacio('descanso') < Math.abs(ME.energiaDeEspacio('tarea')),
+     'y un solo descanso no la paga: hacen falta dos');
+
+  /* El primer mes de quien estudia es UNA casilla, y esa es la primera pantalla
+   * del juego. Ocho casillas vacías no son libertad, son un formulario. */
+  ok(ME.espaciosDisponibles() === 2,
+     `sin decidir nada, el mes empieza con ${ME.espaciosDisponibles()} casillas`);
+  ME.inscribirse('basicos', false, 'am');
+  ok(ME.espaciosDisponibles() === 1,
+     'y al inscribirse queda UNA: la mañana es del colegio y la tarde es suya');
+  ok(ME.semanasAbiertas() === 1, 'porque solo está abierta la primera semana del mes');
+
+  // Esa jornada se le va en la tarea, y se nota
+  const hueco = z.espacios.findIndex((v, i) =>
+    !v && ME.espacioAbierto(i) && !ME.espacioBloqueado(i));
+  ME.asignarEspacio(hueco, 'tarea');
+  const tras1 = ME.energiaProyectada();
+  ok(tras1 < 70 && tras1 > 0,
+     `una tarea y el colegio dejan la energía en ${tras1}, no en noventa y tantos`);
+  ME.cerrarTurno();
+
+  // Mes dos: dos casillas, y las dos tareas NO caben
+  ok(ME.semanasAbiertas() === 2 && ME.espaciosDisponibles() === 2,
+     'al segundo mes se abre la segunda semana: dos casillas');
+  const libres = [];
+  for (let i = 0; i < CONFIG.jornadasPorMes; i++) {
+    if (!z.espacios[i] && ME.espacioAbierto(i) && !ME.espacioBloqueado(i)) libres.push(i);
+  }
+  ok(ME.puedeAsignar(libres[0], 'tarea').ok, 'la primera tarea del mes cabe');
+  ME.asignarEspacio(libres[0], 'tarea');
+  const segunda = ME.puedeAsignar(libres[1], 'tarea');
+  ok(!segunda.ok && segunda.motivo === 'energia',
+     'y la segunda NO: el mes lo dejaría por debajo de cero');
+  ok(ME.puedeAsignar(libres[1], 'descanso').ok,
+     'descansar sí cabe, y es lo único que cabe: ahí está la decisión');
+  ok(!ME.asignarEspacio(libres[1], 'tarea'),
+     'y el motor tampoco la deja poner por la puerta de atrás');
+
+  /* Y las que no hizo se le quedan debiendo. Antes se borraban con el mes y el
+   * contador decía "1" los treinta y seis meses de básicos. */
+  ok(ME.tareasDelMes().length >= 2,
+     `lo que no hizo se acumuló: el colegio le pide ${ME.tareasDelMes().length}`);
+  ok(ME.tareasDelMes().length <= CONFIG.experiencia.tareasMaximas,
+     `y nunca pasa del tope de ${CONFIG.experiencia.tareasMaximas}`);
+
+  /* De los 14 el mes está entero: la apertura por semanas es la pantalla de
+   * aprender a jugar, no una regla del juego. */
+  z.edad = 15;
+  ok(ME.semanasAbiertas() === CONFIG.jornadasPorMes / CONFIG.jornadasPorSemana,
+     'y a los 15 el mes ya está entero, con sus cuatro semanas');
+})();
+
+/* ==========================================================================
+ * La tienda que se paga con lo que sabes
+ * ==========================================================================
+ * Es la única cosa del juego que GASTA experiencia, y con eso la experiencia
+ * deja de ser un contador y se vuelve una decisión: lo que te gastas aquí no
+ * lo tienes para la carrera que te lo va a pedir.
+ */
+(function comprarConSaber() {
+  const sbS = cargar('es');
+  const MS = sbS.Motor;
+  MS.iniciar('normal', 2, 'remesas');
+  const z = MS.get();
+  MS.inscribirse('basicos', false, 'am');
+
+  ok(Array.isArray(MEJORAS_SABER) && MEJORAS_SABER.length > 0,
+     `hay ${MEJORAS_SABER.length} mejora que se paga con experiencia`);
+  ok(MEJORAS_SABER.every(m => m.costoExperiencia > 0 && !m.costo),
+     'y ninguna cuesta un quetzal: esta tienda es de otra moneda');
+
+  const m = MEJORAS_SABER[0];
+  const sinNada = MS.comprarSaber(m.id);
+  ok(!sinNada.ok && sinNada.motivo === 'experiencia',
+     'sin experiencia no se compra, y lo dice: ' + sinNada.razon);
+
+  const caro = Math.abs(MS.energiaDeEspacio('tarea'));
+  z.experiencia = m.costoExperiencia + 12;
+  const r = MS.comprarSaber(m.id);
+  ok(r.ok, 'con experiencia suficiente sí');
+  ok(MS.experiencia() === 12,
+     `y la experiencia BAJA: quedaron ${MS.experiencia()} de los ${m.costoExperiencia + 12}`);
+  const barato = Math.abs(MS.energiaDeEspacio('tarea'));
+  ok(barato < caro,
+     `la tarea pasó de costar ${caro} de energía a ${barato}`);
+  ok(barato >= 6, 'y nunca queda gratis: estudiar siempre cuesta algo');
+  ok(!MS.comprarSaber(m.id).ok, 'y no se compra dos veces');
+
+  /* Lo que esto le compra, en jornadas: con el método puesto, la segunda tarea
+   * del mes empieza a caber. Es exactamente lo que el jugador nota. */
+  const antes = Math.floor(CONFIG.energia.maxima / caro);
+  const ahora = Math.floor(CONFIG.energia.maxima / barato);
+  ok(ahora > antes,
+     `con el cuerpo entero pasa de ${antes} tareas a ${ahora}`);
 })();
 
 M.imprimir('las mejoras que te mejoran a ti');

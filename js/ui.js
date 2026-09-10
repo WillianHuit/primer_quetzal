@@ -296,8 +296,7 @@ var UI = (function () {
    * dejó el colegio y todavía no has puesto. Esa es la pista sutil que
    * sustituye a media cinta de tutorial. Sin nada pendiente, no dice nada. */
   function barraDeCalle(e) {
-    var libres = 0;
-    for (var i = 0; i < e.espacios.length; i++) if (!e.espacios[i]) libres++;
+    var libres = Motor.espaciosLibres();
 
     /* El botón de cerrar el mes vive AQUÍ, pegado a la calle.
      *
@@ -349,7 +348,7 @@ var UI = (function () {
   function primeraLibre() {
     var e = Motor.get();
     for (var i = 0; i < e.espacios.length; i++) {
-      if (!e.espacios[i] && !Motor.espacioBloqueado(i)) return i;
+      if (!e.espacios[i] && Motor.espacioAbierto(i) && !Motor.espacioBloqueado(i)) return i;
     }
     return null;
   }
@@ -396,7 +395,29 @@ var UI = (function () {
       return t ? { ic: t.icono, nom: esc(D(t, 'nombre')) }
                : { ic: 'tienda', nom: T('Tu negocio') };
     }
-    var semanas = CONFIG.jornadasPorMes / CONFIG.jornadasPorSemana;
+    /* El color de cada actividad, y no es adorno.
+     *
+     * Ocho casillas con el mismo fondo y un icono chico se leen una por una.
+     * Con color, el reparto del mes se ve de un golpe: cuánto verde de trabajo,
+     * cuánto ámbar de tarea, cuánto azul de descanso. Es la misma información
+     * y se tarda un segundo en vez de ocho. */
+    var COLOR = { trabajo: 'j-trabajo', estudio: 'j-estudio',
+                  tarea: 'j-tarea', 'tarea-usada': 'j-tarea',
+                  minijuego: 'j-extra', 'minijuego-usado': 'j-extra',
+                  descanso: 'j-descanso' };
+    function colorDe(v) {
+      if (!v) return '';
+      if (Motor.negocioDeEspacio(v)) return 'j-negocio';
+      return COLOR[v] || '';
+    }
+
+    /* Y SOLO las semanas que ya se abrieron.
+     *
+     * El mes empieza con una semana y se abre otra cada mes. Las que faltan no
+     * se dibujan con candado: dibujar tres candados es enseñar tres veces lo
+     * mismo. Debajo va una línea que dice cuántas faltan, y ya. */
+    var semanas = Motor.semanasAbiertas();
+    var deLasCuatro = CONFIG.jornadasPorMes / CONFIG.jornadasPorSemana;
 
     var h = '<div class="jornadas" style="--semanas:' + semanas + '">';
     h += '<div class="jor-eje"></div>';
@@ -411,13 +432,48 @@ var UI = (function () {
         var tipo = e.espacios[i];
         var bloq = Motor.espacioBloqueado(i);
         var pin = pintaCasilla(tipo);
-        h += '<div class="jornada' + (tipo ? ' lleno' : '') + (bloq ? ' bloqueado' : '') +
+        h += '<div class="jornada ' + colorDe(tipo) + (tipo ? ' lleno' : '') +
+             (bloq ? ' bloqueado' : '') +
              (espacioSel === i ? ' sel' : '') + '" data-espacio="' + i + '">' +
              '<div class="ic-caja">' + Ico(bloq ? 'birrete' : pin.ic) + '</div>' +
              '<div class="nom">' + pin.nom + '</div></div>';
       }
     });
-    return h + '</div>';
+    h += '</div>';
+    if (semanas < deLasCuatro) {
+      h += '<p class="sutil centrado" style="margin:8px 0 0">' + Ico('reloj') + ' ' +
+           (deLasCuatro - semanas === 1
+             ? T('La última semana del mes se te abre el mes que viene.')
+             : T('Las otras {0} semanas del mes se abren una por mes.', deLasCuatro - semanas)) +
+           '</p>';
+    }
+    return h;
+  }
+
+  /* Lo que le queda al cuerpo con el reparto puesto.
+   *
+   * Va pegado a la rejilla porque es la consecuencia directa de lo que se
+   * acaba de repartir, y es el número que antes no existía: la barra de arriba
+   * decía la energía de HOY y nada decía con cuánta te iba a dejar el mes. */
+  function tarjetaEnergia(e) {
+    var ahora = Math.round(e.energia);
+    var queda = Motor.energiaProyectada();
+    var pc = Math.max(0, Math.min(100, queda));
+    var mal = queda < CONFIG.energia.umbralRiesgo;
+    var h = '<div class="fila"><span class="etq">' + Ico('rayo') + ' ' +
+            T('Cómo vas a quedar') + '</span><span class="val">' +
+            '<b>' + ahora + '</b> → <b class="' + (mal ? 'neg' : 'pos') + '">' + queda + '</b>' +
+            '</span></div>';
+    h += '<div class="progreso"><div class="progreso-relleno' + (mal ? ' bajo' : '') +
+         '" style="width:' + pc + '%"></div></div>';
+    if (queda <= 0) {
+      h += '<p class="aviso">' +
+        T('Así no llegas. Ponle una jornada a descansar o el mes te va a dejar en cero.') + '</p>';
+    } else if (mal) {
+      h += '<p class="sutil">' +
+        T('Vas a quedar muy cansado, y cansado las tareas rinden la mitad.') + '</p>';
+    }
+    return h;
   }
 
   /* Lo que va a pasar al cerrar el mes, en tres cifras.
@@ -549,6 +605,7 @@ var UI = (function () {
         '</p>';
     }
     h += rejillaJornadas(e);
+    h += tarjetaEnergia(e);
 
     var puedeTrabajar = t || e.migracion;
     if (avisoBloqueo) {
@@ -556,35 +613,71 @@ var UI = (function () {
       avisoBloqueo = false;
     }
     if (espacioSel !== null) {
+      /* Y cada botón dice lo que le cuesta al cuerpo.
+       *
+       * Una tarea se lleva un tercio de la energía y hasta ahora eso se
+       * descubría cerrando el mes. Un costo que no se ve antes de pagarlo no
+       * es una decisión, es una trampa. */
+      function coste(tipo) {
+        var n = Math.round(Motor.energiaDeEspacio(tipo));
+        if (!n) return '';
+        return '<span class="cuesta' + (n > 0 ? ' gana' : '') + '">' +
+               (n > 0 ? '+' : '') + n + '</span>';
+      }
+      /* Y lo que no cabe sale APAGADO, no se rechaza al tocarlo.
+       *
+       * Un botón que se puede tocar y contesta que no es peor que un botón
+       * apagado: el jugador ya decidió cuando le dicen que no podía. Apagado
+       * con el número al lado dice lo mismo antes. */
+      function cabe(tipo) {
+        return Motor.puedeAsignar(espacioSel, tipo).ok ? '' : ' disabled';
+      }
+      /* Y si lo que no cabe es por energia, se dice.
+       *
+       * Un boton apagado sin motivo es peor que uno que contesta: el jugador
+       * ve la tarea en gris y no sabe si le falta algo o si el juego se rompio.
+       * Se mira el motivo y no solo el si/no, porque "Trabajar" tambien sale
+       * apagado cuando todavia no tiene trabajo y eso es otra cosa. */
+      var faltaCuerpo = Motor.puedeAsignar(espacioSel, 'tarea').motivo === 'energia' ||
+                        Motor.puedeAsignar(espacioSel, 'trabajo').motivo === 'energia';
       h += '<div class="btn-fila acciones-jornada">';
-      h += '<button class="btn-chico" data-poner="trabajo"' + (puedeTrabajar ? '' : ' disabled') + '>' + Ico('maletin') + ' ' + T('Trabajar') + '</button>';
+      h += '<button class="btn-chico j-trabajo" data-poner="trabajo"' +
+           (puedeTrabajar ? cabe('trabajo') : ' disabled') + '>' + Ico('maletin') + ' ' +
+           T('Trabajar') + coste('trabajo') + '</button>';
       /* Un botón por cada negocio abierto. Es donde el jugador decide a cuál
        * de sus negocios le pone la cara este mes, y esa decisión importa: al
        * que no le pone ninguna jornada le rinde menos. */
       Motor.negociosAbiertos().forEach(function (neg) {
         var tneg = Motor.tipoDeNegocio(neg.tipoId);
         if (!tneg) return;
-        h += '<button class="btn-chico" data-poner="negocio:' + neg.tipoId + '">' +
-             Ico(tneg.icono) + ' ' + esc(D(tneg, 'nombre')) + '</button>';
+        h += '<button class="btn-chico j-negocio" data-poner="negocio:' + neg.tipoId + '"' +
+             cabe('negocio:' + neg.tipoId) + '>' +
+             Ico(tneg.icono) + ' ' + esc(D(tneg, 'nombre')) + coste('negocio') + '</button>';
       });
       // Estudiar solo tiene sentido con una carrera de horario libre: en el
       // colegio las jornadas ya vienen puestas y no se agregan a mano.
       if (e.estudio && !e.estudio.jornada) {
-        h += '<button class="btn-chico" data-poner="estudio">' + Ico('birrete') + ' ' + T('Estudiar') + '</button>';
+        h += '<button class="btn-chico j-estudio" data-poner="estudio">' + Ico('birrete') + ' ' + T('Estudiar') + coste('estudio') + '</button>';
       }
       /* La tarea es una jornada aparte de "Estudiar", y la diferencia importa:
        * estudiar adelanta los meses de la carrera, la tarea da experiencia.
        * Solo sale mientras esté inscrito, porque no hay tareas sin colegio. */
       if (e.estudio) {
-        h += '<button class="btn-chico" data-poner="tarea">' + Ico('libro') + ' ' +
-             T('Tarea') + '</button>';
+        h += '<button class="btn-chico j-tarea" data-poner="tarea"' + cabe('tarea') + '>' +
+             Ico('libro') + ' ' + T('Tarea') + coste('tarea') + '</button>';
       }
       if (Motor.desbloqueado('extra')) {
-        h += '<button class="btn-chico" data-poner="minijuego">' + Ico('mando') + ' ' + T('Extra') + '</button>';
+        h += '<button class="btn-chico j-extra" data-poner="minijuego"' + cabe('minijuego') + '>' +
+             Ico('mando') + ' ' + T('Extra') + coste('minijuego') + '</button>';
       }
-      h += '<button class="btn-chico" data-poner="descanso">' + Ico('luna') + ' ' + T('Descansar') + '</button>';
+      h += '<button class="btn-chico j-descanso" data-poner="descanso">' + Ico('luna') + ' ' + T('Descansar') + coste('descanso') + '</button>';
       h += '<button class="btn-chico" data-poner="">' + T('Vaciar') + '</button>';
       h += '</div>';
+      if (faltaCuerpo) {
+        h += '<p class="sutil">' + Ico('rayo') + ' ' +
+          T('No te queda cuerpo para más. Descansar es lo único que cabe: recuperas {0}.',
+            Math.round(Motor.energiaDeEspacio('descanso'))) + '</p>';
+      }
       if (!puedeTrabajar) h += '<p class="aviso">' + T('Todavía no tienes trabajo. Búscalo en la pestaña Trabajo.') + '</p>';
     }
     h += '</div>';
@@ -997,9 +1090,10 @@ var UI = (function () {
     var e = Motor.get();
     var h = '<h2>' + T('Estudio') + '</h2>';
 
-    if (e.estudio) return h + estudioEnCurso(e) + tarjetaExperiencia() + estudioPracticar();
+    if (e.estudio) return h + estudioEnCurso(e) + tarjetaExperiencia() +
+                            estudioPracticar() + tiendaDelSaber();
     if (e.decisionEstudio === null) return h + estudioDecidir(e);
-    return h + estudioRutas(e) + tarjetaExperiencia() + estudioPracticar();
+    return h + estudioRutas(e) + tarjetaExperiencia() + estudioPracticar() + tiendaDelSaber();
   }
 
   /* La primera pantalla del juego: estudias, y qué, o no estudias.
@@ -1285,9 +1379,60 @@ var UI = (function () {
         T('Te alcanza para cualquier carrera del juego. Las tareas ya hicieron su trabajo.') + '</p>';
     }
     h += '<p class="sutil">' +
-      T('Se gana haciendo tareas, y más despacio con solo estar inscrito. No se gasta y no se pierde nunca.') +
+      T('Se gana haciendo tareas, y más despacio con solo estar inscrito. Se puede gastar en mejorar tu forma de estudiar, y eso es una decisión: lo que gastas no lo tienes para la carrera.') +
       '</p>';
     return h + '</div>';
+  }
+
+  /* La tienda que se paga con lo que sabes.
+   *
+   * Es la primera cosa del juego que GASTA experiencia, y con eso la
+   * experiencia deja de ser un contador y se vuelve una decisión: los cuarenta
+   * puntos que te lleva el método de estudio son cuarenta que no vas a tener
+   * para la carrera que te los va a pedir. Un número que solo sube no se
+   * decide, se acumula.
+   *
+   * Vive en Estudio y no en la tienda del imperio porque está disponible desde
+   * el primer mes, cuando el imperio no existe todavía y el jugador no tiene
+   * un quetzal pero sí tiene lo que aprendió haciendo tareas. */
+  function tiendaDelSaber() {
+    if (typeof MEJORAS_SABER === 'undefined' || !MEJORAS_SABER.length) return '';
+    var e = Motor.get();
+    var xp = Motor.experiencia();
+    var h = '<h3>' + T('Lo que puedes mejorar') + '</h3>';
+    h += '<p class="sutil">' +
+      T('Se paga con experiencia, no con dinero. Y lo que gastes aquí es lo que no vas a tener para la carrera que te lo pida.') +
+      '</p>';
+    MEJORAS_SABER.forEach(function (m) {
+      var tiene = !!e.mejoras[m.id];
+      var falta = Math.max(0, m.costoExperiencia - xp);
+      h += '<div class="opcion' + (tiene ? ' activa' : '') + '">';
+      h += '<div class="titulo">' + Ico(m.icono) + ' ' + esc(D(m, 'nombre')) +
+           (tiene ? '<span class="etiqueta ok">' + T('ya la tienes') + '</span>' : '') +
+           '</div>';
+      h += '<p class="sutil" style="margin:6px 0">' + esc(D(m, 'descripcion')) + '</p>';
+      /* Y se dice el efecto EN NÚMEROS, con el antes y el después. "Mejora tu
+       * método" no se puede comparar con nada; "35 en vez de 21" sí. */
+      if (m.efecto && m.efecto.ahorroEnergiaTarea) {
+        var base = Math.abs(CONFIG.energia.porEspacio.tarea);
+        var luego = Math.max(6, base - m.efecto.ahorroEnergiaTarea);
+        h += pastillas([
+          pastilla('rayo', T('la tarea te costaría {0} en vez de {1}', luego, base), 'ok'),
+          pastilla('birrete', T('cuesta {0} de experiencia', m.costoExperiencia),
+                   falta ? 'mal' : '')
+        ]);
+      }
+      if (tiene) { h += '</div>'; return; }
+      if (falta) {
+        h += '<p class="sutil">' + T('Te faltan {0}. Se ganan haciendo tareas.', falta) + '</p>';
+      }
+      h += '<div class="btn-fila" style="margin-top:10px">' +
+           '<button class="btn-chico" data-comprar-saber="' + m.id + '"' +
+           (falta ? ' disabled' : '') + '>' + Ico('birrete') + ' ' +
+           T('Cambiar {0} de experiencia', m.costoExperiencia) + '</button></div>';
+      h += '</div>';
+    });
+    return h;
   }
 
   function estudioPracticar() {
@@ -3400,6 +3545,7 @@ var UI = (function () {
        * mismo que salía el pago —cómo te fue— pero no se puede gastar: solo
        * sube, y es lo que después te deja entrar donde quieres entrar. */
       var gano = 0;
+      var agotado = false;
       if (clase) {
         if (res.reprobado) {
           /* Reprobada: cero. La jornada se gastó igual, y eso es lo que hace
@@ -3409,6 +3555,13 @@ var UI = (function () {
           var tope = res.def.experienciaMaxima || 0;
           var parte = Math.max(0, Math.min(1, res.puntos / (res.def.puntosParaPagoMaximo || 100)));
           gano = Math.max(1, Math.round(tope * parte));
+          /* Y cansado se aprende la mitad.
+           *
+           * Es la penalización de la energía que sí funciona a los trece: a esa
+           * edad los golpes de dinero los absorbe la familia, pero que la tarea
+           * rinda la mitad lo paga él. Y es verdad: nadie estudia bien agotado. */
+          agotado = e.energia < CONFIG.energia.umbralRiesgo;
+          if (agotado) gano = Math.max(1, Math.round(gano * CONFIG.experiencia.factorAgotado));
           Motor.sumarExperiencia(gano);
           Sonido.tono('logro');
         }
@@ -3443,6 +3596,9 @@ var UI = (function () {
         fila(T('Aciertos'), T('{0} de {1}', res.aciertos, res.total)) +
         (clase
           ? fila(T('Experiencia ganada'), (res.reprobado ? '0' : '+' + gano), res.reprobado ? 'neg' : 'pos') +
+            (agotado ? '<p class="aviso">' +
+              T('La hiciste agotado, y agotado rinde la mitad. Descansa antes de la siguiente.') +
+              '</p>' : '') +
             fila(T('Experiencia total'), String(Motor.experiencia()))
           : fila(T('Te pagaron'), Q(res.pago), 'pos')) +
         (res.def.ensena ? '<div class="aprendizaje"><strong>' + T('Lo que practicaste.') + '</strong> ' +
@@ -3524,7 +3680,7 @@ var UI = (function () {
 
   function conectar() {
     app.addEventListener('click', function (ev) {
-      var el = ev.target.closest('[data-pestana],[data-sub],[data-espacio],[data-poner],[data-poner-tarea],[data-titulo],[data-ver-ramas],[data-lote],[data-gestion],[data-cerrar-hoja],[data-tomar],[data-abrir],' +
+      var el = ev.target.closest('[data-pestana],[data-sub],[data-espacio],[data-poner],[data-poner-tarea],[data-titulo],[data-ver-ramas],[data-comprar-saber],[data-lote],[data-gestion],[data-cerrar-hoja],[data-tomar],[data-abrir],' +
         '[data-mover],[data-mudar],[data-inscribir],[data-jugar],[data-abonar],[data-abrir-menu],' +
         '[data-casa],[data-envio],[data-canal],[data-porque],[data-detalle],[data-no-estudiar],' +
         '[data-ver-perfil],[data-mejora],' +
@@ -3579,6 +3735,23 @@ var UI = (function () {
       }
       if (d.verRamas) { verTodasLasRamas = true; return render(); }
 
+      /* Comprar con experiencia. Es la única compra del juego que no se paga
+       * con quetzales, y por eso la tarjeta que sale después insiste en el
+       * precio: lo que se fue no está para la carrera. */
+      if (d.comprarSaber) {
+        var rs = Motor.comprarSaber(d.comprarSaber);
+        if (!rs.ok) return aviso(T('Todavía no'), rs.razon);
+        Sonido.tono('logro');
+        render();
+        return tarjetaEducativa('saber' + rs.mejora.id, rs.mejora.icono,
+          T('Aprendiste a estudiar'),
+          T('Te costó {0} de experiencia. Ahora cada tarea te quita {1} de energía en vez de {2}.',
+            rs.mejora.costoExperiencia,
+            Math.abs(Math.round(Motor.energiaDeEspacio('tarea'))),
+            Math.abs(CONFIG.energia.porEspacio.tarea)),
+          esc(D(rs.mejora, 'leccion')));
+      }
+
       /* Los dos botones que abren la hoja de un negocio debajo de la calle.
        *
        * Antes el lote vacío llevaba a la pestaña del imperio, y eso era irse
@@ -3616,6 +3789,25 @@ var UI = (function () {
           Sonido.tono('error');
           return aviso(T('El mes ya está repartido'),
             T('Las ocho jornadas están ocupadas. Vacía una en la rejilla de abajo si quieres cambiar algo.'));
+        }
+        /* Se pregunta ANTES de asignar para poder decir por qué no.
+         *
+         * El caso que importa es la energía: sin esto, el juego dejaba poner
+         * ocho jornadas de trabajo a un cuerpo agotado, recortaba la energía a
+         * cero al cerrar el mes y no pasaba nada de nada. */
+        var permiso = Motor.puedeAsignar(destino, d.poner);
+        if (!permiso.ok) {
+          Sonido.tono('error');
+          if (permiso.motivo === 'energia') {
+            return aviso(T('No te da el cuerpo'),
+              T('Con esa jornada el mes te dejaría por debajo de cero. Ponle una a descansar primero: recuperas {0}.',
+                Math.round(Motor.energiaDeEspacio('descanso'))));
+          }
+          if (permiso.motivo === 'jornadafija') {
+            return aviso(T('El colegio no se acelera'),
+              T('Básicos y el diversificado duran los años que duran. Ponerle más jornadas no los adelanta.'));
+          }
+          return aviso(T('No se puede'), T('Esa jornada no está libre.'));
         }
         Motor.asignarEspacio(destino, d.poner);
         espacioSel = null; Motor.guardar(); Sonido.tono('toque');
@@ -3949,7 +4141,7 @@ var UI = (function () {
       if (el.id === 'ver-reporte-final') return mostrarReporteFinal(function () { render(); });
 
       if (el.id === 'cerrar-turno') {
-        if (Motor.espaciosLibres() === CONFIG.jornadasPorMes) {
+        if (Motor.espaciosLibres() === Motor.espaciosDisponibles()) {
           return aviso(T('No has hecho nada'), T('Reparte al menos una jornada antes de cerrar.'));
         }
         /* Primero lo que prometiste, y después el mes. Ese orden es lo que
