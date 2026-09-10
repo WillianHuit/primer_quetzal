@@ -395,6 +395,11 @@ var UI = (function () {
    * una interrupción. */
   var PAUSA_DADO = 620;
   var PAUSA_LLEGADA = 700;
+  /* Un paso cada 210 ms, y en la esquina 330 mas: ahi el tablero da un cuarto
+   * de vuelta y hay que verlo girar. Con los 165 de antes el paseo iba mas
+   * rapido que la camara y parecia que la ficha se teletransportaba. */
+  var PASO = 210;
+  var PASO_ESQUINA = 330;
 
   /* Y lo que suena al caer, que es lo que el jugador va a recordar. Una tarea
    * y un comodín no suenan ni a bueno ni a malo a propósito: son decisiones,
@@ -740,7 +745,12 @@ var UI = (function () {
     var t = Motor.tablero();
     var anillo = medidasDelAnillo(t.dias + 1);
     var k = desde;
-    var reloj = setInterval(function () {
+
+    /* Un paso cada vez, con `setTimeout` y no con `setInterval`, porque el
+     * paso de la ESQUINA dura mas: ahi el tablero da un cuarto de vuelta y
+     * hay que dejarlo girar. Sin esa espera el giro se comia con el paso
+     * siguiente y la vuelta a la esquina se veia como un salto. */
+    function paso() {
       k++;
       var sitio = casillaDelAnillo(k, anillo.f, anillo.c);
       ficha.style.gridColumn = String(sitio.col + 1);
@@ -758,14 +768,19 @@ var UI = (function () {
       /* Una nota por casilla, cada una un semitono mas alta: un seis suena
        * como una escalerita que sube y el oido cuenta los pasos sin mirar. */
       Sonido.tono('paso', k - desde - 1);
+
       // Y la camara va detras del personaje, casilla por casilla
+      var antes = vuelta;
       enfocarCasilla(k, LENTE_PASEO);
+      var dioLaVuelta = Math.abs(vuelta - antes) > 1;
+
       if (k >= hasta) {
-        clearInterval(reloj);
         fichaEn = null;
-        alLlegar();
+        return alLlegar();
       }
-    }, 165);
+      setTimeout(paso, dioLaVuelta ? PASO + PASO_ESQUINA : PASO);
+    }
+    setTimeout(paso, PASO);
   }
 
   /* =======================================================================
@@ -796,55 +811,87 @@ var UI = (function () {
     return vuelta + d;
   }
 
-  /* Donde va a quedar la casilla `k` con el tablero ya girado a `giroFinal` y
-   * la lente en reposo.
+  /* Que casilla de la cuadricula ocupa el sitio de otra despues de girar.
    *
-   * El truco: se pone el estado final SIN transicion, se mide, y se devuelve
-   * todo antes de soltar el hilo. Entre que empieza y termina esta funcion el
-   * navegador no pinta ni un cuadro, asi que nadie ve el salto; y medir a
-   * medias de una animacion —que es lo que pasaba si se leia sin mas— devuelve
-   * la casilla donde estaba a mitad de camino, no donde va a quedar. */
-  function medirCasilla(k, giroFinal) {
+   * Un cuarto de vuelta en el sentido del reloj lleva la casilla (fila, col) a
+   * (col, N-1-fila). Se aplica una, dos o tres veces segun el giro. */
+  function sitioGirado(sitio, n, grados) {
+    var vueltas = ((Math.round(grados / 90) % 4) + 4) % 4;
+    var f = sitio.fila, c = sitio.col, t;
+    for (var i = 0; i < vueltas; i++) { t = f; f = c; c = n - 1 - t; }
+    return { fila: f, col: c };
+  }
+
+  /* =======================================================================
+   * EL PLANO DEL TABLERO: se mide UNA VEZ POR TURNO, con todo quieto
+   * =======================================================================
+   * Aqui estan las dos cosas que costaron el doble de lo que parecian.
+   *
+   * La primera: MEDIR NO PUEDE COSTAR UN REPINTADO. La version que ponia el
+   * giro final sin transicion, media y lo devolvia todo antes de pintar daba
+   * la medida buena y rompia la animacion —el navegador toma el punto de
+   * partida de una transicion del ultimo estilo que calculo, y ese ir y venir
+   * se lo dejaba en otro sitio—, asi que la camara SALTABA en vez de seguir.
+   *
+   * La segunda: NO SE PUEDE MEDIR UN TABLERO QUE ESTA GIRANDO. `rect` devuelve
+   * donde esta la casilla AHORA, a media vuelta, no donde va a quedar; la
+   * camara apuntaba a un fantasma y acababa mirando a la acera de al lado.
+   *
+   * La salida es medir el plano entero una vez, al empezar el turno, cuando no
+   * se mueve nada, y de ahi en adelante calcular. Y se puede calcular porque
+   * girar un cuadrado un cuarto de vuelta NO mueve los sitios de la pantalla:
+   * los deja ocupados por otras casillas. Si la casilla de la fila 1 columna 8
+   * va a acabar donde ahora esta la de la fila 8 columna 7, su sitio en
+   * pantalla ya esta medido.
+   */
+  var plano = null;
+
+  function tomarMedidas() {
     var tab = document.querySelector('.tablero');
-    var lente = document.querySelector('.tablero-lente');
     var vista = document.querySelector('.tablero-vista');
-    if (!tab || !lente || !vista) return null;
-    var cel = k > 0 ? tab.querySelector('[data-paso="' + k + '"]')
-                    : tab.querySelector('.casilla.salida');
-    if (!cel) return null;
-
-    var trans0 = lente.style.transition, tr0 = lente.style.transform;
-    var trans1 = tab.style.transition, vu0 = tab.style.getPropertyValue('--vuelta');
-    var m = null;
+    if (!tab || !vista) return null;
     try {
-      lente.style.transition = 'none';
-      lente.style.transform = 'none';
-      tab.style.transition = 'none';
-      tab.style.setProperty('--vuelta', giroFinal + 'deg');
-      var rc = cel.getBoundingClientRect();
       var rv = vista.getBoundingClientRect();
+      if (!rv.width) return null;
       var rb = tab.getBoundingClientRect();
-      if (rv.width) {
-        m = {
-          dx: (rc.left + rc.width / 2) - (rv.left + rv.width / 2),
-          dy: (rc.top + rc.height / 2) - (rv.top + rv.height / 2),
-          // Y el tablero entero, para no dejar que la camara se salga de el
-          bx: (rb.left + rb.width / 2) - (rv.left + rv.width / 2),
-          by: (rb.top + rb.height / 2) - (rv.top + rv.height / 2),
-          ancho: rb.width, alto: rb.height,
-          vAncho: rv.width, vAlto: rv.height
-        };
+      var cx = rv.left + rv.width / 2, cy = rv.top + rv.height / 2;
+      var sitios = {};
+      var celdas = tab.querySelectorAll('.casilla[data-f]');
+      for (var i = 0; i < celdas.length; i++) {
+        var r = celdas[i].getBoundingClientRect();
+        sitios[celdas[i].getAttribute('data-f') + ',' + celdas[i].getAttribute('data-c')] =
+          { x: r.left + r.width / 2 - cx, y: r.top + r.height / 2 - cy };
       }
-    } catch (err) { m = null; }
+      plano = {
+        // Con que giro se tomaron estas medidas: todo lo demas sale de aqui
+        base: vuelta,
+        sitios: sitios,
+        // Y el tablero entero, para no dejar que la camara se salga de el. Su
+        // caja no cambia al girar: un cuadrado girado un cuarto de vuelta
+        // ocupa exactamente el mismo sitio.
+        bx: rb.left + rb.width / 2 - cx, by: rb.top + rb.height / 2 - cy,
+        ancho: rb.width, alto: rb.height,
+        vAncho: rv.width, vAlto: rv.height
+      };
+      return plano;
+    } catch (err) { return null; }
+  }
 
-    lente.style.transition = trans0;
-    lente.style.transform = tr0;
-    tab.style.transition = trans1;
-    if (vu0) tab.style.setProperty('--vuelta', vu0);
-    else tab.style.removeProperty('--vuelta');
-    // Se fuerza a que el navegador tome el estado devuelto ANTES de animar
-    try { void tab.offsetWidth; } catch (err) {}
-    return m;
+  /* Donde va a quedar la casilla `k` cuando el tablero acabe de girar. */
+  function medirCasilla(k, giroFinal) {
+    var m = plano || tomarMedidas();
+    var t = Motor.tablero();
+    if (!m || !t) return null;
+    var anillo = medidasDelAnillo(t.dias + 1);
+    var destino = sitioGirado(casillaDelAnillo(k, anillo.f, anillo.c),
+                              anillo.f, giroFinal - m.base);
+    var q = m.sitios[destino.fila + ',' + destino.col];
+    if (!q) return null;
+    return {
+      dx: q.x, dy: q.y,
+      bx: m.bx, by: m.by, ancho: m.ancho, alto: m.alto,
+      vAncho: m.vAncho, vAlto: m.vAlto
+    };
   }
 
   /* La camara se pone sobre la casilla `k`. Devuelve false si no pudo medir
@@ -984,15 +1031,21 @@ var UI = (function () {
       var lado = ' lado-' + ladoDelAnillo(sitio, anillo.f, anillo.c);
       var esquina = sitio.esquina ? ' esquina' : '';
       var estilo = 'grid-column:' + (sitio.col + 1) + ';grid-row:' + (sitio.fila + 1);
+      /* En que sitio de la cuadricula esta. Con esto la camara sabe donde va a
+       * quedar una casilla despues de que el tablero gire, sin tener que
+       * girarlo para medirlo. */
+      var enSitio = ' data-f="' + sitio.fila + '" data-c="' + sitio.col + '"';
 
       if (k === 0) {           // la salida
-        h += '<div class="casilla salida' + esquina + lado + '" style="' + estilo + '">' +
+        h += '<div class="casilla salida' + esquina + lado + '" style="' + estilo + '"' +
+             enSitio + '>' +
              caraDelDia('salida', '', '') +
              objetoDeCasilla('salida') + '</div>';
         continue;
       }
       if (k > t.dias) {        // camino sin día: el mes ya se acabó antes
-        h += '<div class="casilla camino' + esquina + lado + '" style="' + estilo + '"></div>';
+        h += '<div class="casilla camino' + esquina + lado + '" style="' + estilo + '"' +
+             enSitio + '></div>';
         continue;
       }
       var c = t.casillas[k - 1];
@@ -1000,7 +1053,7 @@ var UI = (function () {
       var aqui = k === donde;
       h += '<div class="casilla ' + (CLASE_CASILLA[c.tipo] || '') + esquina + lado +
            (pasada ? ' pasada' : '') + (aqui ? ' aqui' : '') +
-           '" style="' + estilo + '" data-paso="' + k + '"' +
+           '" style="' + estilo + '" data-paso="' + k + '"' + enSitio +
            ' title="' + T('Día {0}', k) + '">' +
            caraDelDia(c.tipo, k, precioDeCasilla(c)) +
            objetoDeCasilla(c.tipo) + '</div>';
@@ -4888,6 +4941,12 @@ var UI = (function () {
          *      ventana que salta en el mismo instante en que la ficha se para
          *      no se siente una consecuencia, se siente una interrupción.
          */
+        /* Se toman las medidas AHORA, con el tablero recien dibujado y sin
+         * una sola animacion encima. Todo lo que la camara haga en este turno
+         * sale de esta foto. */
+        plano = null;
+        tomarMedidas();
+
         return setTimeout(function () {
           enfocarCasilla(tirada.desde, LENTE_PASEO);
           setTimeout(function () {

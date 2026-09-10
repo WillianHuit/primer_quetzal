@@ -26,6 +26,7 @@
     ?p=casa&mj=1    además abre un minijuego
     ?tirada=1       tira el dado una vez y deja abierta la tarjeta del día
     ?tirada=zoom    igual, pero sin la ventana: la cámara acercada a la casilla
+    ?tirada=zoom&desde=8   tira desde la esquina, para mirar el giro del tablero
     ?tirada=carta   tira hasta caer en un día que pregunte algo, y deja su escritura
     ?fin=1          cierra el mes y muestra el resumen con sus gráficas
     ?nueva=1        partida recién empezada, con la ruta cerrada y el tutorial
@@ -281,6 +282,12 @@
       return;
     }
     if (veces === 'zoom') {
+      /* ?desde=8 deja la ficha en ese dia antes de tirar. Con 8 —la esquina
+       * de arriba a la derecha— la tirada siguiente cruza esquina si o si, que
+       * es la que hay que poder mirar: ahi el tablero da un cuarto de vuelta. */
+      var d0 = parseInt(par.get('desde') || '0', 10);
+      // tirarHasta() vuelve a tocar la pestana, y eso redibuja
+      if (d0 > 0) { Motor.tablero().pos = d0; Motor.guardar(); }
       tirarHasta(1);
       /* Cuatro segundos: el cubo rueda, la camara baja, la ficha camina y al
        * llegar hay un respiro antes de que se abra la tarjeta. */

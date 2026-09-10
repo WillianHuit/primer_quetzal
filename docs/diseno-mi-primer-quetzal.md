@@ -216,21 +216,37 @@ Cuánto hay que correr la lente para centrar una casilla **se mide del navegador
 con perspectiva no proyecta las casillas donde dice la cuadrícula —las de atrás se juntan y
 las de adelante se abren—, así que cualquier cuenta a mano queda mal justo en las esquinas.
 `getBoundingClientRect()` ya trae la casilla donde de verdad se está viendo, y con el origen
-en el centro basta con `t = -d·s`. Tres cosas que costaron sangre:
+en el centro basta con `t = -d·s`. Cuatro cosas que costaron sangre, y las dos primeras
+cuestan la animación entera:
 
+- **Medir no puede costar un repintado.** La primera versión ponía el giro final sin
+  transición, medía y lo devolvía todo antes de pintar. La medida salía bien y la animación
+  salía rota: el navegador toma el punto de partida de una transición del último estilo que
+  calculó, y ese ir y venir se lo dejaba en otro sitio. La cámara **saltaba** en vez de
+  seguir a la ficha.
+- **Y no se puede medir un tablero que está girando.** `rect` devuelve dónde está la casilla
+  *ahora*, a media vuelta, no dónde va a quedar. Por eso el plano se mide **una vez por
+  turno** —`tomarMedidas()`, con el tablero recién dibujado y sin una sola animación
+  encima— y de ahí en adelante se calcula. Se puede calcular porque girar un cuadrado un
+  cuarto de vuelta **no mueve los sitios de la pantalla**: los deja ocupados por otras
+  casillas. Si la casilla de la fila 1 columna 8 va a acabar donde ahora está la de la fila 8
+  columna 7, su sitio ya está medido. De ahí el `data-f`/`data-c` de cada casilla.
 - **La lente va por FUERA de la perspectiva.** Metida dentro, su `scale` escalaba la escena
   en tres dimensiones —la capa lleva `preserve-3d`— y eso cambia cómo proyecta la
   perspectiva: la casilla no acababa donde decía la cuenta. Por fuera, la escena se dibuja
   primero y la lente mueve y agranda el resultado, como una lupa sobre una foto.
-- **Se mide el estado final, no el de en medio.** `medirCasilla()` pone el giro final sin
-  transición, mide y lo devuelve todo antes de soltar el hilo: entre que empieza y termina
-  no se pinta ni un cuadro. Midiendo a media animación, la casilla sale donde estaba a mitad
-  de camino y la cámara persigue un fantasma.
 - **La cámara no se sale del tablero.** Centrar la casilla y ya se veía bien en medio del
   mes y fatal en las orillas: media pantalla en blanco. `dentroDelTablero()` la sujeta —el
   tablero tiene que seguir tapando la ventana, con un 12% de holgura para que el día de
   enfrente no quede pegado al borde—, que es lo mismo que hace cualquier cámara de juego con
   los bordes del mapa.
+
+Los tiempos, que son la diferencia entre seguir a alguien y parpadear detrás de él: un paso
+cada **210 ms**, la cámara detrás con una transición de **400 ms** —un pelo más lenta que el
+paseo, para que se note que lo sigue y no que salta con él— y el giro de la esquina en
+**500 ms** con peso, arrancando y frenando despacio. Y en el paso que cruza la esquina el
+paseo espera **330 ms de más**: ahí el tablero da un cuarto de vuelta y hay que verlo girar.
+Sin esa espera el giro se comía con el paso siguiente.
 
 #### El tablero gira, como el de mesa
 
@@ -315,7 +331,7 @@ librerías**, y no por tacañería:
   motor de escena son unos 600 KB, casi tres veces todo lo que hay hoy en `vendor/` y la
   mitad del presupuesto de arte, para dibujar un plano inclinado y un cubo.
 - Y sobre todo: un `<canvas>` de WebGL **no se puede probar**. `pruebas/dom-real.js` juega el
-  juego tocando nodos —191 comprobaciones— y el tablero es justo la pantalla donde más hay
+  juego tocando nodos —194 comprobaciones— y el tablero es justo la pantalla donde más hay
   que romper. Con transformaciones CSS cada día del mes sigue siendo un `<div>` que la suite
   puede mirar y tocar.
 

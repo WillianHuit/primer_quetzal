@@ -519,6 +519,20 @@ ok(!puerta.experienciaRequerida,
   ok(w3.document.querySelectorAll('.tablero .casilla').length === 32,
      `los ${t3.dias} días caben en un anillo de 9x9, que es cuadrado exacto`);
 
+  /* Cada casilla dice en qué sitio de la cuadrícula está. De esto vive la
+   * cámara: para saber dónde va a quedar una casilla DESPUÉS de que el tablero
+   * gire, mide la que ahora está en ese sitio. Sin `data-f`/`data-c` tendría
+   * que girar el tablero para medirlo, y medir moviendo cosas es justo lo que
+   * le rompía la animación —la cámara saltaba en vez de seguir a la ficha—. */
+  const conSitio = [...w3.document.querySelectorAll('.tablero .casilla[data-f][data-c]')];
+  ok(conSitio.length === 32,
+     'las 32 casillas dicen en qué fila y columna están, que es de lo que vive la cámara');
+  const sitios = new Set(conSitio.map(c => c.dataset.f + ',' + c.dataset.c));
+  ok(sitios.size === 32, 'y no hay dos en el mismo sitio');
+  const enBorde = conSitio.every(c => ['0', '8'].indexOf(c.dataset.f) >= 0 ||
+                                      ['0', '8'].indexOf(c.dataset.c) >= 0);
+  ok(enBorde, 'todas caen en el borde del cuadrado, que es donde va el camino');
+
   /* El barrio del primer día sale de la dificultad que eligió. Esta partida
    * empieza en 'apoyo', que es el nivel fácil: residencial. */
   ok(w3.document.querySelector('.barrio').getAttribute('data-barrio') === 'residencial',

@@ -254,10 +254,11 @@ p  { margin: 0 0 10px; }
 .tablero-lente {
   position: absolute; inset: 0;
   transform-origin: 50% 50%;
-  /* Corta y sin rebote: la camara va DETRAS de la ficha, que da un paso cada
-     165 ms. Con una curva larga la camara llegaba al dia anterior cuando la
-     ficha ya estaba dos mas alla. */
-  transition: transform .3s ease-out;
+  /* La camara va DETRAS de la ficha, que da un paso cada 210 ms: un pelo mas
+     lenta que el paseo, para que se note que la sigue y no que salta con
+     ella. Frena al final y no arranca de golpe, que es como se mueve una
+     camara y no una diapositiva. */
+  transition: transform .4s cubic-bezier(.22, .61, .36, 1);
 }
 .tablero-lente.acercado {
   transform: translate(var(--zx, 0px), var(--zy, 0px)) scale(var(--zs, 1));
@@ -296,7 +297,11 @@ p  { margin: 0 0 10px; }
      mientras la ficha camina: el lado por el que va queda abajo. */
   transform: translate(-50%, -54%) rotateX(var(--giro)) rotateZ(var(--vuelta, 0deg));
   transform-style: preserve-3d;
-  transition: transform .34s ease-out;
+  /* Medio segundo y con peso —arranca despacio y frena despacio—: el cuarto
+     de vuelta de la esquina es un movimiento que hay que VER. Con menos, la
+     ficha ya iba dos casillas mas alla cuando el tablero terminaba de girar y
+     la vuelta se leia como un salto. */
+  transition: transform .5s cubic-bezier(.45, .05, .25, 1);
 }
 
 /* ---------- la casilla, con forma de tarjeta de tablero de mesa ----------
