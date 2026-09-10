@@ -618,10 +618,16 @@ var UI = (function () {
        * Una tarea se lleva un tercio de la energía y hasta ahora eso se
        * descubría cerrando el mes. Un costo que no se ve antes de pagarlo no
        * es una decisión, es una trampa. */
+      /* Lo que la jornada le cuesta al cuerpo, CON su icono.
+       *
+       * El número solo —"-35"— no dice de qué: podría ser dinero, meses o
+       * puntos. El rayo es el mismo de la barra de arriba, así que el jugador
+       * ya sabe qué es sin que nadie se lo explique, y es lo único que hace que
+       * "-35" y "+26" se lean como la misma cosa que la barra que va bajando. */
       function coste(tipo) {
         var n = Math.round(Motor.energiaDeEspacio(tipo));
         if (!n) return '';
-        return '<span class="cuesta' + (n > 0 ? ' gana' : '') + '">' +
+        return '<span class="cuesta' + (n > 0 ? ' gana' : '') + '">' + Ico('rayo') +
                (n > 0 ? '+' : '') + n + '</span>';
       }
       /* Y lo que no cabe sale APAGADO, no se rechaza al tocarlo.
@@ -639,11 +645,21 @@ var UI = (function () {
        * Se mira el motivo y no solo el si/no, porque "Trabajar" tambien sale
        * apagado cuando todavia no tiene trabajo y eso es otra cosa. */
       var faltaCuerpo = Motor.puedeAsignar(espacioSel, 'tarea').motivo === 'energia' ||
-                        Motor.puedeAsignar(espacioSel, 'trabajo').motivo === 'energia';
+                        (Motor.desbloqueado('trabajo') &&
+                         Motor.puedeAsignar(espacioSel, 'trabajo').motivo === 'energia');
       h += '<div class="btn-fila acciones-jornada">';
-      h += '<button class="btn-chico j-trabajo" data-poner="trabajo"' +
-           (puedeTrabajar ? cabe('trabajo') : ' disabled') + '>' + Ico('maletin') + ' ' +
-           T('Trabajar') + coste('trabajo') + '</button>';
+      /* El botón de trabajar no existe mientras no exista el trabajo.
+       *
+       * Salía apagado desde el primer mes, con un aviso que mandaba a "la
+       * pestaña Trabajo" cuatro meses antes de que esa pestaña se abriera.
+       * Mandar a alguien a un sitio que no está es peor que no decirle nada:
+       * lo pone a buscarlo y a dudar de si se le rompió algo. Va atado a la
+       * LLAVE y no a tener empleo, que son dos momentos distintos. */
+      if (Motor.desbloqueado('trabajo')) {
+        h += '<button class="btn-chico j-trabajo" data-poner="trabajo"' +
+             (puedeTrabajar ? cabe('trabajo') : ' disabled') + '>' + Ico('maletin') + ' ' +
+             T('Trabajar') + coste('trabajo') + '</button>';
+      }
       /* Un botón por cada negocio abierto. Es donde el jugador decide a cuál
        * de sus negocios le pone la cara este mes, y esa decisión importa: al
        * que no le pone ninguna jornada le rinde menos. */
@@ -678,7 +694,11 @@ var UI = (function () {
           T('No te queda cuerpo para más. Descansar es lo único que cabe: recuperas {0}.',
             Math.round(Motor.energiaDeEspacio('descanso'))) + '</p>';
       }
-      if (!puedeTrabajar) h += '<p class="aviso">' + T('Todavía no tienes trabajo. Búscalo en la pestaña Trabajo.') + '</p>';
+      // Y el aviso solo cuando el consejo se puede seguir: con la pestaña abierta
+      if (!puedeTrabajar && Motor.desbloqueado('trabajo')) {
+        h += '<p class="aviso">' +
+          T('Todavía no tienes trabajo. Búscalo en la pestaña Trabajo.') + '</p>';
+      }
     }
     h += '</div>';
 

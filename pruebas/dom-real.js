@@ -199,7 +199,7 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
   let esperas = 0;
   /* Lo que NO puede haber en pantalla durante la espera. Se cuenta en vez de
    * comprobarse mes a mes, para no soltar cuatro líneas iguales. */
-  const durante = { velo: 0, meta: 0, pestanas: 0, sinPista: 0, dinero: 0 };
+  const durante = { velo: 0, meta: 0, pestanas: 0, sinPista: 0, dinero: 0, trabajar: 0 };
   const pasosGuia = w.PROGRESO.filter(p => p.guia).map(p => p.id);
   const terminado = () => pasosGuia.every(id => w.Motor.get().peldanos[id]);
 
@@ -219,6 +219,17 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
       const libre = jornadasLibres(w)[0];
       if (libre) {
         clic(w, libre);
+        /* Con la casilla elegida, la fila de actividades está en pantalla: es
+         * el único momento en que se puede comprobar qué se ofrece.
+         *
+         * Y lo que NO se ofrece es trabajar. Salía apagado desde el primer mes
+         * con un aviso que mandaba a "la pestaña Trabajo" cuatro meses antes de
+         * que esa pestaña existiera. Mandar a alguien a un sitio que no está lo
+         * pone a buscarlo y a dudar de si algo se rompió. */
+        if (w.document.querySelector('[data-poner="trabajo"]')) durante.trabajar++;
+        if (w.document.querySelector('main').textContent.indexOf('pestaña Trabajo') >= 0) {
+          durante.trabajar++;
+        }
         const bTarea = w.document.querySelector('[data-poner="tarea"]');
         const bDesc = w.document.querySelector('[data-poner="descanso"]');
         const cabe = bTarea &&
@@ -311,6 +322,8 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
   ok(durante.pestanas === 0,
      'y esos meses son Mes y Estudio: ni banco ni noticias ni trabajo todavía');
   ok(durante.dinero === 0, 'y no aparece un solo quetzal en pantalla');
+  ok(durante.trabajar === 0,
+     'ni el botón de Trabajar, ni un aviso que mande a una pestaña que no existe');
   /* La pista que sustituye a la cinta. Es lo único que el juego pide en esos
    * meses, y si desapareciera el jugador se quedaría sin saber qué hacer con
    * la pantalla apagada y sin instrucciones. */

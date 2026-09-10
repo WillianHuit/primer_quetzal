@@ -1023,7 +1023,8 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
    lo que devuelve: es el unico sitio donde el jugador ve el precio ANTES. */
 .cuesta {
   margin-left: auto; font-size: 11.5px; font-weight: 800;
-  padding: 1px 6px; border-radius: 99px;
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 1px 6px 1px 4px; border-radius: 99px;
   background: #fdf0ec; color: var(--rojo);
   border: 1px solid color-mix(in srgb, var(--rojo) 26%, var(--linea));
   font-variant-numeric: tabular-nums;
@@ -1032,6 +1033,7 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
   background: var(--verde-claro); color: var(--verde);
   border-color: var(--verde-borde);
 }
+.cuesta svg { width: 12px; height: 12px; flex: 0 0 auto; }
 .acciones-jornada .btn-chico { justify-content: flex-start; gap: 7px; }
 
 /* La barra de energia proyectada cuando va mal */
