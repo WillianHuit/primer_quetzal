@@ -17,6 +17,50 @@
   ui['Imprevisto'] = 'Setback';
   ui['Fin de mes'] = 'Month end';
 
+  /* ---------- el dia que no existio y la deuda de experiencia ---------- */
+  ui['Viaje'] = 'Time slip';
+  ui['Un día que no existió'] = 'A day that never happened';
+  ui['Lo que no sabías, se paga.'] = 'What you did not know, you pay for.';
+  ui['Te faltaban {0} de experiencia. Se cobraron en {1} y {2} de cuerpo.'] =
+    'You were {0} experience short. It was charged as {1} and {2} of energy.';
+
+  /* Lo que te pasa cuando el dia se te atraviesa, por id. Ver datos/tablero.js
+   * y docs/como-crecer-el-tablero.md: agregar una es agregar su linea aqui. */
+  X.tablero_dificultad = {
+    dif_desvelo: 'You stayed up late on your phone.',
+    dif_lluvia: 'The rain came down and you got soaked the whole way.',
+    dif_gripe: 'You have had a cold since yesterday.',
+    dif_bus: 'The bus never came and you had to walk.',
+    dif_pleito: 'A row at home and nobody slept well.',
+    dif_luz: 'The power was out all night.',
+    dif_mandado: 'They sent you running errands all day.',
+    dif_cola: 'Four hours in line for a two-minute piece of paper.',
+    dif_celular: 'You cracked your phone screen.',
+    dif_zapatos: 'Your shoes fell apart and will not last another month.',
+    dif_medicina: 'You had to buy medicine for the family.',
+    dif_pasaje: 'The bus fare went up and the whole month goes on transport.',
+    dif_cumple: 'A birthday in the family and you had to chip in.',
+    dif_gotera: 'Water came in through the roof and it had to be patched.',
+    dif_robo: 'You got robbed at the bus stop. Not much, but still.',
+    dif_herramienta: 'A tool you use at work broke.',
+    dif_cuaderno: 'You did not open your notebook all week.',
+    dif_falte: 'You missed three days in a row and lost the thread.',
+    dif_copia: 'You copied on the exam. You passed and learned nothing.',
+    dif_apuntes: 'You lost your notes for the whole term.',
+    dif_pantalla: 'The month went by on a screen and you revised nothing.'
+  };
+
+  /* Los textos de los viajes en el tiempo, por id. Ver datos/tablero.js. */
+  X.tablero_viaje = {
+    via_futuro: 'You fell asleep on the bus and woke up three months ahead. ' +
+                'Nobody is going to believe you.',
+    via_reloj: 'The church clock struck thirteen and the day repeated itself.',
+    via_abuelo: 'You dreamt of your grandfather. He told you what was coming, and he was right.',
+    via_apagon: 'A two-hour blackout, and when the lights came back it was the following week.',
+    via_bus: 'You got on the wrong bus and it dropped you off in another month.',
+    via_lluvia: 'It rained without stopping and the calendar skipped a few days.'
+  };
+
   /* ---------- el barrio del centro del tablero ----------
    * El nombre de cada barrio y lo que se ve en el. La clave ':d' es la
    * descripcion, la que va en el title. Ver datos/barrio.js. */

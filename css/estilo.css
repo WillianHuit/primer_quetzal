@@ -409,49 +409,73 @@ p  { margin: 0 0 10px; }
 .c-dificultad { --tinte: var(--rojo); }
 .c-comodin    { --tinte: #6b4fa8; }
 .c-fin        { --tinte: var(--verde); }
+.c-viaje      { --tinte: #2f7f93; }
 
 /* ---------- una caja de verdad ----------
-   Tres caras y una sombra. Con esto estan hechos los objetos que se paran en
-   las casillas y los edificios del barrio del centro: una sola pieza, dos
-   usos.
+   Techo, CUATRO paredes y una sombra. Con esto estan hechos los objetos que se
+   paran en las casillas y los edificios del barrio del centro: una sola pieza,
+   dos usos.
 
-   El frente cuelga del borde delantero de la base y gira -90 grados sobre el:
-   asi se para hacia arriba y su cara mira a la camara. El costado hace lo
-   mismo y ademas gira 90 sobre Y, para quedar en el plano de la derecha. Las
+   Cuatro y no tres, que es como estaban. Con tres —techo, frente y costado— la
+   caja solo servia vista desde una esquina, asi que habia que DESGIRARLA cada
+   vez que el tablero giraba para que siempre ensenara la misma cara. Y una
+   casa que pivota sobre si misma cada vez que giras el tablero no parece una
+   casa, parece un cartel. Con las cuatro paredes la caja se queda quieta, el
+   tablero gira, y la ves por el otro lado: que es lo que pasa cuando uno gira
+   un tablero de mesa de verdad.
+
+   Cada pared cuelga de su borde de la base y gira noventa grados sobre el. Las
    medidas vienen en pixeles desde la interfaz porque translateZ no acepta
    porcentajes. */
-/* Y la caja se DESGIRA lo que gire el tablero: sus tres caras estan hechas
-   para mirar a la camara, y si girara con el tablero le verias el costado que
-   no existe. Es la misma cuenta para todo lo que se para encima —las casitas,
-   el rotulo del barrio, el dado y la ficha— y va antes de la inclinacion,
-   porque deshacer un giro es deshacerlo en el orden contrario. */
 .caja3d {
   position: absolute;
   transform-style: preserve-3d;
-  transform: rotate(calc(-1 * var(--vuelta, 0deg))) translateZ(var(--sube, 0px));
+  transform: translateZ(var(--sube, 0px));
   pointer-events: none;
 }
 .caja3d .cara {
   position: absolute; display: block;
   background: var(--cara);
+  /* La luz va en la propia cara y no en un color por pared: el tablero gira, y
+     una pared pintada de oscuro porque "esta detras" acaba mirando a la camara
+     media vuelta despues. Asi cada pared se ve igual de bien desde cualquier
+     lado. */
+  box-shadow: inset 0 5px 6px -5px rgba(255, 255, 255, .5),
+              inset 0 -7px 9px -7px rgba(10, 20, 16, .28);
 }
 .caja3d .techo {
   left: 0; top: 0; width: 100%; height: 100%;
   background: var(--techo); border-radius: 2px;
   transform: translateZ(var(--alto));
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
-.caja3d .frente {
+/* El emblema va en el TECHO y no en una pared: desde arriba se ve caiga el
+   tablero como caiga, y un icono en una pared se pierde en cuanto esa pared
+   deja de mirar a la camara. */
+.caja3d .techo svg {
+  width: 58%; height: 58%;
+  opacity: .5; color: rgba(12, 24, 20, .85);
+}
+.caja3d .sur {
   left: 0; bottom: 0; width: 100%; height: var(--alto);
   transform-origin: 50% 100%; transform: rotateX(-90deg);
   border-radius: 2px 2px 0 0;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: flex-end; justify-content: center;
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22);
 }
-.caja3d .costado {
+.caja3d .norte {
+  left: 0; top: 0; width: 100%; height: var(--alto);
+  transform-origin: 50% 0%; transform: rotateX(90deg);
+  border-radius: 2px 2px 0 0;
+}
+.caja3d .este {
   left: 100%; bottom: 0; width: var(--d, 100%); height: var(--alto);
   transform-origin: 0% 100%; transform: rotateX(-90deg) rotateY(90deg);
-  filter: brightness(.84);
+}
+.caja3d .oeste {
+  left: 0; bottom: 0; width: var(--d, 100%); height: var(--alto);
+  transform-origin: 0% 100%; transform: rotateX(-90deg) rotateY(90deg);
 }
 /* La sombra en el suelo. Solo la llevan las piezas que se paran en el: una
    copa de arbol flotando a nueve pixeles no proyecta la suya donde esta. */
@@ -461,25 +485,19 @@ p  { margin: 0 0 10px; }
   border-radius: 3px;
   filter: blur(1.5px);
 }
-.caja3d .frente svg {
-  width: 62%; height: 62%;
-  opacity: .55; color: rgba(12, 24, 20, .8);
+/* Ventanas en las CUATRO paredes, y con un dibujo de fondo en vez de un puñado
+   de elementos: cuatro paredes por doce ventanas por diez edificios son
+   cuatrocientos ochenta nodos para pintar unos cuadritos. Donde se cruzan las
+   dos tramas el color se dobla, y ese cruce es la ventana. */
+.caja3d .pared.con-ventanas {
+  background-image: radial-gradient(circle at center,
+    rgba(40, 64, 84, .26) 0 1.6px, transparent 1.9px);
+  background-size: 7px 7px;
 }
-/* Ventanas: las columnas y las filas las escribe la interfaz en el style. */
-.ventanas {
-  position: absolute; inset: 16% 14%;
-  display: grid; gap: 1.5px;
-}
-.ventanas i { background: rgba(46, 72, 92, .38); border-radius: 1px; }
-.ventanas i:nth-child(3n) { background: rgba(240, 198, 110, .8); }
-/* La lamina, acanalada: rayas finas en el techo y en las paredes. Es lo que
-   la distingue del block a este tamanio, donde no cabe ningun otro detalle. */
+/* La lamina, acanalada: rayas finas en todas las caras. Es lo que la distingue
+   del block a este tamanio, donde no cabe ningun otro detalle. */
 .pieza-lamina .cara {
   background-image: repeating-linear-gradient(90deg,
-    rgba(30, 40, 45, .16) 0 1px, transparent 1px 4px);
-}
-.pieza-lamina .techo {
-  background-image: repeating-linear-gradient(0deg,
     rgba(30, 40, 45, .16) 0 1px, transparent 1px 4px);
 }
 .puerta {
@@ -492,6 +510,13 @@ p  { margin: 0 0 10px; }
   position: absolute; left: 0; right: 0; bottom: 0; height: 38%;
   background: repeating-linear-gradient(90deg, #d8503f 0 4px, #f7f0e3 4px 8px);
 }
+/* Tu casa y tu trabajo, que son las dos piezas del barrio que salen del estado
+   y no de los datos, llevan un borde de tinta: son TUYAS y hay que
+   distinguirlas de las del vecindario a la primera. */
+.propia-casa .techo, .propia-trabajo .techo {
+  box-shadow: inset 0 0 0 1.5px rgba(20, 40, 32, .5);
+}
+.propia-casa .techo svg, .propia-trabajo .techo svg { opacity: .72; }
 
 /* ---------- el barrio, en el centro ----------
    Lo que en un tablero de mesa son las cartas. El barrio sale de datos/barrio.js
@@ -699,8 +724,53 @@ p  { margin: 0 0 10px; }
   .barrio-frente { transform: none; }
   .barrio-frente .dado3d { transform: none; }
   .barrio-rotulo { transform: none; }
-  .caja3d .techo, .caja3d .costado, .caja3d.consombra::before { display: none; }
-  .caja3d .frente { top: 0; bottom: auto; height: 100%; transform: none; border-radius: 3px; }
+  .caja3d .pared, .caja3d.consombra::before { display: none; }
+  .caja3d .techo { transform: none; }
+  .fin-sello, .papelito { animation: none; }
+}
+
+/* ---------- llegaste al final del mes ----------
+   Treinta dias recorridos de uno en uno merecen algo mas que una linea gris.
+   El sello cae encima del tablero, el confeti baja y a los dos segundos se va
+   solo: no hay que cerrarlo y no tapa el boton de terminar el mes. Una
+   celebracion que hay que despachar deja de ser una celebracion. */
+.fin-mes {
+  position: absolute; inset: 0;
+  overflow: hidden; pointer-events: none;
+  z-index: 6;
+  transition: opacity .4s ease;
+}
+.fin-mes.yendose { opacity: 0; }
+.fin-sello {
+  position: absolute; left: 50%; top: 44%;
+  transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: var(--verde); color: #fff;
+  font-size: 18px; font-weight: 800; letter-spacing: .3px;
+  box-shadow: 0 10px 22px rgba(10, 25, 20, .35), inset 0 1px 0 rgba(255,255,255,.25);
+  animation: sello-cae .5s cubic-bezier(.2, 1.5, .4, 1) both;
+}
+.fin-sello svg { width: 20px; height: 20px; }
+@keyframes sello-cae {
+  0%   { transform: translate(-50%, -50%) scale(2.4) rotate(-12deg); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(-3deg); opacity: 1; }
+}
+/* Cada papelito lleva su color, su carril y su retraso, y eso lo escribe la
+   interfaz: veinte reglas iguales con un numero distinto no son CSS. */
+.papelito {
+  position: absolute; top: -14px;
+  width: 7px; height: 11px; border-radius: 2px;
+  animation-name: papelito-cae;
+  animation-timing-function: ease-in;
+  animation-fill-mode: both;
+}
+@keyframes papelito-cae {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translateY(320px) rotate(540deg); opacity: .9; }
 }
 
 /* Lo que paso en la ultima tirada, en una linea. Es el registro del mes: sin

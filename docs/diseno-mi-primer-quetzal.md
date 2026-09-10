@@ -280,12 +280,15 @@ Dos consecuencias que hay que tener en la cabeza al tocar esto:
 - **El anillo es un cuadrado exacto** (9×9 siempre, con las casillas que sobren como camino
   sin día). Antes era «lo más cuadrado posible» y febrero salía 9×8: girarle la cara 90° a
   una casilla que no es cuadrada la desborda.
-- **Lo que se para encima NO gira.** Las cajas, la ficha, el dado y el rótulo del barrio se
-  desgiran lo que gire el tablero (`rotate(calc(-1 * var(--vuelta)))`), porque están hechos
-  para mirar a la cámara y girando le verías el costado que no existe. El dado y el rótulo
-  van además en una capa que desgira entera (`.barrio-frente`): si no, a media vuelta el
-  dado acababa tirado en la acera del fondo. Las casas del barrio sí giran de sitio —están
-  plantadas en el suelo— aunque sigan mirando de frente.
+- **Las cajas tienen CUATRO paredes.** Tenían tres —techo, frente y costado—, así que solo
+  servían vistas desde una esquina y había que desgirarlas cada vez que el tablero giraba.
+  Una casa que pivota sobre sí misma cada vez que giras el tablero no parece una casa,
+  parece un cartel. Con las cuatro se quedan quietas, el tablero gira y las ves por el otro
+  lado, que es lo que pasa al girar un tablero de mesa. Por lo mismo el **emblema va en el
+  techo**: desde arriba se ve caiga el tablero como caiga.
+- **Lo que sí desgira** es lo que es del jugador y no del mundo: la ficha, el dado y el
+  rótulo del barrio. Los dos últimos van en una capa que desgira entera
+  (`.barrio-frente`): si no, a media vuelta el dado acababa tirado en la acera del fondo.
 
 #### Cada día es una tarjeta, y lleva algo encima
 
@@ -306,6 +309,42 @@ Los objetos y los edificios están hechos con **la misma pieza**: `caja3d()`, tr
 cómo se ve el relieve, cambia el tablero entero. Las medidas van en píxeles y no en
 porcentajes porque `translateZ` **no acepta porcentajes**: si el ancho fuera relativo y el
 alto no, las cajas se deformarían con el ancho de la pantalla.
+
+#### Lo que te pasa tiene precio, y a veces no lo puedes pagar
+
+Las dificultades costaban solo cuerpo. Ahora pueden costar **cuerpo, dinero y experiencia**,
+y cada una pide la condición que le toca (`si: 'dinero'`, `si: 'estudia'`, `si: 'trabaja'`):
+no se le quita el cuaderno a quien no estudia, ni Q350 a quien tiene Q80.
+
+Esa condición nació de un error que el jugador vio: un comodín le ofrecía *"hay partido en la
+cancha y tienes tarea pendiente"* a alguien que había decidido no estudiar. **Elegir entre
+dos cosas cuando una de las dos no existe no es una decisión, es un error.** La misma palabra
+vale ahora para las casillas —las tareas no le salen a quien no está inscrito—, para las
+dificultades y para los comodines.
+
+**Y lo que sabes no se puede deber.** Si una dificultad quita 12 de experiencia y el jugador
+solo tiene 5, los 7 que faltan se cobran donde sí hay de dónde: en dinero por tres y en
+cuerpo por medio (`CONFIG.experiencia.deuda`). Es la parte del juego que castiga más al que
+no ha estudiado nada, que es justo al que le tiene que doler; la ventana se lo explica sola
+para que nadie vea salir quetzales de una casilla que hablaba del cuaderno.
+
+Y una dificultad **nunca deja a nadie en números rojos**: se cobra de lo que hay. Para
+endeudarse están los préstamos, que son una decisión y no un accidente.
+
+#### El día que no existió
+
+La casilla rara del tablero, y la única que solo da. Cae poco —peso 3, uno cada dos o tres
+meses— y lo que da depende de lo que el jugador ya tenga: **dinero** solo si ya maneja
+dinero (un 5–20% de lo suyo, en porcentaje y no en cifra fija, porque una cifra fija o no se
+nota a los cuarenta o rompe el juego a los quince), **algo aprendido** solo si estudia, y de
+**0 a 100 de cuerpo** siempre. Que a veces no dé nada es parte del asunto.
+
+#### Al final del mes cae el sello
+
+Treinta días recorridos de uno en uno merecen algo más que una línea gris. La cámara se abre
+—se ve el mes entero recorrido—, el sello cae encima y baja el confeti. Se va solo a los dos
+segundos: no hay que cerrarlo, no tapa el botón de terminar el mes y no le pide nada al
+jugador. Una celebración que hay que despachar deja de ser una celebración.
 
 #### El barrio del centro dice de dónde sales
 
@@ -341,7 +380,7 @@ librerías**, y no por tacañería:
   motor de escena son unos 600 KB, casi tres veces todo lo que hay hoy en `vendor/` y la
   mitad del presupuesto de arte, para dibujar un plano inclinado y un cubo.
 - Y sobre todo: un `<canvas>` de WebGL **no se puede probar**. `pruebas/dom-real.js` juega el
-  juego tocando nodos —200 comprobaciones— y el tablero es justo la pantalla donde más hay
+  juego tocando nodos —200 comprobaciones, y 22 mas del tablero— y el tablero es justo la pantalla donde más hay
   que romper. Con transformaciones CSS cada día del mes sigue siendo un `<div>` que la suite
   puede mirar y tocar.
 

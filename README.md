@@ -96,11 +96,22 @@ informal). De ahí en adelante:
 - **Y suena**: el dado al caer, una nota por paso —cada una un semitono más alta— y al
   llegar, alegre si le tocó algo bueno y triste si le tocó algo malo. Todo con osciladores
   del navegador: cero archivos. El interruptor está en el tablero, al lado del dado.
+- **Lo que te pasa tiene precio**: un día que se te atraviesa puede costarte cuerpo, dinero
+  y hasta lo que sabes. Y **lo que sabes no se puede deber**: si te quitan más experiencia de
+  la que tienes, lo que falta se cobra en dinero por tres y en cuerpo por medio.
+- **El día que no existió**: una casilla rara que solo da —dinero si ya tienes, algo
+  aprendido si estudias y de 0 a 100 de cuerpo—. Cae poco y se recuerda.
+- **Al llegar al final del mes** cae el sello y baja el confeti: treinta días recorridos de
+  uno en uno merecen algo más que una línea gris.
 - **El barrio, en el centro**: en un tablero de mesa el centro son las cartas; aquí son las
   casas donde vive el personaje, en tres dimensiones. Se empieza en el barrio que le tocó
   —la dificultad que elegiste— y sube con lo que junta: del asentamiento de lámina a la
-  colonia, a la residencial y a la zona de edificios. Es la única pantalla que dice cuánto
-  tienes sin escribir un número.
+  colonia, a la residencial y a la zona de edificios. Ahí están **tu casa** —que crece cuando
+  te mudas— y **tu trabajo**, con el emblema de tu oficio. Es la única pantalla que dice
+  cuánto tienes sin escribir un número.
+- **Se puede crecer sin tocar el motor**: cada dificultad, cada comodín y cada viaje en el
+  tiempo es una línea en `datos/tablero.js`. La guía está en
+  [docs/como-crecer-el-tablero.md](docs/como-crecer-el-tablero.md).
 - **En 3D, y sin descargar nada**: perspectiva, cajas con techo, frente y costado, y un dado
   que es un cubo de seis caras y rueda hasta la que salió. Todo con transformaciones 3D del
   navegador: cero librerías.

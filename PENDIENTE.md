@@ -5,7 +5,27 @@ aporta al juego, no por lo que es más fácil.
 
 ---
 
-## 0. Lo que se cerró hoy
+## 0. Lo que le toca a quien siga con el tablero
+
+El tablero del mes es lo que más va a crecer, y ya tiene su propia guía:
+**`docs/como-crecer-el-tablero.md`**. Ahí está el formato de cada cosa, los
+rangos que no desbalancean y la regla de la condición `si`. Lo que falta,
+por orden de lo que más se nota jugando:
+
+- **Más comodines.** Son los que el jugador recuerda y solo hay ocho. Deberían
+  ser treinta.
+- **Más dificultades de adulto.** Las 21 de ahora son de estudiante y de casa;
+  falta lo que le pasa a alguien de 30 con un negocio y dos hijos.
+- **Los comodines no están traducidos al inglés** (40 cadenas: pregunta, los
+  dos lados y los dos resultados de cada uno). Las dificultades y los viajes
+  en el tiempo sí lo están, en `datos/textos.en.v2.js`.
+- **Condiciones nuevas.** `si` acepta tres palabras (`estudia`, `trabaja`,
+  `dinero`). Faltan la edad y el número de negocios abiertos, y agregar una es
+  tocar `cumpleCondicion()` en `js/motor.js`: cuatro líneas.
+
+---
+
+## 0.1. Lo que se cerró hoy
 
 ### El colegio deja de llevar al jugador de la mano
 

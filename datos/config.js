@@ -247,7 +247,19 @@ var CONFIG = {
     /* Y cansado se aprende la mitad. Es la otra penalizacion de la energia, y
      * la unica que funciona a los trece: a esa edad un golpe de dinero lo
      * absorbe la familia, pero que la tarea rinda la mitad lo paga el. */
-    factorAgotado: 0.5
+    factorAgotado: 0.5,
+
+    /* Lo que sabes NO SE PUEDE DEBER.
+     *
+     * Una dificultad puede quitar experiencia —no abriste el cuaderno, te
+     * copiaste, faltaste tres dias—, y el jugador puede no tener suficiente.
+     * Lo que falta se cobra donde si hay de donde: en dinero por tres y en
+     * cuerpo por medio.
+     *
+     * Los numeros son de diseno y no de ninguna fuente: castigan mas al que
+     * no ha estudiado nada, que es justo el que tiene que notarlo. Doce de
+     * experiencia sin nada guardado son Q36 y seis de cuerpo. */
+    deuda: { dinero: 3, energia: 0.5 }
   },
 
   prestaciones: {

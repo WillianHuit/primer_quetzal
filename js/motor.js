@@ -1248,13 +1248,46 @@ var Motor = (function () {
     return TABLERO_DIAS_POR_MES[estado ? estado.mes : 0] || 30;
   }
 
+  /* Las CONDICIONES del jugador, que no son las llaves de la ruta.
+   *
+   * Una llave dice que una parte del juego ya se abrio; una condicion dice
+   * como esta el jugador ahora mismo. Las piden las casillas, las dificultades
+   * y los comodines, y todas usan estas tres palabras:
+   *
+   *   'estudia'  inscrito en algo. Sin esto el tablero le sacaba tareas del
+   *              colegio a quien no estudia y comodines que le hablaban de
+   *              "tu tarea pendiente" a quien no tiene ninguna.
+   *   'trabaja'  con empleo.
+   *   'dinero'   ya maneja dinero Y le alcanza para lo que le van a quitar.
+   *              En la etapa de colegio devuelve false siempre: la pantalla
+   *              todavia no habla de quetzales, y quitarle unos que no ve es
+   *              peor que no quitarselos.
+   *
+   * `costo` es lo que la cosa va a costar, para no cobrarle a nadie mas de lo
+   * que tiene. Una dificultad no puede dejar a nadie en numeros rojos: para
+   * eso ya estan los prestamos, que son una decision y no un accidente.
+   */
+  function cumpleCondicion(si, costo) {
+    if (!si) return true;
+    if (!estado) return false;
+    if (si === 'estudia') return !!estado.estudio;
+    if (si === 'trabaja') return !!estado.empleo;
+    if (si === 'dinero') {
+      if (etapaTablero() === 'colegio') return false;
+      return dineroDisponible() >= Math.abs(costo || 0);
+    }
+    return true;
+  }
+
   /* Sortea un TIPO de dia con los pesos de la etapa. Una casilla que pide una
-   * llave que no esta abierta no sale nunca, aunque su peso diga otra cosa. */
+   * llave que no esta abierta —o una condicion que no se cumple— no sale
+   * nunca, aunque su peso diga otra cosa. */
   function sortearTipoDeDia(etapa) {
     var bolsa = [];
     for (var i = 0; i < TABLERO_CASILLAS.length; i++) {
       var c = TABLERO_CASILLAS[i];
       if (c.requiere && !desbloqueado(c.requiere)) continue;
+      if (c.si && !cumpleCondicion(c.si)) continue;
       var peso = (c.peso && c.peso[etapa]) || 0;
       for (var k = 0; k < peso; k++) bolsa.push(c);
     }
@@ -1308,7 +1341,18 @@ var Motor = (function () {
     }
 
     if (casilla.tipo === 'dificultad' && typeof TABLERO_DIFICULTADES !== 'undefined') {
-      casilla.sorteado = TABLERO_DIFICULTADES[azarEntero(0, TABLERO_DIFICULTADES.length - 1)];
+      /* Solo las que le pueden pasar a ESTE jugador ahora mismo: no se le
+       * quita el cuaderno a quien no estudia ni Q350 a quien tiene Q80. */
+      var males = TABLERO_DIFICULTADES.filter(function (d) {
+        return cumpleCondicion(d.si, d.dinero);
+      });
+      if (!males.length) males = TABLERO_DIFICULTADES.filter(function (d) { return !d.si; });
+      casilla.sorteado = males[azarEntero(0, males.length - 1)];
+      return casilla;
+    }
+
+    if (casilla.tipo === 'viaje') {
+      casilla.sorteado = sortearViaje();
       return casilla;
     }
 
@@ -1318,6 +1362,7 @@ var Motor = (function () {
        * peor que no darlo. */
       var hayDinero = etapaTablero() !== 'colegio';
       var posibles = TABLERO_COMODINES.filter(function (c) {
+        if (c.si && !cumpleCondicion(c.si)) return false;
         if (hayDinero) return true;
         return !(c.a.efecto && c.a.efecto.dinero) && !(c.b.efecto && c.b.efecto.dinero);
       });
@@ -1327,6 +1372,40 @@ var Motor = (function () {
     }
 
     return casilla;
+  }
+
+  /* EL DIA QUE NO EXISTIO.
+   *
+   * La unica casilla que solo da. Lo que da depende de lo que el jugador ya
+   * tenga, y eso es lo que la hace justa: al que no tiene dinero no le
+   * aparecen quetzales de la nada —no sabria de donde salieron— y al que no
+   * estudia no le cae sabiduria del futuro.
+   *
+   * El dinero va en PORCENTAJE de lo suyo y no en una cifra fija. Una cifra
+   * fija o no se nota a los cuarenta o rompe el juego a los quince; un
+   * porcentaje crece con la partida y nunca es el sueldo de un mes.
+   *
+   * El cuerpo va de 0 a 100 y sin condicion: puede no darte nada y puede
+   * devolverte el mes entero. Que a veces no de nada es parte del asunto.
+   */
+  function sortearViaje() {
+    var texto = (typeof TABLERO_VIAJES !== 'undefined' && TABLERO_VIAJES.length)
+      ? TABLERO_VIAJES[azarEntero(0, TABLERO_VIAJES.length - 1)]
+      : { id: 'via', texto: '' };
+
+    var hay = dineroDisponible();
+    var dinero = 0;
+    if (hay >= 20 && etapaTablero() !== 'colegio') {
+      dinero = Math.round(hay * azarEntero(5, 20) / 100);
+    }
+
+    return {
+      id: texto.id,
+      texto: texto.texto,
+      dinero: dinero,
+      experiencia: (estado && estado.estudio) ? azarEntero(4, 15) : 0,
+      energia: azarEntero(0, 100)
+    };
   }
 
   /* Tirar el dado. Devuelve lo que paso, o null si el mes ya se acabo.
@@ -1356,16 +1435,71 @@ var Motor = (function () {
    * Es lo unico que las casillas pueden mover, y a proposito: un tablero que
    * pudiera tocar cualquier cosa del estado seria imposible de balancear. */
   function aplicarEfecto(ef) {
-    if (!ef) return;
-    if (ef.energia) {
-      estado.energia = limitar(estado.energia + ef.energia, 0, CONFIG.energia.maxima);
+    if (!ef || !estado) return null;
+    var energia = ef.energia || 0;
+    var dinero = ef.dinero || 0;
+    var xp = ef.experiencia || 0;
+    var hecho = { energia: 0, dinero: 0, experiencia: 0, deuda: null };
+
+    /* LO QUE SABES NO SE PUEDE DEBER. Si le quitan mas experiencia de la que
+     * tiene, lo que falta se cobra en dinero y en cuerpo (los factores estan
+     * en CONFIG.experiencia.deuda). Es la parte del juego que castiga mas al
+     * que no ha estudiado nada, que es justo el que tiene que notarlo. */
+    if (xp < 0) {
+      var tiene = estado.experiencia || 0;
+      var quita = Math.min(tiene, -xp);
+      var falta = -xp - quita;
+      estado.experiencia = tiene - quita;
+      hecho.experiencia = -quita;
+      if (falta > 0) {
+        var f = (CONFIG.experiencia && CONFIG.experiencia.deuda) || { dinero: 3, energia: 0.5 };
+        hecho.deuda = {
+          experiencia: falta,
+          dinero: -Math.round(falta * f.dinero),
+          energia: -Math.round(falta * f.energia)
+        };
+        dinero += hecho.deuda.dinero;
+        energia += hecho.deuda.energia;
+      }
+    } else if (xp > 0) {
+      sumarExperiencia(xp);
+      hecho.experiencia = xp;
     }
-    if (ef.experiencia) sumarExperiencia(ef.experiencia);
-    if (ef.dinero) {
-      if (estado.monetaria !== null) estado.monetaria = redondear(estado.monetaria + ef.dinero);
-      else estado.efectivo = redondear(estado.efectivo + ef.dinero);
+
+    if (energia) {
+      var antes = estado.energia;
+      estado.energia = limitar(estado.energia + energia, 0, CONFIG.energia.maxima);
+      hecho.energia = redondear(estado.energia - antes);
     }
+    if (dinero) hecho.dinero = dinero > 0 ? abonarDinero(dinero) : cobrarDinero(-dinero);
+
     guardar();
+    return hecho;
+  }
+
+  /* Meter y sacar dinero de donde haya, sin dejar a nadie en rojo.
+   *
+   * Un accidente del tablero no puede meter a nadie en numeros rojos: para eso
+   * estan los prestamos, que son una decision y no algo que te pasa. Se cobra
+   * primero del efectivo, que es como se paga un imprevisto de verdad, y
+   * despues de la cuenta. Devuelve lo que de verdad se movio. */
+  function cobrarDinero(monto) {
+    var falta = monto;
+    var deEfectivo = Math.min(estado.efectivo, falta);
+    estado.efectivo = redondear(estado.efectivo - deEfectivo);
+    falta -= deEfectivo;
+    if (falta > 0 && estado.monetaria !== null) {
+      var deCuenta = Math.min(estado.monetaria, falta);
+      estado.monetaria = redondear(estado.monetaria - deCuenta);
+      falta -= deCuenta;
+    }
+    return -redondear(monto - falta);
+  }
+
+  function abonarDinero(monto) {
+    if (estado.monetaria !== null) estado.monetaria = redondear(estado.monetaria + monto);
+    else estado.efectivo = redondear(estado.efectivo + monto);
+    return redondear(monto);
   }
 
   /* Aceptar la casilla en la que estoy: mete la jornada en la contabilidad del
@@ -2900,7 +3034,8 @@ var Motor = (function () {
     casillaActual: casillaActual, tableroTerminado: tableroTerminado,
     etapaTablero: etapaTablero, aplicarEfecto: aplicarEfecto,
     aceptarCasilla: aceptarCasilla, diasDelMes: diasDelMes,
-    nivelDeBarrio: nivelDeBarrio,
+    nivelDeBarrio: nivelDeBarrio, cumpleCondicion: cumpleCondicion,
+    sortearViaje: sortearViaje,
     energiaDeEspacio: energiaDeEspacio, energiaProyectada: energiaProyectada,
     energiaProyectadaMes: energiaProyectadaMes,
     comprarSaber: comprarSaber, mejoraDeSaber: mejoraDeSaber,

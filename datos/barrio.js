@@ -126,6 +126,19 @@ var BARRIO_NIVELES = [
   }
 ];
 
+/* Los dos sitios del barrio que NO salen de esta lista: la casa donde vive el
+ * personaje y el lugar donde trabaja. Se dibujan siempre en el mismo par de
+ * puntos de la placita —al frente, uno a cada lado del dado— para que el
+ * jugador sepa dónde mirar sin buscarlos, y cambian con la partida: la casa
+ * crece cuando se muda y el trabajo lleva el emblema de su oficio.
+ *
+ * Mover uno es cambiar estos números. Lo único que hay que respetar es dejar
+ * libre el centro de enfrente, que es donde cae el dado. */
+var BARRIO_PROPIOS = {
+  casa:    { x: 16, z: 92 },
+  trabajo: { x: 84, z: 92 }
+};
+
 /* El barrio del primer día, por origen del personaje. Los tres niveles de
  * dificultad de la pantalla de inicio salen cada uno de un origen distinto
  * (ver NIVELES_JUEGO en datos/origenes.js), así que elegir "difícil" es

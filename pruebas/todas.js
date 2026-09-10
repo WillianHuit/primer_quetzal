@@ -10,6 +10,7 @@ const SUITES = [
   ['largo-plazo.js',        'Hipoteca, pensión, orígenes y migración'],
   ['minijuegos-valen.js',   'Los minijuegos valen la jornada que cuestan'],
   ['ruta.js',               'La ruta que se va abriendo'],
+  ['tablero.js',            'El tablero del mes: qué sale y a quién'],
   ['decisiones.js',         'Las tarjetas de decisión'],
   ['mejoras.js',            'Las mejoras que te mejoran a ti'],
   ['imperio.js',            'El imperio: negocios, planilla y techos'],

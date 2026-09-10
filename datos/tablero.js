@@ -25,8 +25,9 @@
  *               'trabajo'    te sale un día de trabajo. Lo tomas o no.
  *               'extra'      un trabajito suelto de los de Extra.
  *               'descanso'   un día para ti. Recuperas cuerpo.
- *               'dificultad' te pasa algo y te cuesta cuerpo. No se elige.
+ *               'dificultad' te pasa algo y te cuesta. No se elige.
  *               'comodin'    dos puertas, A y B, y eliges a ciegas.
+ *               'viaje'      un día que no debería existir. Ver abajo.
  *
  *   nombre    lo que dice la casilla
  *   icono     de js/iconos.js
@@ -34,6 +35,16 @@
  *             con peso 0 en una etapa no sale nunca en esa etapa.
  *   requiere  'trabajo' si la casilla solo tiene sentido con la pestaña de
  *             trabajo abierta. Sin eso, su peso es cero aunque diga otra cosa.
+ *   si        una CONDICIÓN del jugador, no de la ruta. Las tres que hay:
+ *
+ *               'estudia'  solo si está inscrito en algo
+ *               'trabaja'  solo si tiene empleo
+ *               'dinero'   solo si ya maneja dinero y le alcanza
+ *
+ *             La misma palabra vale para las casillas, las dificultades y los
+ *             comodines. Está porque el tablero le sacaba tareas del colegio a
+ *             quien no estudia, y un comodín que dice "tienes tarea pendiente"
+ *             a quien no tiene ninguna no es una decisión: es un error.
  *
  * Las ETAPAS son dos por ahora y salen del estado del jugador, no de la edad:
  *
@@ -52,6 +63,11 @@
  * largo de la partida. La mitad de ellas premian la opción prudente y la otra
  * mitad la premian a medias, porque si la prudente ganara siempre no habría
  * nada que decidir.
+ *
+ * Un comodín también puede pedir una CONDICIÓN con `si`, igual que las
+ * casillas y las dificultades: `si: 'estudia'` es el de los dos que hablan del
+ * colegio. Sin eso, a quien no está inscrito en nada le salía "tienes tarea
+ * pendiente", y una tarea que no existe no se puede dejar para después.
  *
  * Cada comodín tiene { a: {...}, b: {...} } y cada lado lleva:
  *   texto     lo que el jugador lee ANTES de elegir
@@ -72,6 +88,10 @@ var TABLERO_CASILLAS = [
     tipo: 'tarea',
     nombre: 'Tarea del colegio',
     icono: 'libro',
+    /* Solo si está estudiando. Sin esto el tablero le sacaba tareas del
+     * colegio a quien no está inscrito en nada, y una tarea que no existe no
+     * se puede hacer ni dejar pasar. */
+    si: 'estudia',
     peso: { colegio: 30, trabajo: 14 }
   },
   {
@@ -110,21 +130,111 @@ var TABLERO_CASILLAS = [
     nombre: 'Te toca elegir',
     icono: 'mundo',
     peso: { colegio: 14, trabajo: 12 }
+  },
+  {
+    id: 'dia_viaje',
+    tipo: 'viaje',
+    nombre: 'Un día que no existió',
+    icono: 'reloj',
+    /* Peso bajo a propósito: un día que regala cosas deja de ser un regalo en
+     * cuanto sale seguido. Uno cada dos o tres meses es una historia; uno cada
+     * semana es una nómina. */
+    peso: { colegio: 3, trabajo: 3 }
   }
 ];
 
-/* Lo que te pasa cuando el día se te atraviesa. Se aplica solo: no hay nada
- * que elegir, y eso también es la vida. Cuesta CUERPO y no dinero, porque a
- * los trece los golpes de dinero los absorbe la familia y este juego no le va
- * a mentir sobre eso. */
+/* ---------------------------------------------------------------------------
+ * Lo que te pasa cuando el día se te atraviesa
+ * ---------------------------------------------------------------------------
+ * Se aplica solo: no hay nada que elegir, y eso también es la vida.
+ *
+ * Cada una puede quitar TRES cosas, y las tres a la vez si hace falta:
+ *
+ *   energia      cuerpo. Lo que cuesta cualquier día malo.
+ *   dinero       quetzales. Negativo, siempre.
+ *   experiencia  lo que sabes. Negativo. Tiene truco, ver abajo.
+ *
+ * Y cada una puede pedir una condición con `si` ('estudia', 'trabaja' o
+ * 'dinero'). Sin condición sale siempre. Las que quitan dinero llevan casi
+ * todas `si: 'dinero'`: a los trece la pantalla todavía no habla de quetzales
+ * y quitarle unos que no ve es peor que no quitárselos; y quitarle los que no
+ * tiene, peor todavía.
+ *
+ * EL TRUCO DE LA EXPERIENCIA. Lo que sabes no se puede deber. Si una
+ * dificultad te quita 12 y solo tienes 5, los 7 que faltan se cobran donde sí
+ * hay de dónde: en dinero por TRES y en cuerpo por MEDIO (los factores están
+ * en CONFIG.experiencia.deuda, en datos/config.js). Un mes sin abrir el
+ * cuaderno se paga caro justamente cuando no hay nada guardado, que es cuando
+ * de verdad duele.
+ * --------------------------------------------------------------------------- */
 var TABLERO_DIFICULTADES = [
+  // --- las que solo cuestan cuerpo: pasan a cualquier edad ---
   { id: 'dif_desvelo', texto: 'Te desvelaste viendo el celular.', energia: -12 },
   { id: 'dif_lluvia', texto: 'Se soltó el agua y te empapaste todo el camino.', energia: -10 },
   { id: 'dif_gripe', texto: 'Andas con gripe desde ayer.', energia: -16 },
   { id: 'dif_bus', texto: 'El bus no pasó y te tocó caminar.', energia: -10 },
   { id: 'dif_pleito', texto: 'Pleito en la casa y nadie durmió bien.', energia: -14 },
   { id: 'dif_luz', texto: 'Se fue la luz toda la noche.', energia: -8 },
-  { id: 'dif_mandado', texto: 'Te mandaron a hacer mandados todo el día.', energia: -12 }
+  { id: 'dif_mandado', texto: 'Te mandaron a hacer mandados todo el día.', energia: -12 },
+  { id: 'dif_cola', texto: 'Cuatro horas de cola para un papel de dos minutos.', energia: -13 },
+
+  // --- las que además cuestan dinero: solo cuando ya hay de dónde ---
+  { id: 'dif_celular', texto: 'Se te quebró la pantalla del celular.',
+    energia: -4, dinero: -350, si: 'dinero' },
+  { id: 'dif_zapatos', texto: 'Se te rompieron los zapatos y no aguantan otro mes.',
+    energia: -3, dinero: -180, si: 'dinero' },
+  { id: 'dif_medicina', texto: 'Te tocó comprar medicina para la casa.',
+    energia: -6, dinero: -120, si: 'dinero' },
+  { id: 'dif_pasaje', texto: 'Subió el pasaje y todo el mes se te va en camioneta.',
+    energia: -5, dinero: -75, si: 'dinero' },
+  { id: 'dif_cumple', texto: 'Cumpleaños en la familia y te tocó poner.',
+    energia: -4, dinero: -100, si: 'dinero' },
+  { id: 'dif_gotera', texto: 'Se metió el agua por el techo y hubo que taparlo.',
+    energia: -9, dinero: -250, si: 'dinero' },
+  { id: 'dif_robo', texto: 'Te robaron en la parada. No fue mucho, pero fue.',
+    energia: -11, dinero: -200, si: 'dinero' },
+  { id: 'dif_herramienta', texto: 'Se te arruinó una herramienta del trabajo.',
+    energia: -5, dinero: -160, si: 'trabaja' },
+
+  // --- las que cuestan lo que sabes: solo si está estudiando ---
+  { id: 'dif_cuaderno', texto: 'No abriste el cuaderno en toda la semana.',
+    energia: -2, experiencia: -10, si: 'estudia' },
+  { id: 'dif_falte', texto: 'Faltaste tres días seguidos y perdiste el hilo.',
+    energia: -4, experiencia: -14, si: 'estudia' },
+  { id: 'dif_copia', texto: 'Te copiaste en el examen. Lo pasaste y no te quedó nada.',
+    experiencia: -12, si: 'estudia' },
+  { id: 'dif_apuntes', texto: 'Perdiste los apuntes del trimestre.',
+    energia: -6, experiencia: -16, si: 'estudia' },
+  { id: 'dif_pantalla', texto: 'Se te fue el mes en la pantalla y no repasaste nada.',
+    energia: -5, experiencia: -8, si: 'estudia' }
+];
+
+/* ---------------------------------------------------------------------------
+ * El día que no existió: el viaje en el tiempo
+ * ---------------------------------------------------------------------------
+ * La casilla rara del tablero, y la única que solo da. Cae poco (peso 3) y
+ * cuando cae, el jugador se acuerda.
+ *
+ * Lo que da NO está escrito aquí, y a propósito: se sortea, y depende de lo
+ * que el jugador ya tenga. Ver `sortearViaje` en js/motor.js.
+ *
+ *   dinero       solo si ya tiene. Un porcentaje de lo suyo, no una cifra:
+ *                así el regalo crece con la partida y no desbalancea el
+ *                principio, que es donde una cifra fija rompería el juego.
+ *   experiencia  solo si está estudiando. Lo que aprendería en unas semanas.
+ *   cuerpo       siempre, de 0 a 100. Puede no darte nada y puede devolverte
+ *                el mes entero.
+ *
+ * Aquí solo van los TEXTOS, que es lo que hace que no se repita. Agregar uno
+ * es escribir una línea. */
+var TABLERO_VIAJES = [
+  { id: 'via_futuro', texto: 'Te dormiste en la camioneta y despertaste tres meses adelante. ' +
+                             'Nadie te lo va a creer.' },
+  { id: 'via_reloj', texto: 'El reloj de la iglesia dio trece campanadas y el día se repitió.' },
+  { id: 'via_abuelo', texto: 'Soñaste con tu abuelo. Te contó lo que iba a pasar, y acertó.' },
+  { id: 'via_apagon', texto: 'Un apagón de dos horas, y cuando volvió la luz era la semana siguiente.' },
+  { id: 'via_bus', texto: 'Te subiste a la camioneta equivocada y te dejó en otro mes.' },
+  { id: 'via_lluvia', texto: 'Llovió sin parar y el calendario se saltó unos días.' }
 ];
 
 /* Los comodines. A y B, y ninguna dice lo que va a pasar.
@@ -135,6 +245,7 @@ var TABLERO_DIFICULTADES = [
 var TABLERO_COMODINES = [
   {
     id: 'com_partido',
+    si: 'estudia',
     pregunta: 'Hay partido en la cancha y tienes tarea pendiente.',
     a: { texto: 'Ir al partido',
          resultado: 'Jugaste dos horas y llegaste muerto, pero de buenas.',
@@ -195,6 +306,7 @@ var TABLERO_COMODINES = [
   },
   {
     id: 'com_examen',
+    si: 'estudia',
     pregunta: 'Mañana hay examen y un compañero te ofrece las respuestas.',
     a: { texto: 'Aceptarlas',
          resultado: 'Pasaste el examen. Y no aprendiste nada.',

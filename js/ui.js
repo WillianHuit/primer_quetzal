@@ -345,12 +345,13 @@ var UI = (function () {
    */
   var ICONO_CASILLA = {
     libre: 'calendario', tarea: 'libro', trabajo: 'maletin', extra: 'mando',
-    descanso: 'luna', dificultad: 'alerta', comodin: 'mundo', fin: 'bandera'
+    descanso: 'luna', dificultad: 'alerta', comodin: 'mundo', fin: 'bandera',
+    viaje: 'reloj'
   };
   var CLASE_CASILLA = {
     libre: '', tarea: 'c-tarea', trabajo: 'c-trabajo', extra: 'c-extra',
     descanso: 'c-descanso', dificultad: 'c-dificultad', comodin: 'c-comodin',
-    fin: 'c-fin'
+    fin: 'c-fin', viaje: 'c-viaje'
   };
 
   // Lo que dijo el dado la última vez, para poder dibujarlo
@@ -405,7 +406,8 @@ var UI = (function () {
    * y un comodín no suenan ni a bueno ni a malo a propósito: son decisiones,
    * no cosas que te pasan, y el juego no va a decirle cuál es la buena. */
   var ANIMO_CASILLA = {
-    trabajo: 'alegre', extra: 'alegre', descanso: 'alegre', dificultad: 'triste'
+    trabajo: 'alegre', extra: 'alegre', descanso: 'alegre', dificultad: 'triste',
+    viaje: 'alegre'
   };
 
   /* Las medidas del anillo para un camino de `total` casillas.
@@ -443,22 +445,35 @@ var UI = (function () {
   /* =======================================================================
    * UNA CAJA DE VERDAD
    * =======================================================================
-   * La pieza con la que esta hecho todo lo que sobresale del tablero: tres
-   * caras —techo, frente y costado— y su sombra en el suelo. Con esta misma
-   * funcion se dibujan los objetos que se paran en las casillas y los
-   * edificios del barrio del centro. Una pieza, dos usos: si manana hay que
-   * cambiar como se ve el relieve, se cambia aqui y cambia el tablero entero.
+   * La pieza con la que esta hecho todo lo que sobresale del tablero: el
+   * techo, las CUATRO paredes y su sombra en el suelo. Con esta misma funcion
+   * se dibujan los objetos que se paran en las casillas y los edificios del
+   * barrio del centro. Una pieza, dos usos.
    *
-   * Las caras se colocan asi, y el orden importa:
+   * Cuatro paredes y no tres, que es como estaban. Con tres —techo, frente y
+   * costado— la caja solo servia vista desde una esquina, asi que habia que
+   * DESGIRARLA cada vez que el tablero giraba para que siempre ensenara la
+   * misma cara. Y una casa que pivota sobre si misma cada vez que giras el
+   * tablero no parece una casa, parece un cartel. Con las cuatro paredes la
+   * caja se queda quieta, el tablero gira, y la ves por el otro lado: que es
+   * lo que pasa cuando uno gira un tablero de mesa.
    *
-   *   techo    el mismo rectangulo de la base, empujado `alto` en Z
-   *   frente   pegado al borde delantero, girado -90 grados sobre su base
-   *   costado  pegado al borde derecho, girado -90 y luego 90 sobre Y
+   * Como se coloca cada cara, que es lo unico dificil de aqui:
+   *
+   *   techo   el mismo rectangulo de la base, empujado `alto` en Z
+   *   sur     cuelga del borde delantero y gira -90 sobre su base
+   *   norte   cuelga del borde de atras y gira +90 sobre su borde de arriba
+   *   este    en el borde derecho: -90 sobre X y luego 90 sobre Y
+   *   oeste   lo mismo que este, pero pegado al borde izquierdo
    *
    * Las medidas van en PIXELES y no en porcentajes porque `translateZ` no
    * acepta porcentajes: la altura de una caja no se puede escribir en
    * proporcion a nada. Si el ancho fuera relativo y el alto no, las cajas se
    * deformarian con el ancho de la pantalla.
+   *
+   * El EMBLEMA va en el techo y no en una pared, y es por lo mismo: desde
+   * arriba se ve caiga el tablero como caiga. Un icono en una pared se pierde
+   * en cuanto esa pared deja de mirar a la camara.
    */
   function caja3d(o) {
     var est = 'width:' + o.ancho + 'px;height:' + o.largo + 'px;' +
@@ -476,20 +491,14 @@ var UI = (function () {
     /* La sombra solo la llevan las piezas que se paran EN el suelo: una copa
      * de arbol flotando a nueve pixeles no proyecta la suya donde esta. */
     var clase = 'caja3d' + (o.sube ? '' : ' consombra') + (o.clase ? ' ' + o.clase : '');
-    var h = '<span class="' + clase + '" style="' + est + '">';
-    h += '<span class="cara techo"></span>';
-    h += '<span class="cara costado"></span>';
-    h += '<span class="cara frente">' + (o.dentro || '') + '</span>';
-    return h + '</span>';
-  }
+    var pared = 'cara pared' + (o.paredes ? ' ' + o.paredes : '');
 
-  /* Ventanas para el frente de una casa o un edificio. Las columnas se
-   * escriben aqui y no en el CSS porque `repeat(var(--n), 1fr)` no es CSS
-   * valido: la cuenta de `repeat()` no acepta variables. */
-  function ventanas(cols, filas) {
-    var h = '<span class="ventanas" style="grid-template-columns:repeat(' +
-            cols + ',1fr);grid-template-rows:repeat(' + filas + ',1fr)">';
-    for (var i = 0; i < cols * filas; i++) h += '<i></i>';
+    var h = '<span class="' + clase + '" style="' + est + '">';
+    h += '<span class="cara techo">' + (o.emblema ? Ico(o.emblema) : '') + '</span>';
+    h += '<span class="' + pared + ' norte"></span>';
+    h += '<span class="' + pared + ' este"></span>';
+    h += '<span class="' + pared + ' oeste"></span>';
+    h += '<span class="' + pared + ' sur">' + (o.dentro || '') + '</span>';
     return h + '</span>';
   }
 
@@ -540,16 +549,66 @@ var UI = (function () {
 
     var pisos = Math.max(1, p.alto || 1);
     var alto = (p.tipo === 'casa' || p.tipo === 'edificio') ? d.alto * pisos : d.alto;
+    /* El toldo y la puerta van en la pared de enfrente, que es donde estan en
+     * la calle: una tienda tiene un frente y no cuatro. Las ventanas, en
+     * cambio, van en las cuatro paredes, y por eso son un dibujo de fondo y no
+     * un puñado de elementos: cuatro paredes por doce ventanas por diez
+     * edificios son cuatrocientos ochenta nodos para pintar unos cuadritos. */
     var dentro = '';
-    if (d.ventanas) dentro = ventanas(d.ventanas, pisos);
     if (d.toldo) dentro = '<span class="toldo"></span>';
-    /* La champa de lamina lleva su puerta y nada mas. Sin ella era una caja
-     * gris, y una caja gris no es una casa: es un bulto. */
     if (p.tipo === 'lamina') dentro = '<span class="puerta"></span>';
 
     return caja3d({ x: p.x, z: p.z, ancho: d.ancho, largo: d.largo, alto: alto,
                     color: col.pared, techo: col.techo,
-                    clase: 'pieza-' + p.tipo, dentro: dentro });
+                    paredes: d.ventanas ? 'con-ventanas' : '',
+                    clase: 'pieza-' + p.tipo, dentro: dentro,
+                    emblema: p.emblema });
+  }
+
+  /* =======================================================================
+   * TU CASA Y TU TRABAJO, en el barrio
+   * =======================================================================
+   * Las dos piezas del centro que no salen de los datos sino del ESTADO: la
+   * casa donde vive el personaje y el sitio donde trabaja. Van siempre en el
+   * mismo par de sitios de la placita —ver BARRIO_PROPIOS en datos/barrio.js—
+   * para que el jugador sepa donde mirar sin buscarlas.
+   *
+   * Y cambian con la partida, que es de lo que va todo esto: la casa crece
+   * cuando se muda y el trabajo lleva el emblema de su oficio. Quien pasa de
+   * la casa familiar a la propia lo ve en el centro del tablero, no en una
+   * cifra.
+   */
+  var CASA_DEL_PROTA = {
+    familiar:    { pisos: 1, color: '#f0e6d6', techo: '#b8663f' },
+    cuarto:      { pisos: 2, color: '#e6e0d4', techo: '#8f7f6d' },
+    apartamento: { pisos: 3, color: '#e2e9ee', techo: '#7f93a1' },
+    propia:      { pisos: 2, color: '#fbf5e8', techo: '#2f8a6a' }
+  };
+
+  function piezasPropias(e) {
+    if (typeof BARRIO_PROPIOS === 'undefined') return '';
+    var h = '';
+
+    var casa = CASA_DEL_PROTA[e.vivienda] || CASA_DEL_PROTA.familiar;
+    var sitio = BARRIO_PROPIOS.casa;
+    h += caja3d({ x: sitio.x, z: sitio.z, ancho: 30, largo: 22,
+                  alto: 14 * casa.pisos,
+                  color: casa.color, techo: casa.techo,
+                  paredes: 'con-ventanas', clase: 'pieza-casa propia-casa',
+                  emblema: 'casa' });
+
+    /* El trabajo solo se dibuja si lo hay: un solar vacio al lado de tu casa
+     * dice mas que un edificio generico, y dice la verdad. */
+    var t = Motor.trabajoActual();
+    if (t) {
+      var st = BARRIO_PROPIOS.trabajo;
+      h += caja3d({ x: st.x, z: st.z, ancho: 30, largo: 22, alto: 16,
+                    color: '#e9eef0', techo: '#3f7f93',
+                    paredes: 'con-ventanas', clase: 'pieza-trabajo propia-trabajo',
+                    emblema: t.icono || 'maletin',
+                    dentro: '<span class="toldo"></span>' });
+    }
+    return h;
   }
 
   function barrio3d() {
@@ -565,6 +624,8 @@ var UI = (function () {
             '" title="' + esc(K('barrio', n.id + ':d', n.descripcion || '')) + '">';
     h += '<span class="barrio-calle"></span>';
     for (var i = 0; i < piezas.length; i++) h += piezaDelBarrio(piezas[i]);
+    // Y las dos que no salen de los datos: donde vive y donde trabaja
+    h += piezasPropias(Motor.get());
     return h + '</div>';
   }
 
@@ -584,6 +645,7 @@ var UI = (function () {
     descanso:   { alto: 7,  color: '#8dbbd8', techo: '#b6d6ed' },
     dificultad: { alto: 10, color: '#dd8f7c', techo: '#f0b6a6' },
     comodin:    { alto: 12, color: '#a992d8', techo: '#c6b6ec' },
+    viaje:      { alto: 14, color: '#6fb7c9', techo: '#a5dbe6' },
     fin:        { alto: 13, color: '#4fae8c', techo: '#8fd0b4' },
     salida:     { alto: 13, color: '#4fae8c', techo: '#8fd0b4' }
   };
@@ -600,7 +662,7 @@ var UI = (function () {
       ancho: Math.round(13 * f), largo: Math.round(9 * f),
       alto: Math.round(o.alto * f),
       color: o.color, techo: o.techo, clase: 'obj',
-      dentro: Ico(ICONO_CASILLA[tipo] || 'calendario')
+      emblema: ICONO_CASILLA[tipo] || 'calendario'
     });
   }
 
@@ -637,6 +699,8 @@ var UI = (function () {
       p = { i: 'alerta', t: '?' };
     } else if (c.tipo === 'comodin') {
       p = { i: 'mundo', t: 'A / B' };
+    } else if (c.tipo === 'viaje') {
+      p = { i: 'reloj', t: '?' };
     }
     if (!p) return '';
     return '<span class="precio">' + Ico(p.i) + '<b>' + p.t + '</b></span>';
@@ -673,6 +737,7 @@ var UI = (function () {
     if (tipo === 'descanso') return T('Descanso');
     if (tipo === 'dificultad') return T('Imprevisto');
     if (tipo === 'comodin') return T('Comodín');
+    if (tipo === 'viaje') return T('Viaje');
     if (tipo === 'fin') return T('Fin de mes');
     if (tipo === 'salida') return T('Salida');
     return '';
@@ -1161,6 +1226,46 @@ var UI = (function () {
     return h;
   }
 
+  /* LLEGASTE AL FINAL DEL MES.
+   *
+   * Treinta días recorridos de uno en uno merecen algo más que una línea gris.
+   * El sello cae encima del tablero, el confeti baja y a los dos segundos se
+   * va solo: no hay que cerrarlo, no tapa el botón de terminar el mes y no le
+   * pide nada al jugador. Una celebración que hay que despachar deja de ser
+   * una celebración.
+   *
+   * El confeti se escribe aquí y no en el CSS porque cada papelito lleva su
+   * color, su carril y su retraso: veinte reglas iguales con un número
+   * distinto no son CSS, son una tabla.
+   */
+  var COLOR_CONFETI = ['#e9c974', '#79bb9e', '#efa87d', '#8dbbd8', '#a992d8', '#dd8f7c'];
+
+  function celebrarFinDeMes() {
+    var caja = document.querySelector('.tablero-vista');
+    if (!caja || sinMovimiento()) return null;
+
+    var h = '<span class="fin-sello">' + Ico('bandera') + '<b>' + T('Fin de mes') + '</b></span>';
+    for (var i = 0; i < 18; i++) {
+      h += '<i class="papelito" style="left:' + azar(2, 96) + '%;' +
+           'background:' + COLOR_CONFETI[i % COLOR_CONFETI.length] + ';' +
+           'animation-delay:' + (azar(0, 60) / 100) + 's;' +
+           'animation-duration:' + (1 + azar(0, 90) / 100) + 's"></i>';
+    }
+    var capa = document.createElement('div');
+    capa.className = 'fin-mes';
+    capa.innerHTML = h;
+    caja.appendChild(capa);
+    Sonido.tono('logro');
+
+    setTimeout(function () {
+      capa.classList.add('yendose');
+      setTimeout(function () { if (capa.parentNode) capa.remove(); }, 400);
+    }, 1900);
+    return null;
+  }
+
+  function azar(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+
   /* La tarjeta de la casilla, con la forma de la escritura de una propiedad
    * de tablero de mesa: la franja de color arriba con el nombre del dia, el
    * objeto en grande sobre su tarima y debajo, en filas, lo que da y lo que
@@ -1193,8 +1298,13 @@ var UI = (function () {
     var e = Motor.get();
 
     if (res.fin) {
+      /* La cámara se abre —se ve el mes entero recorrido— y se celebra. Es el
+       * único momento del mes en que el jugador terminó algo, y hasta ahora
+       * pasaba en una línea de texto gris. */
       notaTablero = T('Llegaste al final del mes.');
-      return alejar();
+      zoomEn = null;
+      render();
+      return celebrarFinDeMes();
     }
 
     if (c.tipo === 'libre') {
@@ -1204,13 +1314,33 @@ var UI = (function () {
 
     if (c.tipo === 'dificultad') {
       var d = c.sorteado || { texto: '', energia: 0 };
-      Motor.aplicarEfecto({ energia: d.energia });
+      /* Una dificultad puede costar tres cosas a la vez: cuerpo, dinero y lo
+       * que sabes. Se aplica y se enseña lo que DE VERDAD se movió, que no
+       * siempre es lo que decía la ficha: si le quitaban más experiencia de la
+       * que tenía, parte se cobró en quetzales. */
+      var hd = Motor.aplicarEfecto({ energia: d.energia, dinero: d.dinero,
+                                     experiencia: d.experiencia });
       notaTablero = esc(K('tablero_dificultad', d.id, d.texto));
       render();
       return modal(escritura('dificultad', T('Se te atravesó el día'),
           '<p>' + esc(K('tablero_dificultad', d.id, d.texto)) + '</p>',
-          fila(T('Energía'), String(Math.round(d.energia)), 'neg')) +
+          filasDeEfecto(hd) + avisoDeDeuda(hd)) +
         '<button class="btn-primario" data-cerrar>' + T('Ni modo') + '</button>',
+        alejar);
+    }
+
+    /* EL DÍA QUE NO EXISTIÓ. La única casilla que solo da, y lo que da depende
+     * de lo que el jugador ya tenga: ver `sortearViaje` en js/motor.js. */
+    if (c.tipo === 'viaje') {
+      var v = c.sorteado || { texto: '', energia: 0 };
+      var hv = Motor.aplicarEfecto({ energia: v.energia, dinero: v.dinero,
+                                     experiencia: v.experiencia });
+      notaTablero = esc(K('tablero_viaje', v.id, v.texto));
+      render();
+      return modal(escritura('viaje', T('Un día que no existió'),
+          '<p>' + esc(K('tablero_viaje', v.id, v.texto)) + '</p>',
+          filasDeEfecto(hv)) +
+        '<button class="btn-primario" data-cerrar>' + T('Seguir') + '</button>',
         alejar);
     }
 
@@ -1229,7 +1359,7 @@ var UI = (function () {
       dm.querySelectorAll('[data-lado]').forEach(function (b) {
         b.addEventListener('click', function () {
           var lado = k[b.getAttribute('data-lado')];
-          Motor.aplicarEfecto(lado.efecto);
+          var hc = Motor.aplicarEfecto(lado.efecto);
           /* El comodín no suena al caer —es una decisión, no algo que te
            * pasa— pero sí al resolverse: ahí ya se sabe si salió bien. */
           var ef = lado.efecto || {};
@@ -1242,7 +1372,7 @@ var UI = (function () {
           modal(escritura('comodin', T('Elegiste'),
               '<p>' + esc(K('tablero_comodin', k.id + ':' + b.getAttribute('data-lado') + ':r',
                             lado.resultado)) + '</p>',
-              filasDeEfecto(lado.efecto)) +
+              filasDeEfecto(hc) + avisoDeDeuda(hc)) +
             '<button class="btn-primario" data-cerrar>' + T('Listo') + '</button>',
             alejar);
         });
@@ -1259,10 +1389,25 @@ var UI = (function () {
     if (!ef) return h;
     if (ef.energia) h += fila(T('Energía'), (ef.energia > 0 ? '+' : '') + ef.energia,
                               ef.energia > 0 ? 'pos' : 'neg');
-    if (ef.experiencia) h += fila(T('Experiencia'), '+' + ef.experiencia, 'pos');
+    if (ef.experiencia) h += fila(T('Experiencia'),
+                                  (ef.experiencia > 0 ? '+' : '') + ef.experiencia,
+                                  ef.experiencia > 0 ? 'pos' : 'neg');
     if (ef.dinero) h += fila(T('Dinero'), (ef.dinero > 0 ? '+' : '') + Q0(ef.dinero),
                              ef.dinero > 0 ? 'pos' : 'neg');
     return h;
+  }
+
+  /* Y la deuda de experiencia, que se explica aparte porque es la regla menos
+   * evidente del tablero: lo que sabes no se puede deber, así que lo que no
+   * alcanzó se cobró en dinero y en cuerpo. Sin este párrafo el jugador ve
+   * salir quetzales de una casilla que hablaba del cuaderno. */
+  function avisoDeDeuda(hecho) {
+    if (!hecho || !hecho.deuda) return '';
+    var d = hecho.deuda;
+    return '<div class="aprendizaje"><strong>' + T('Lo que no sabías, se paga.') +
+           '</strong> ' +
+           T('Te faltaban {0} de experiencia. Se cobraron en {1} y {2} de cuerpo.',
+             d.experiencia, Q0(-d.dinero), -d.energia) + '</div>';
   }
 
   /* Aceptar o dejar pasar. Es la decisión que se repite todo el mes, así que
