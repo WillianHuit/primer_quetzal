@@ -87,9 +87,14 @@ informal). De ahí en adelante:
   la ficha que **camina casilla por casilla**, con su brinco y su sonido.
 - **Visto desde la silla**: la cámara va baja y cerca —52 grados—, así que los días que
   tienes enfrente son grandes y los del otro lado se ven pequeños y al fondo. Cada día es
-  una **tarjeta** con su franja de color mirando al centro, su precio en la esquina y una
-  **casita parada encima**. Y al caer en uno, la cámara **se acerca** a la tarjeta antes de
-  abrirla.
+  una **tarjeta** —franja con el nombre arriba, la casita parada en medio, el número y lo
+  que cuesta abajo— impresa mirando a su lado del tablero, como en el de mesa.
+- **La cámara sigue al personaje**: tiras el dado con el mes entero a la vista, la cámara
+  baja hasta la ficha, **el tablero gira** para poner el lado por el que va de frente —así
+  su tarjeta se lee derecha—, la ficha camina casilla por casilla con una nota por paso, y
+  al llegar hay un **respiro** antes de que se abra la tarjeta. Suena alegre si le tocó algo
+  bueno y triste si le tocó algo malo. (El sonido va apagado por defecto; se enciende en el
+  menú de los tres puntos.)
 - **El barrio, en el centro**: en un tablero de mesa el centro son las cartas; aquí son las
   casas donde vive el personaje, en tres dimensiones. Se empieza en el barrio que le tocó
   —la dificultad que elegiste— y sube con lo que junta: del asentamiento de lámina a la

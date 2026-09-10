@@ -17,7 +17,24 @@ var Sonido = (function () {
     moneda:   { notas: [880, 1175, 1568], dur: 0.07, tipo: 'triangle' },
     logro:    { notas: [523, 659, 784, 1047], dur: 0.11, tipo: 'sine' },
     alerta:   { notas: [400, 300, 400],   dur: 0.12, tipo: 'sawtooth' },
-    toque:    { notas: [520],             dur: 0.04, tipo: 'sine' }
+    toque:    { notas: [520],             dur: 0.04, tipo: 'sine' },
+
+    /* ---- los del tablero ----
+     * El dado: cuatro golpes secos y graves, que es un cubo cayendo en la
+     * mesa. No es una nota, es un ruido, y por eso va en cuadrada y bajo.
+     *
+     * El paso: una sola nota corta. Suena una por casilla y se le pasa un
+     * numero de semitonos que sube con cada paso, asi que un seis no suena
+     * seis veces igual: suena como una escalerita que sube. El oido cuenta
+     * los pasos aunque no los este mirando.
+     *
+     * Y los dos que dicen que paso, que son los que el jugador va a recordar:
+     * `alegre` sube en acorde mayor y `triste` baja en menor. No hacen falta
+     * palabras para saber cual de los dos te toco. */
+    dado:     { notas: [170, 230, 190, 250], dur: 0.035, tipo: 'square' },
+    paso:     { notas: [660],             dur: 0.05, tipo: 'triangle' },
+    alegre:   { notas: [587, 740, 880, 1175], dur: 0.09, tipo: 'triangle' },
+    triste:   { notas: [494, 440, 370, 294], dur: 0.15, tipo: 'sine' }
   };
 
   function contexto() {
@@ -30,14 +47,19 @@ var Sonido = (function () {
     return ctx;
   }
 
-  function tono(nombre) {
+  /* `semitonos` sube o baja el tono entero sin tocar la tabla de arriba. Lo
+   * usa el paseo de la ficha: el mismo sonido, un semitono mas alto en cada
+   * casilla. Doce semitonos son una octava, de ahi el 2^(n/12). */
+  function tono(nombre, semitonos) {
     if (!activo) return;
     var def = TONOS[nombre];
     if (!def) return;
     var c = contexto();
     if (!c) return;
+    var factor = semitonos ? Math.pow(2, semitonos / 12) : 1;
 
-    def.notas.forEach(function (hz, i) {
+    def.notas.forEach(function (hz0, i) {
+      var hz = hz0 * factor;
       var osc = c.createOscillator();
       var vol = c.createGain();
       osc.type = def.tipo;

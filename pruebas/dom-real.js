@@ -499,6 +499,26 @@ ok(!puerta.experienciaRequerida,
   ok(lados.size === 4,
      'y las franjas miran al centro por los cuatro lados del anillo');
 
+  /* Cada tarjeta lleva su cara impresa: el nombre del día en la franja y el
+   * número con su precio en el pie. La cara es una capa aparte porque es la
+   * única que gira con el lado —como en el tablero de mesa, donde las
+   * tarjetas de cada lado están impresas mirando a quien se sienta ahí—. */
+  ok(w3.document.querySelectorAll('.tablero .casilla .cara-dia').length ===
+     w3.document.querySelectorAll('.tablero .casilla').length,
+     'las tarjetas llevan su cara impresa, la que gira con el lado del tablero');
+  const conNombre = [...w3.document.querySelectorAll('.tablero .casilla.c-tarea .banda')]
+    .filter(b => b.textContent.trim() === 'Tarea');
+  ok(conNombre.length > 0,
+     `los días de tarea dicen que lo son en la franja (${conNombre.length})`);
+  ok(!!w3.document.querySelector('.tablero .casilla .pie .dia'),
+     'y el número del día va en el pie, del lado de afuera');
+
+  /* Y el anillo es un CUADRADO exacto, no lo más cuadrado que salga: la cara
+   * de la tarjeta gira noventa grados en dos de los cuatro lados, y en una
+   * casilla que no fuera cuadrada se desbordaría. */
+  ok(w3.document.querySelectorAll('.tablero .casilla').length === 32,
+     `los ${t3.dias} días caben en un anillo de 9x9, que es cuadrado exacto`);
+
   /* El barrio del primer día sale de la dificultad que eligió. Esta partida
    * empieza en 'apoyo', que es el nivel fácil: residencial. */
   ok(w3.document.querySelector('.barrio').getAttribute('data-barrio') === 'residencial',

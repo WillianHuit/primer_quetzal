@@ -368,17 +368,56 @@ var UI = (function () {
    * eso; si no, la tarjeta se abriría sobre un tablero que ya se alejó. */
   var zoomEn = null;
 
+  /* Cuánto está GIRADO el tablero, en grados y acumulando.
+   *
+   * Un tablero de mesa se gira. Las tarjetas de cada lado están impresas
+   * mirando a quien se sienta en ese lado, así que para leer las del lado de
+   * enfrente hay que darle la vuelta al tablero, y eso es exactamente lo que
+   * hace la cámara aquí: mientras la ficha camina, el tablero gira para que el
+   * lado por el que va quede abajo, de frente, y sus tarjetas se lean —franja
+   * arriba, objeto en medio, número abajo—.
+   *
+   * Acumula en vez de guardar 0/90/180/270 para que el giro tome siempre el
+   * camino corto: de -90 a 180 son 90 grados, no 270. */
+  var vuelta = 0;
+
+  /* El giro que deja cada lado del anillo abajo, de frente a la cámara. */
+  var GIRO_LADO = { abajo: 0, izquierda: -90, arriba: 180, derecha: 90 };
+
+  /* Cuánto se acerca la cámara: mientras camina va más suelta, para que se vea
+   * de dónde viene y a dónde va; al llegar se cierra sobre la tarjeta. */
+  var LENTE_PASEO = 1.5;
+  var LENTE_CERCA = 1.95;
+
+  /* Los tiempos. El dado tiene que verse rodar antes de que la cámara baje, y
+   * al llegar hace falta un respiro: la tarjeta que salta encima en el mismo
+   * instante en que la ficha se para no se siente una consecuencia, se siente
+   * una interrupción. */
+  var PAUSA_DADO = 620;
+  var PAUSA_LLEGADA = 700;
+
+  /* Y lo que suena al caer, que es lo que el jugador va a recordar. Una tarea
+   * y un comodín no suenan ni a bueno ni a malo a propósito: son decisiones,
+   * no cosas que te pasan, y el juego no va a decirle cuál es la buena. */
+  var ANIMO_CASILLA = {
+    trabajo: 'alegre', extra: 'alegre', descanso: 'alegre', dificultad: 'triste'
+  };
+
   /* Las medidas del anillo para un camino de `total` casillas.
    *
    * El perímetro de una cuadrícula de R por C son 2R+2C-4, siempre par. Se
-   * busca el par más chico que quepa y se reparte lo más cuadrado posible,
-   * porque un tablero de mesa es un cuadrado y no un pasillo. */
+   * busca el par más chico que quepa y se reparte en un CUADRADO exacto: los
+   * tres largos de mes que existen caben en 9x9, y las casillas que sobran
+   * quedan como camino sin día.
+   *
+   * Cuadrado exacto y no lo más cuadrado posible, que es lo que hacía antes:
+   * febrero salía 9x8 y sus casillas eran más altas que anchas. Con las
+   * tarjetas giradas —las de los lados se leen de canto, como en el tablero de
+   * mesa— una casilla que no es cuadrada se desborda al girarle el contenido. */
   function medidasDelAnillo(total) {
     var p = total % 2 === 0 ? total : total + 1;
-    var suma = p / 2 + 2;                  // R + C
-    var f = Math.ceil(suma / 2);
-    var c = suma - f;
-    return { f: f, c: c, total: 2 * f + 2 * c - 4 };
+    var f = Math.ceil((p / 2 + 2) / 2);    // el lado del cuadrado
+    return { f: f, c: f, total: 4 * f - 4 };
   }
 
   /* Dónde cae la casilla número `k` del camino, en el sentido de las agujas
@@ -521,9 +560,6 @@ var UI = (function () {
             '" title="' + esc(K('barrio', n.id + ':d', n.descripcion || '')) + '">';
     h += '<span class="barrio-calle"></span>';
     for (var i = 0; i < piezas.length; i++) h += piezaDelBarrio(piezas[i]);
-    /* El rotulo del barrio se PONE DE PIE mirando a la camara: es la unica
-     * cosa del centro que hay que poder leer. */
-    h += '<span class="barrio-rotulo">' + esc(K('barrio', n.id, n.nombre)) + '</span>';
     return h + '</div>';
   }
 
@@ -555,7 +591,7 @@ var UI = (function () {
      * lo unico que hay. */
     var f = grande ? 3.6 : 1;
     return caja3d({
-      x: grande ? 50 : 64, z: grande ? 72 : 80,
+      x: 50, z: grande ? 72 : 70,
       ancho: Math.round(13 * f), largo: Math.round(9 * f),
       alto: Math.round(o.alto * f),
       color: o.color, techo: o.techo, clase: 'obj',
@@ -601,15 +637,53 @@ var UI = (function () {
     return '<span class="precio">' + Ico(p.i) + '<b>' + p.t + '</b></span>';
   }
 
-  /* En que lado del anillo cae una casilla. Sirve para poner la franja de
-   * color mirando al centro, como en el tablero de mesa: las cuatro franjas
-   * apuntan hacia dentro y el anillo se lee como un anillo y no como cuatro
-   * filas de tarjetas sueltas. */
+  /* En que lado del anillo cae una casilla.
+   *
+   * De aqui sale todo lo demas: la tarjeta se IMPRIME mirando a ese lado
+   * —franja arriba, numero abajo, girada 90, 180 o 270 grados segun toque,
+   * igual que en el tablero de mesa— y el tablero se GIRA para poner ese lado
+   * abajo cuando la ficha va por el. Las dos rotaciones se anulan, asi que la
+   * tarjeta que la camara esta mirando siempre se lee derecha. */
   function ladoDelAnillo(sitio, f, c) {
     if (sitio.fila === 0) return 'arriba';
     if (sitio.fila === f - 1) return 'abajo';
     if (sitio.col === 0) return 'izquierda';
     return 'derecha';
+  }
+
+  function ladoDeCasilla(k) {
+    var t = Motor.tablero();
+    if (!t) return 'abajo';
+    var anillo = medidasDelAnillo(t.dias + 1);
+    return ladoDelAnillo(casillaDelAnillo(k, anillo.f, anillo.c), anillo.f, anillo.c);
+  }
+
+  /* El nombre corto del dia, el que va en la franja. Es el nombre de la
+   * propiedad del tablero de mesa: dice de que va la casilla antes de caer en
+   * ella y sin abrir nada. */
+  function etiquetaDeCasilla(tipo) {
+    if (tipo === 'tarea') return T('Tarea');
+    if (tipo === 'trabajo') return T('Trabajo');
+    if (tipo === 'extra') return T('Extra');
+    if (tipo === 'descanso') return T('Descanso');
+    if (tipo === 'dificultad') return T('Imprevisto');
+    if (tipo === 'comodin') return T('Comodín');
+    if (tipo === 'fin') return T('Fin de mes');
+    if (tipo === 'salida') return T('Salida');
+    return '';
+  }
+
+  /* La cara de la tarjeta: franja con el nombre arriba, el pie con el dia y su
+   * precio abajo, y en medio el hueco donde se para el objeto. Va en una capa
+   * aparte porque es la unica que GIRA con el lado; el objeto y la ficha se
+   * quedan de frente a la camara pase lo que pase. */
+  function caraDelDia(tipo, dia, precio) {
+    var h = '<span class="cara-dia">';
+    h += '<span class="banda">' + esc(etiquetaDeCasilla(tipo)) + '</span>';
+    h += '<span class="pie">' +
+         (dia ? '<span class="dia">' + dia + '</span>' : '<span class="dia"></span>') +
+         (precio || '') + '</span>';
+    return h + '</span>';
   }
 
   /* La ficha del jugador, de pie sobre su casilla.
@@ -681,7 +755,11 @@ var UI = (function () {
       });
       var casilla = tab.querySelector('[data-paso="' + k + '"]');
       if (casilla) { casilla.classList.remove('pasada'); casilla.classList.add('aqui'); }
-      Sonido.tono('toque');
+      /* Una nota por casilla, cada una un semitono mas alta: un seis suena
+       * como una escalerita que sube y el oido cuenta los pasos sin mirar. */
+      Sonido.tono('paso', k - desde - 1);
+      // Y la camara va detras del personaje, casilla por casilla
+      enfocarCasilla(k, LENTE_PASEO);
       if (k >= hasta) {
         clearInterval(reloj);
         fichaEn = null;
@@ -691,44 +769,128 @@ var UI = (function () {
   }
 
   /* =======================================================================
-   * LA CAMARA SE ACERCA A LA CASILLA
+   * LA CAMARA
    * =======================================================================
-   * Al llegar, el tablero se acerca a la tarjeta antes de abrirla. Es lo que
-   * hace que el tablero se sienta un sitio y no un dibujo: el dia al que
-   * llegaste crece, se ve lo que hay parado encima y de ahi sale la ventana.
+   * Antes de tirar se ve el mes entero, que es lo que hay que ver para tirar.
+   * En cuanto el dado cae, la camara BAJA al personaje y lo SIGUE casilla por
+   * casilla; al llegar se cierra sobre la tarjeta, espera un respiro y ahi si
+   * la abre. Es lo que hace que el tablero se sienta un sitio y no un dibujo.
    *
-   * El desplazamiento se MIDE del navegador, no se calcula. Un tablero
-   * inclinado con perspectiva no proyecta las casillas donde dice la
-   * cuadricula —las de atras se juntan y las de adelante se abren— asi que
-   * cualquier cuenta a mano queda mal justo en las esquinas. `rect` ya trae la
-   * casilla donde de verdad se esta viendo.
+   * Dos cosas se mueven a la vez y las dos importan:
+   *
+   *   la LENTE   corre y agranda el tablero para centrar la casilla
+   *   la VUELTA  gira el tablero para poner el lado por el que va la ficha
+   *              abajo, de frente, con sus tarjetas derechas
+   *
+   * Y donde cae una casilla en la pantalla se MIDE del navegador, no se
+   * calcula. Un tablero inclinado con perspectiva no proyecta las casillas
+   * donde dice la cuadricula —las de atras se juntan y las de adelante se
+   * abren— asi que cualquier cuenta a mano queda mal justo en las esquinas.
    */
-  var LENTE = 2;
 
-  function acercarCasilla(k, luego) {
-    var lente = document.querySelector('.tablero-lente');
-    var vista = document.querySelector('.tablero-vista');
-    var cel = document.querySelector('.tablero .casilla[data-paso="' + k + '"]');
-    if (!lente || !vista || !cel || sinMovimiento()) return luego();
-
-    var rc, rv;
-    try {
-      rc = cel.getBoundingClientRect();
-      rv = vista.getBoundingClientRect();
-    } catch (err) { return luego(); }
-    if (!rc || !rv || !rv.width) return luego();
-
-    /* Con `translate(t) scale(s)` y el origen en el centro, un punto que esta
-     * a `d` del centro acaba en `d*s + t`. Para que la casilla quede en el
-     * centro: t = -d*s. */
-    var dx = (rc.left + rc.width / 2) - (rv.left + rv.width / 2);
-    var dy = (rc.top + rc.height / 2) - (rv.top + rv.height / 2);
-    zoomEn = { k: k, x: -dx * LENTE, y: -dy * LENTE, s: LENTE };
-    aplicarLente(lente);
-    return setTimeout(luego, 430);
+  /* El giro mas corto hasta `objetivo`, contando desde donde esta el tablero.
+   * Sin esto, de -90 a 180 el tablero daria tres cuartos de vuelta en vez de
+   * uno, y el jugador perderia de vista a su personaje por el camino. */
+  function giroCorto(objetivo) {
+    var d = ((objetivo - vuelta) % 360 + 540) % 360 - 180;
+    return vuelta + d;
   }
 
-  function aplicarLente(lente) {
+  /* Donde va a quedar la casilla `k` con el tablero ya girado a `giroFinal` y
+   * la lente en reposo.
+   *
+   * El truco: se pone el estado final SIN transicion, se mide, y se devuelve
+   * todo antes de soltar el hilo. Entre que empieza y termina esta funcion el
+   * navegador no pinta ni un cuadro, asi que nadie ve el salto; y medir a
+   * medias de una animacion —que es lo que pasaba si se leia sin mas— devuelve
+   * la casilla donde estaba a mitad de camino, no donde va a quedar. */
+  function medirCasilla(k, giroFinal) {
+    var tab = document.querySelector('.tablero');
+    var lente = document.querySelector('.tablero-lente');
+    var vista = document.querySelector('.tablero-vista');
+    if (!tab || !lente || !vista) return null;
+    var cel = k > 0 ? tab.querySelector('[data-paso="' + k + '"]')
+                    : tab.querySelector('.casilla.salida');
+    if (!cel) return null;
+
+    var trans0 = lente.style.transition, tr0 = lente.style.transform;
+    var trans1 = tab.style.transition, vu0 = tab.style.getPropertyValue('--vuelta');
+    var m = null;
+    try {
+      lente.style.transition = 'none';
+      lente.style.transform = 'none';
+      tab.style.transition = 'none';
+      tab.style.setProperty('--vuelta', giroFinal + 'deg');
+      var rc = cel.getBoundingClientRect();
+      var rv = vista.getBoundingClientRect();
+      var rb = tab.getBoundingClientRect();
+      if (rv.width) {
+        m = {
+          dx: (rc.left + rc.width / 2) - (rv.left + rv.width / 2),
+          dy: (rc.top + rc.height / 2) - (rv.top + rv.height / 2),
+          // Y el tablero entero, para no dejar que la camara se salga de el
+          bx: (rb.left + rb.width / 2) - (rv.left + rv.width / 2),
+          by: (rb.top + rb.height / 2) - (rv.top + rv.height / 2),
+          ancho: rb.width, alto: rb.height,
+          vAncho: rv.width, vAlto: rv.height
+        };
+      }
+    } catch (err) { m = null; }
+
+    lente.style.transition = trans0;
+    lente.style.transform = tr0;
+    tab.style.transition = trans1;
+    if (vu0) tab.style.setProperty('--vuelta', vu0);
+    else tab.style.removeProperty('--vuelta');
+    // Se fuerza a que el navegador tome el estado devuelto ANTES de animar
+    try { void tab.offsetWidth; } catch (err) {}
+    return m;
+  }
+
+  /* La camara se pone sobre la casilla `k`. Devuelve false si no pudo medir
+   * —jsdom no calcula geometria— y entonces todo lo demas sigue sin camara. */
+  function enfocarCasilla(k, escala) {
+    var giro = giroCorto(GIRO_LADO[ladoDeCasilla(k)]);
+    var m = medirCasilla(k, giro);
+    if (!m) return false;
+    vuelta = giro;
+    zoomEn = {
+      k: k, s: escala,
+      x: dentroDelTablero(-m.dx * escala, m.bx, m.ancho, m.vAncho, escala),
+      y: dentroDelTablero(-m.dy * escala, m.by, m.alto, m.vAlto, escala)
+    };
+    aplicarCamara();
+    return true;
+  }
+
+  /* La camara no se sale del tablero.
+   *
+   * Centrar la casilla y ya se veia bien en medio del mes y fatal en las
+   * orillas: al enfocar el primer dia, media pantalla quedaba en blanco y el
+   * tablero se iba a una esquina. Esto la sujeta: el tablero tiene que seguir
+   * tapando la ventana entera, y si a esa escala ya no da para taparla, se
+   * centra y se acabo. Es lo mismo que hace cualquier camara de juego con los
+   * bordes del mapa. */
+  function dentroDelTablero(t, centro, largo, ventana, escala) {
+    /* Con un poco de holgura, porque las casillas de la orilla SON la orilla:
+     * sujetando el tablero a rajatabla, el dia de enfrente quedaba siempre
+     * pegado al borde de abajo y medio cortado. Un doce por ciento de la
+     * ventana le deja sitio y todavia no se ve el tablero flotando. */
+    var holgura = ventana * 0.12;
+    var medio = largo * escala / 2 + holgura;
+    var min = ventana / 2 - centro * escala - medio;   // no dejar hueco al final
+    var max = -ventana / 2 - centro * escala + medio;  // ni al principio
+    if (min > max) return -centro * escala;            // ya no tapa: se centra
+    return Math.max(min, Math.min(max, t));
+  }
+
+  /* Con `translate(t) scale(s)` y el origen en el centro, un punto que esta a
+   * `d` del centro acaba en `d*s + t`. Para que la casilla quede en el centro:
+   * t = -d*s. */
+  function aplicarCamara() {
+    var lente = document.querySelector('.tablero-lente');
+    var tab = document.querySelector('.tablero');
+    if (tab) tab.style.setProperty('--vuelta', vuelta + 'deg');
     if (!lente || !zoomEn) return;
     lente.style.setProperty('--zx', zoomEn.x + 'px');
     lente.style.setProperty('--zy', zoomEn.y + 'px');
@@ -736,9 +898,14 @@ var UI = (function () {
     lente.classList.add('acercado');
   }
 
-  /* Y se aleja al cerrar la ventana de la casilla. Todo lo que cierra una
-   * tarjeta pasa por aqui: si alguna salida se saltara este paso, el tablero
-   * se quedaria acercado y la tirada siguiente se veria a ciegas. */
+  /* Y se aleja al cerrar la ventana de la casilla, hasta ver el mes entero.
+   * Todo lo que cierra una tarjeta pasa por aqui: si alguna salida se saltara
+   * este paso, el tablero se quedaria acercado y la tirada siguiente se veria
+   * a ciegas.
+   *
+   * El GIRO no se deshace, y es a proposito: el tablero se queda como lo dejo
+   * el personaje, igual que uno no endereza el tablero de mesa cada vez que
+   * levanta la vista. Deshacerlo obligaba a media vuelta en cada tirada. */
   function alejar() {
     zoomEn = null;
     render();
@@ -775,15 +942,28 @@ var UI = (function () {
     var anillo = medidasDelAnillo(t.dias + 1);
     var donde = fichaEn === null ? t.pos : fichaEn;
     var barrio = Motor.nivelDeBarrio && Motor.nivelDeBarrio();
+    /* El mes nuevo empieza con el tablero mirando al lado de la SALIDA, que es
+     * por donde va a caminar la ficha. Asi la primera tirada no arranca dando
+     * media vuelta al tablero. */
+    if (t.pos === 0 && !zoomEn) vuelta = GIRO_LADO[ladoDeCasilla(0)];
 
     var h = '<div class="tarjeta tablero-caja">';
     h += '<div class="titulo">' + Ico('calendario') + ' ' +
          T('{0}: día {1} de {2}', nombreMes(e.mes), t.pos, t.dias) + '</div>';
 
-    h += '<div class="tablero-vista"><div class="tablero-3d">';
+    /* La lente va POR FUERA de la perspectiva, y no al reves.
+     *
+     * Metida dentro, su `scale` escalaba la escena en tres dimensiones —la
+     * capa lleva `preserve-3d`— y eso cambia como proyecta la perspectiva:
+     * la casilla no acababa donde decia la cuenta y la camara quedaba corta
+     * justo al acercarse del todo. Por fuera, la escena se dibuja primero y la
+     * lente mueve y agranda el resultado, como una lupa encima de una foto:
+     * ahi si, un punto que esta a `d` del centro acaba en `d*s + t`. */
+    h += '<div class="tablero-vista">';
     h += '<div class="tablero-lente' + (zoomEn ? ' acercado' : '') + '"' +
          (zoomEn ? ' style="--zx:' + zoomEn.x + 'px;--zy:' + zoomEn.y +
                    'px;--zs:' + zoomEn.s + '"' : '') + '>';
+    h += '<div class="tablero-3d">';
 
     /* Se ve el tipo de TODAS las casillas, incluidas las que faltan, porque
      * eso es lo que hace que un tablero sea un tablero: se mira lo que viene.
@@ -795,7 +975,7 @@ var UI = (function () {
      * válido —la cuenta de `repeat()` no acepta variables— y el navegador se lo
      * come sin decir nada: el tablero salía con las columnas por omisión y se
      * iba de la pantalla. */
-    h += '<div class="tablero" style="' +
+    h += '<div class="tablero" style="--vuelta:' + vuelta + 'deg;' +
          'grid-template-columns:repeat(' + anillo.c + ',minmax(0,1fr));' +
          'grid-template-rows:repeat(' + anillo.f + ',minmax(0,1fr))">';
 
@@ -807,8 +987,7 @@ var UI = (function () {
 
       if (k === 0) {           // la salida
         h += '<div class="casilla salida' + esquina + lado + '" style="' + estilo + '">' +
-             '<span class="banda"></span>' +
-             '<span class="rotulo">' + T('Salida') + '</span>' +
+             caraDelDia('salida', '', '') +
              objetoDeCasilla('salida') + '</div>';
         continue;
       }
@@ -823,22 +1002,28 @@ var UI = (function () {
            (pasada ? ' pasada' : '') + (aqui ? ' aqui' : '') +
            '" style="' + estilo + '" data-paso="' + k + '"' +
            ' title="' + T('Día {0}', k) + '">' +
-           '<span class="banda"></span>' +
-           '<span class="dia">' + k + '</span>' +
-           objetoDeCasilla(c.tipo) +
-           precioDeCasilla(c) + '</div>';
+           caraDelDia(c.tipo, k, precioDeCasilla(c)) +
+           objetoDeCasilla(c.tipo) + '</div>';
     }
 
     /* El centro: el barrio donde vive, y el dado en la placita de enfrente. */
     h += '<div class="tablero-centro" style="grid-area:2/2/' + anillo.f + '/' + anillo.c + '">';
     h += barrio3d();
+    /* El dado y el rotulo van en una capa que DESGIRA el tablero entera. Sin
+     * ella el dado se iba con el giro: a media vuelta acababa tirado en la
+     * acera del fondo, de espaldas al jugador. Las casas si giran —estan
+     * plantadas en el suelo— pero el dado esta encima de la mesa. */
+    h += '<div class="barrio-frente">';
+    h += '<span class="barrio-rotulo">' + esc(K('barrio', barrio ? barrio.id : '',
+           barrio ? barrio.nombre : '')) + '</span>';
     h += dadoCubo(ultimoDado);
+    h += '</div>';
     h += '</div>';
 
     // Y la ficha, que es un elemento suelto: se mueve de casilla en casilla
     h += fichaDelTablero(e, donde);
     h += '</div>';          // .tablero
-    h += '</div></div></div>';   // lente, 3d, vista
+    h += '</div></div></div>';   // 3d, lente, vista
 
     /* La consola, debajo del tablero y de frente.
      *
@@ -983,6 +1168,11 @@ var UI = (function () {
         b.addEventListener('click', function () {
           var lado = k[b.getAttribute('data-lado')];
           Motor.aplicarEfecto(lado.efecto);
+          /* El comodín no suena al caer —es una decisión, no algo que te
+           * pasa— pero sí al resolverse: ahí ya se sabe si salió bien. */
+          var ef = lado.efecto || {};
+          var saldo = (ef.energia || 0) + (ef.experiencia || 0) + (ef.dinero || 0);
+          Sonido.tono(saldo >= 0 ? 'alegre' : 'triste');
           dm.remove();
           notaTablero = esc(K('tablero_comodin', k.id + ':' + b.getAttribute('data-lado') + ':r',
                               lado.resultado));
@@ -4670,22 +4860,46 @@ var UI = (function () {
         if (!tirada) return render();
         ultimoDado = tirada.dado;
         notaTablero = '';
-        Sonido.tono('toque');
+        // Cuatro golpes secos: un cubo cayendo en la mesa, no una nota
+        Sonido.tono('dado');
         /* La ficha se dibuja donde ESTABA y camina hasta donde cayó. Sin esto
          * aparecía de golpe al otro lado del tablero y el dado no se entendía:
          * el jugador veía un número y una ficha teletransportada. */
         fichaEn = tirada.desde;
         zoomEn = null;
         render();
-        return caminarFicha(tirada.desde, tirada.pos, function () {
+
+        /* Sin animaciones —el banco de pruebas, o quien pidió menos
+         * movimiento— la casilla contesta de una vez. */
+        if (sinMovimiento()) {
+          fichaEn = null;
           render();
-          /* Al llegar, la cámara se acerca al día y de ahí sale la tarjeta.
-           * Solo si el día trae algo: acercarse a un día cualquiera para no
-           * decir nada sería un viaje de ida y vuelta por gusto. */
-          var c = tirada.casilla;
-          if (tirada.fin || !c || c.tipo === 'libre') return abrirCasilla(tirada);
-          return acercarCasilla(tirada.pos, function () { abrirCasilla(tirada); });
-        });
+          return abrirCasilla(tirada);
+        }
+
+        /* Y con ellas, el turno tiene cuatro tiempos:
+         *
+         *   1. el cubo rueda, con el mes entero a la vista, que es lo que hay
+         *      que ver para entender la tirada;
+         *   2. la cámara BAJA al personaje y el tablero gira a su lado;
+         *   3. la ficha camina, y la cámara va detrás casilla por casilla;
+         *   4. al llegar se cierra sobre la tarjeta, suena lo que le tocó y
+         *      solo entonces se abre. El respiro es la mitad del asunto: una
+         *      ventana que salta en el mismo instante en que la ficha se para
+         *      no se siente una consecuencia, se siente una interrupción.
+         */
+        return setTimeout(function () {
+          enfocarCasilla(tirada.desde, LENTE_PASEO);
+          setTimeout(function () {
+            caminarFicha(tirada.desde, tirada.pos, function () {
+              enfocarCasilla(tirada.pos, LENTE_CERCA);
+              var c = tirada.casilla;
+              var animo = tirada.fin ? null : ANIMO_CASILLA[c && c.tipo];
+              if (animo) Sonido.tono(animo);
+              setTimeout(function () { abrirCasilla(tirada); }, PAUSA_LLEGADA);
+            });
+          }, 380);
+        }, PAUSA_DADO);
       }
 
       if (el.id === 'cerrar-turno') {

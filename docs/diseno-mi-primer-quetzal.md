@@ -190,14 +190,76 @@ tablero de mesa tampoco. Por eso hay dos formas de leer el tablero, y las dos ha
 
 - **de lejos, por los bultos.** Cada día tiene una cosa parada encima, con su color y su
   sombra, y eso se ve desde el otro lado del tablero.
-- **de cerca, por las letras.** Al llegar a una casilla la cámara **se acerca** a ella
-  —`.tablero-lente`, dos aumentos— y de ahí sale la ventana.
+- **de cerca, por las letras.** En cuanto el dado cae, la cámara baja al personaje y lo
+  **sigue** casilla por casilla; al llegar se cierra sobre la tarjeta.
 
-Cuánto hay que correr la lente para centrar una casilla **se mide del navegador**, no se
-calcula: un plano con perspectiva no proyecta las casillas donde dice la cuadrícula —las de
-atrás se juntan y las de adelante se abren—, así que cualquier cuenta a mano queda mal justo
-en las esquinas. `getBoundingClientRect()` ya trae la casilla donde de verdad se está
-viendo, y con el origen en el centro basta con `t = -d·s`.
+#### El turno tiene cuatro tiempos
+
+1. **El cubo rueda**, con el mes entero a la vista: eso es lo que hay que ver para entender
+   la tirada.
+2. **La cámara baja** al personaje y el tablero **gira** para poner su lado de frente.
+3. **La ficha camina**, y la cámara va detrás. Cada paso suena una nota un semitono más alta
+   que la anterior, así que un seis suena como una escalerita y el oído cuenta los pasos sin
+   mirar.
+4. **Al llegar hay un respiro** —700 ms— y ahí suena lo que le tocó: alegre si fue algo
+   bueno, triste si fue algo malo. Solo entonces se abre la tarjeta. El respiro es la mitad
+   del asunto: una ventana que salta en el mismo instante en que la ficha se para no se
+   siente una consecuencia, se siente una interrupción.
+
+Una tarea y un comodín **no suenan** ni a bueno ni a malo, y es a propósito: son decisiones,
+no cosas que te pasan, y el juego no va a decirle cuál es la buena. El comodín sí suena
+después de elegir, cuando ya se sabe cómo salió.
+
+#### La cámara: medida, no calculada
+
+Cuánto hay que correr la lente para centrar una casilla **se mide del navegador**: un plano
+con perspectiva no proyecta las casillas donde dice la cuadrícula —las de atrás se juntan y
+las de adelante se abren—, así que cualquier cuenta a mano queda mal justo en las esquinas.
+`getBoundingClientRect()` ya trae la casilla donde de verdad se está viendo, y con el origen
+en el centro basta con `t = -d·s`. Tres cosas que costaron sangre:
+
+- **La lente va por FUERA de la perspectiva.** Metida dentro, su `scale` escalaba la escena
+  en tres dimensiones —la capa lleva `preserve-3d`— y eso cambia cómo proyecta la
+  perspectiva: la casilla no acababa donde decía la cuenta. Por fuera, la escena se dibuja
+  primero y la lente mueve y agranda el resultado, como una lupa sobre una foto.
+- **Se mide el estado final, no el de en medio.** `medirCasilla()` pone el giro final sin
+  transición, mide y lo devuelve todo antes de soltar el hilo: entre que empieza y termina
+  no se pinta ni un cuadro. Midiendo a media animación, la casilla sale donde estaba a mitad
+  de camino y la cámara persigue un fantasma.
+- **La cámara no se sale del tablero.** Centrar la casilla y ya se veía bien en medio del
+  mes y fatal en las orillas: media pantalla en blanco. `dentroDelTablero()` la sujeta —el
+  tablero tiene que seguir tapando la ventana, con un 12% de holgura para que el día de
+  enfrente no quede pegado al borde—, que es lo mismo que hace cualquier cámara de juego con
+  los bordes del mapa.
+
+#### El tablero gira, como el de mesa
+
+En un tablero de mesa las tarjetas de cada lado están impresas mirando a quien se sienta en
+ese lado, y para leer las de enfrente hay que darle la vuelta al tablero. Aquí pasa
+exactamente eso: mientras la ficha camina, el tablero **gira** (`--vuelta`) para que el lado
+por el que va quede abajo, de frente. Y la tarjeta está impresa mirando a su lado
+(`--vuelta-tarjeta`: 0°, 90°, 180° o -90°). Las dos rotaciones se anulan, así que la tarjeta
+que la cámara está mirando **siempre** se lee así:
+
+```
+=========================
+   TAREA                  <- la franja, con el nombre del día
+=========================
+      [ el objeto ]
+   7            ⚡ -35     <- el número y lo que cuesta
+```
+
+Dos consecuencias que hay que tener en la cabeza al tocar esto:
+
+- **El anillo es un cuadrado exacto** (9×9 siempre, con las casillas que sobren como camino
+  sin día). Antes era «lo más cuadrado posible» y febrero salía 9×8: girarle la cara 90° a
+  una casilla que no es cuadrada la desborda.
+- **Lo que se para encima NO gira.** Las cajas, la ficha, el dado y el rótulo del barrio se
+  desgiran lo que gire el tablero (`rotate(calc(-1 * var(--vuelta)))`), porque están hechos
+  para mirar a la cámara y girando le verías el costado que no existe. El dado y el rótulo
+  van además en una capa que desgira entera (`.barrio-frente`): si no, a media vuelta el
+  dado acababa tirado en la acera del fondo. Las casas del barrio sí giran de sitio —están
+  plantadas en el suelo— aunque sigan mirando de frente.
 
 #### Cada día es una tarjeta, y lleva algo encima
 
@@ -253,7 +315,7 @@ librerías**, y no por tacañería:
   motor de escena son unos 600 KB, casi tres veces todo lo que hay hoy en `vendor/` y la
   mitad del presupuesto de arte, para dibujar un plano inclinado y un cubo.
 - Y sobre todo: un `<canvas>` de WebGL **no se puede probar**. `pruebas/dom-real.js` juega el
-  juego tocando nodos —187 comprobaciones— y el tablero es justo la pantalla donde más hay
+  juego tocando nodos —191 comprobaciones— y el tablero es justo la pantalla donde más hay
   que romper. Con transformaciones CSS cada día del mes sigue siendo un `<div>` que la suite
   puede mirar y tocar.
 

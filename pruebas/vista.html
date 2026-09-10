@@ -282,9 +282,11 @@
     }
     if (veces === 'zoom') {
       tirarHasta(1);
+      /* Cuatro segundos: el cubo rueda, la camara baja, la ficha camina y al
+       * llegar hay un respiro antes de que se abra la tarjeta. */
       setTimeout(function () {
         document.querySelectorAll('.velo').forEach(function (v) { v.remove(); });
-      }, 900);
+      }, 4200);
       return;
     }
     window.SIN_PASEO = (veces > 1);

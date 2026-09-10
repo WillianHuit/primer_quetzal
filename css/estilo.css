@@ -238,6 +238,30 @@ p  { margin: 0 0 10px; }
   overflow: hidden;
   margin: 10px 0 12px;
 }
+/* La LENTE es lo unico que se mueve al acercarse, y va POR FUERA de la
+   perspectiva.
+
+   Metida dentro, su `scale` escalaba la escena en tres dimensiones —la capa
+   llevaba `preserve-3d`— y eso cambia como proyecta la perspectiva: la casilla
+   no acababa donde decia la cuenta y la camara quedaba corta justo al cerrarse
+   sobre la tarjeta. Por fuera, la escena se dibuja primero y la lente mueve y
+   agranda el resultado, como una lupa encima de una foto: ahi si, un punto que
+   esta a `d` del centro acaba en `d*s + t`.
+
+   Cuanto hay que correrla para centrar una casilla lo MIDE la interfaz del
+   navegador: un plano con perspectiva no proyecta las casillas donde dice la
+   cuadricula. */
+.tablero-lente {
+  position: absolute; inset: 0;
+  transform-origin: 50% 50%;
+  /* Corta y sin rebote: la camara va DETRAS de la ficha, que da un paso cada
+     165 ms. Con una curva larga la camara llegaba al dia anterior cuando la
+     ficha ya estaba dos mas alla. */
+  transition: transform .3s ease-out;
+}
+.tablero-lente.acercado {
+  transform: translate(var(--zx, 0px), var(--zy, 0px)) scale(var(--zs, 1));
+}
 /* La distancia de la camara. Corta, se dispara: la fila de enfrente se sale de
    la tarjeta y la del fondo se cierra hasta no verse. Larga, se aplana y deja
    de parecer un tablero mirado desde la silla. Mil pixeles con 52 grados deja
@@ -247,19 +271,6 @@ p  { margin: 0 0 10px; }
   position: absolute; inset: 0;
   perspective: 1000px;
   perspective-origin: 50% 58%;
-}
-/* La lente: lo unico que se mueve al acercarse. Va aparte del tablero para que
-   el acercamiento no toque la inclinacion, que es de la escena y no de la
-   camara. Cuanto hay que correrla lo MIDE la interfaz del navegador: un plano
-   con perspectiva no proyecta las casillas donde dice la cuadricula. */
-.tablero-lente {
-  position: absolute; inset: 0;
-  transform-style: preserve-3d;
-  transform-origin: 50% 50%;
-  transition: transform .42s cubic-bezier(.25, .8, .3, 1);
-}
-.tablero-lente.acercado {
-  transform: translate(var(--zx, 0px), var(--zy, 0px)) scale(var(--zs, 1));
 }
 
 /* OJO: las filas y columnas las escribe la interfaz en el `style` del
@@ -278,9 +289,14 @@ p  { margin: 0 0 10px; }
   /* -54% y no -50%: con perspectiva la mitad de enfrente se proyecta mas alta
      que la del fondo, asi que el centro de lo que se VE cae por debajo del
      centro de la cuadricula. Sin esta correccion la fila de enfrente —la que
-     se lee— es justo la que se sale por abajo. */
-  transform: translate(-50%, -54%) rotateX(var(--giro));
+     se lee— es justo la que se sale por abajo.
+
+     Y `--vuelta` GIRA el tablero en su propio plano, como se gira uno de mesa
+     para leer las tarjetas del lado de enfrente. Lo escribe la interfaz
+     mientras la ficha camina: el lado por el que va queda abajo. */
+  transform: translate(-50%, -54%) rotateX(var(--giro)) rotateZ(var(--vuelta, 0deg));
   transform-style: preserve-3d;
+  transition: transform .34s ease-out;
 }
 
 /* ---------- la casilla, con forma de tarjeta de tablero de mesa ----------
@@ -306,49 +322,61 @@ p  { margin: 0 0 10px; }
   transform: translateZ(-6px);
   z-index: -1;
 }
+/* La CARA de la tarjeta, que es lo unico que gira con el lado.
+   ---------------------------------------------------------------------------
+   Cada tarjeta esta impresa mirando a su lado del tablero, igual que en el de
+   mesa: la del lado de abajo se lee derecha, la de la izquierda girada un
+   cuarto, la de arriba al reves. Y como el tablero GIRA para poner el lado por
+   el que va la ficha abajo (ver `--vuelta`), las dos rotaciones se anulan y la
+   tarjeta que la camara esta mirando siempre queda asi:
+
+        franja con el nombre
+        el objeto parado
+        el dia y lo que cuesta
+
+   El objeto y la ficha se quedan FUERA de esta capa: esos no giran nunca,
+   porque tienen que mirar a la camara desde cualquier lado del tablero. */
+.cara-dia {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+  transform: rotate(var(--vuelta-tarjeta, 0deg));
+}
+.lado-abajo     .cara-dia { --vuelta-tarjeta: 0deg; }
+.lado-izquierda .cara-dia { --vuelta-tarjeta: 90deg; }
+.lado-arriba    .cara-dia { --vuelta-tarjeta: 180deg; }
+.lado-derecha   .cara-dia { --vuelta-tarjeta: -90deg; }
+
 .casilla .banda {
-  position: absolute; display: block;
+  display: block; flex: 0 0 auto;
+  min-height: 26%;
   background: var(--tinte, var(--linea));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .28);
+  border-radius: 3px 3px 0 0;
+  color: #fff; font-size: 5px; font-weight: 800;
+  letter-spacing: .2px; text-transform: uppercase;
+  text-align: center; line-height: 2.2;
+  overflow: hidden; white-space: nowrap;
+}
+.casilla .pie {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 3px 2px;
+  line-height: 1;
 }
 .casilla .dia {
-  position: absolute;
   font-size: 8px; font-weight: 800; opacity: .5;
-  font-variant-numeric: tabular-nums; line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 .casilla .precio {
-  position: absolute;
   display: inline-flex; align-items: center; gap: 1px;
-  font-size: 7.5px; font-weight: 800; line-height: 1;
+  font-size: 7.5px; font-weight: 800;
   color: var(--tinte, var(--gris));
   font-variant-numeric: tabular-nums;
 }
 .casilla .precio svg { width: 7px; height: 7px; }
-.casilla .rotulo {
-  position: absolute; left: 0; right: 0; bottom: 14%;
-  text-align: center; font-size: 7px; font-weight: 800;
-  text-transform: uppercase; letter-spacing: .3px;
-  color: var(--verde);
-}
 
-/* Los cuatro lados. El centro del tablero queda al otro lado de la franja. */
-.lado-arriba    .banda  { left: 8%; right: 8%; bottom: 0; height: 22%; border-radius: 0 0 4px 4px; }
-.lado-arriba    .dia    { top: 2px; left: 3px; }
-.lado-arriba    .precio { top: 2px; right: 3px; }
-.lado-abajo     .banda  { left: 8%; right: 8%; top: 0; height: 22%; border-radius: 4px 4px 0 0; }
-.lado-abajo     .dia    { bottom: 2px; left: 3px; }
-.lado-abajo     .precio { bottom: 2px; right: 3px; }
-.lado-izquierda .banda  { top: 8%; bottom: 8%; right: 0; width: 22%; border-radius: 0 4px 4px 0; }
-.lado-izquierda .dia    { top: 2px; left: 3px; }
-.lado-izquierda .precio { bottom: 2px; left: 3px; }
-.lado-derecha   .banda  { top: 8%; bottom: 8%; left: 0; width: 22%; border-radius: 4px 0 0 4px; }
-.lado-derecha   .dia    { top: 2px; right: 3px; }
-.lado-derecha   .precio { bottom: 2px; right: 3px; }
-
-/* Las cuatro esquinas van redondeadas por fuera y sin franja, como en el
-   tablero de mesa: no son propiedades, son sitios. */
+/* Las cuatro esquinas van redondeadas por fuera, como en el tablero de mesa */
 .casilla.esquina { border-radius: 10px; }
-.casilla.esquina .banda { display: none; }
 /* La SALIDA: la casilla de la que se sale y a la que no se vuelve este mes */
 .casilla.salida {
   background: var(--verde-claro); border-color: var(--verde);
@@ -387,10 +415,15 @@ p  { margin: 0 0 10px; }
    mismo y ademas gira 90 sobre Y, para quedar en el plano de la derecha. Las
    medidas vienen en pixeles desde la interfaz porque translateZ no acepta
    porcentajes. */
+/* Y la caja se DESGIRA lo que gire el tablero: sus tres caras estan hechas
+   para mirar a la camara, y si girara con el tablero le verias el costado que
+   no existe. Es la misma cuenta para todo lo que se para encima —las casitas,
+   el rotulo del barrio, el dado y la ficha— y va antes de la inclinacion,
+   porque deshacer un giro es deshacerlo en el orden contrario. */
 .caja3d {
   position: absolute;
   transform-style: preserve-3d;
-  transform: translateZ(var(--sube, 0px));
+  transform: rotate(calc(-1 * var(--vuelta, 0deg))) translateZ(var(--sube, 0px));
   pointer-events: none;
 }
 .caja3d .cara {
@@ -489,6 +522,15 @@ p  { margin: 0 0 10px; }
   content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px;
   background: repeating-linear-gradient(90deg, #f1e9c9 0 8px, transparent 8px 16px);
 }
+/* La capa de enfrente del barrio: lo que esta ENCIMA de la mesa y no plantado
+   en ella. Desgira el tablero entera, asi que el dado y el rotulo se quedan
+   siempre en la parte de acá del centro, mire el tablero a donde mire. */
+.barrio-frente {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  transform: rotate(calc(-1 * var(--vuelta, 0deg)));
+  pointer-events: none;
+}
 /* El rotulo del barrio se pone DE PIE mirando a la camara: es la unica cosa
    del centro que hay que poder leer. */
 .barrio-rotulo {
@@ -513,10 +555,13 @@ p  { margin: 0 0 10px; }
   z-index: 5; pointer-events: none;
   align-self: end; justify-self: center;
   width: 104%; height: 124%;
-  /* Corrida a la izquierda: la ficha se para AL LADO de lo que hay en la
-     casilla y no encima. Sin esto, al acercarse la camara la ficha tapaba
-     justo la tarjeta que se acababa de acercar. */
-  transform: translateX(-24%) rotateX(calc(-1 * var(--giro))) translateZ(12px);
+  /* Se desgira el tablero, se pone de pie y ENTONCES se corre a la izquierda:
+     el corrimiento va en el ultimo sitio para que sea a la izquierda de la
+     PANTALLA y no del tablero, que gira. La ficha se para al lado de lo que
+     hay en la casilla y no encima, que si no tapaba justo la tarjeta a la que
+     la camara se acababa de acercar. */
+  transform: rotate(calc(-1 * var(--vuelta, 0deg))) rotateX(calc(-1 * var(--giro)))
+             translateX(-24%) translateZ(12px);
   transform-origin: 50% 100%;
   display: flex; align-items: flex-end; justify-content: center;
   filter: drop-shadow(0 5px 4px rgba(10, 25, 20, .4));
@@ -529,9 +574,9 @@ p  { margin: 0 0 10px; }
    pasos, que es justo lo que hay que poder contar. */
 .tablero .ficha.salta { animation: ficha-brinca .165s ease-out; }
 @keyframes ficha-brinca {
-  0%   { transform: translateX(-24%) rotateX(calc(-1 * var(--giro))) translateZ(12px) translateY(0) scale(1); }
-  45%  { transform: translateX(-24%) rotateX(calc(-1 * var(--giro))) translateZ(28px) translateY(-9px) scale(1.06); }
-  100% { transform: translateX(-24%) rotateX(calc(-1 * var(--giro))) translateZ(12px) translateY(0) scale(1); }
+  0%   { transform: rotate(calc(-1 * var(--vuelta, 0deg))) rotateX(calc(-1 * var(--giro))) translateX(-24%) translateZ(12px) translateY(0) scale(1); }
+  45%  { transform: rotate(calc(-1 * var(--vuelta, 0deg))) rotateX(calc(-1 * var(--giro))) translateX(-24%) translateZ(28px) translateY(-9px) scale(1.06); }
+  100% { transform: rotate(calc(-1 * var(--vuelta, 0deg))) rotateX(calc(-1 * var(--giro))) translateX(-24%) translateZ(12px) translateY(0) scale(1); }
 }
 
 /* ---------- el dado, un cubo de seis caras ----------
@@ -549,7 +594,7 @@ p  { margin: 0 0 10px; }
   width: 44px; height: 44px;
   perspective: 240px;
 }
-.tablero-centro .dado3d {
+.barrio-frente .dado3d {
   position: absolute; left: 50%; bottom: 5%;
   margin-left: -22px;
   transform: rotateX(-28deg) translateZ(14px);
@@ -625,13 +670,18 @@ p  { margin: 0 0 10px; }
     --giro: 0deg;
     width: 100%;
     transform: translate(-50%, -50%);
+    transition: none;
   }
+  /* Y sin giro del tablero, cada tarjeta se queda impresa mirando a su lado,
+     que es como se ve un tablero de mesa desde arriba. */
+  .caja3d { transform: none; }
   .casilla.aqui { transform: scale(1.06); }
   .tablero .ficha { transform: none; }
   .tablero .ficha.salta { animation: none; }
   .tablero-lente { transition: none; }
   .dado-cubo.rueda { animation: none; }
-  .tablero-centro .dado3d { transform: none; }
+  .barrio-frente { transform: none; }
+  .barrio-frente .dado3d { transform: none; }
   .barrio-rotulo { transform: none; }
   .caja3d .techo, .caja3d .costado, .caja3d.consombra::before { display: none; }
   .caja3d .frente { top: 0; bottom: auto; height: 100%; transform: none; border-radius: 3px; }

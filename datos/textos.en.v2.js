@@ -9,6 +9,14 @@
   if (typeof X === 'undefined') return;
   var ui = X.ui, datos = X.datos;
 
+  /* ---------- los nombres cortos de las casillas del tablero ----------
+   * Van en la franja de color de cada dia, como el nombre de una propiedad en
+   * el tablero de mesa. Cortos a proposito: la franja mide cinco pixeles. */
+  ui['Comodín'] = 'Wildcard';
+  ui['Descanso'] = 'Rest';
+  ui['Imprevisto'] = 'Setback';
+  ui['Fin de mes'] = 'Month end';
+
   /* ---------- el barrio del centro del tablero ----------
    * El nombre de cada barrio y lo que se ve en el. La clave ':d' es la
    * descripcion, la que va en el title. Ver datos/barrio.js. */
