@@ -231,16 +231,23 @@ p  { margin: 0 0 10px; }
   margin: 12px 0 16px;
   padding-bottom: 6px;
 }
+/* OJO: las filas y columnas las escribe la interfaz en el `style` del
+   elemento, no aqui. `repeat(var(--cols), 1fr)` NO es CSS valido —la cuenta de
+   `repeat()` no acepta variables— y el navegador se lo come sin decir nada: el
+   tablero se dibujaba con las columnas por defecto y se salia de la pantalla.
+
+   Y las pistas van en `minmax(0, 1fr)` y no en `1fr`, porque la ficha mide mas
+   que su casilla a proposito y con `1fr` estiraba su columna. */
 .tablero {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 5px;
+  aspect-ratio: 1;
+  gap: 3px;
   transform: rotateX(18deg);
   transform-style: preserve-3d;
 }
 .casilla {
   position: relative;
-  aspect-ratio: 1;
+  min-width: 0; min-height: 0;
   border: 2px solid var(--borde); border-radius: 11px;
   background: var(--tarjeta);
   display: flex; align-items: center; justify-content: center;
@@ -258,11 +265,34 @@ p  { margin: 0 0 10px; }
   z-index: -1;
 }
 .casilla .dia {
-  position: absolute; top: 2px; left: 4px;
-  font-size: 8.5px; font-weight: 800; opacity: .5;
-  font-variant-numeric: tabular-nums;
+  position: absolute; top: 1px; left: 3px;
+  font-size: 7.5px; font-weight: 800; opacity: .55;
+  font-variant-numeric: tabular-nums; line-height: 1;
 }
-.casilla svg { width: 17px; height: 17px; }
+.casilla svg { width: 14px; height: 14px; }
+
+/* Las cuatro esquinas van redondeadas por fuera, como en un tablero de mesa */
+.casilla.esquina { border-radius: 14px; }
+/* La SALIDA: la casilla de la que se sale y a la que no se vuelve este mes */
+.casilla.salida {
+  background: var(--verde-claro); border-color: var(--verde); color: var(--verde);
+}
+.casilla.salida .dia {
+  position: static; font-size: 7px; text-transform: uppercase; letter-spacing: .3px;
+  opacity: .9;
+}
+.casilla.salida svg { display: none; }
+/* Camino sin dia: los meses cortos dejan una casilla de sobra en el anillo */
+.casilla.camino { background: var(--fondo); border-style: dashed; opacity: .5; }
+
+/* El centro del tablero. En un tablero de mesa son las cartas; aqui es lo
+   unico que se toca: el dado y su boton. */
+.tablero-centro {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 6px;
+  transform: translateZ(2px);
+}
+.tablero-centro .btn-primario.chico { width: 100%; }
 /* Los dias por los que ya pasaste se apagan: el tablero se lee de un vistazo
    como "por aqui voy". */
 /* Los dias por los que ya pasaste se apagan, pero no desaparecen: a .42 los
@@ -271,22 +301,37 @@ p  { margin: 0 0 10px; }
 /* Y el de hoy manda: se LEVANTA del tablero, no solo crece */
 .casilla.aqui {
   border-color: var(--verde); z-index: 3;
-  transform: translateZ(22px) scale(1.06);
-  box-shadow: inset 0 1px 0 #fff, 0 10px 18px rgba(10,25,20,.28);
+  transform: translateZ(16px) scale(1.08);
+  box-shadow: inset 0 1px 0 #fff, 0 8px 14px rgba(10,25,20,.28);
 }
-.casilla.aqui svg { display: none; }
-/* La ficha se pone DE PIE: se contragira la inclinacion del tablero para que
-   mire a la cámara, como una pieza puesta sobre el tablero y no pintada en el. */
-.casilla .ficha {
-  position: absolute; left: 50%; bottom: 2px;
-  width: 112%; height: 132%;
-  transform: translateX(-50%) rotateX(-18deg) translateZ(14px);
+
+/* ---------- la ficha, de pie y caminando ----------
+   Va FUERA de las casillas, colocada con grid igual que ellas, y se mueve
+   cambiando su fila y su columna. Metida dentro de una casilla habria que
+   redibujar el tablero en cada paso y el paseo se veria a saltos.
+
+   Y se pone DE PIE: se contragira la inclinacion del tablero para que mire a
+   la camara, como una pieza puesta encima y no pintada en el. */
+.tablero .ficha {
+  z-index: 5; pointer-events: none;
+  align-self: end; justify-self: center;
+  width: 132%; height: 158%;
+  transform: rotateX(-18deg) translateZ(16px);
   transform-origin: 50% 100%;
   display: flex; align-items: flex-end; justify-content: center;
-  filter: drop-shadow(0 4px 4px rgba(10,25,20,.35));
+  filter: drop-shadow(0 5px 4px rgba(10,25,20,.4));
+  transition: grid-column .14s linear, grid-row .14s linear;
 }
-.casilla .ficha svg, .casilla .ficha img {
+.tablero .ficha svg, .tablero .ficha img {
   width: 100%; height: 100%; display: block;
+}
+/* Un brinco por casilla: sin esto la ficha se desliza y no se cuentan los
+   pasos, que es justo lo que hay que poder contar. */
+.tablero .ficha.salta { animation: ficha-brinca .165s ease-out; }
+@keyframes ficha-brinca {
+  0%   { transform: rotateX(-18deg) translateZ(16px) translateY(0) scale(1); }
+  45%  { transform: rotateX(-18deg) translateZ(30px) translateY(-9px) scale(1.06); }
+  100% { transform: rotateX(-18deg) translateZ(16px) translateY(0) scale(1); }
 }
 
 /* Un color por tipo de dia, y son los mismos que tenian las actividades
@@ -358,8 +403,9 @@ p  { margin: 0 0 10px; }
    El 3D es como se ve mejor, no como se juega: la informacion es la misma. */
 @media (prefers-reduced-motion: reduce) {
   .tablero { transform: none; }
-  .casilla.aqui { transform: scale(1.1); }
-  .casilla .ficha { transform: translateX(-50%); }
+  .casilla.aqui { transform: scale(1.06); }
+  .tablero .ficha { transform: none; }
+  .tablero .ficha.salta { animation: none; }
   .dado-cubo.rueda { animation: none; }
 }
 

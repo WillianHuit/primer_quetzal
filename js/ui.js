@@ -356,6 +356,117 @@ var UI = (function () {
   // Lo que dijo el dado la última vez, para poder dibujarlo
   var ultimoDado = null;
   var notaTablero = '';
+  /* En qué casilla se DIBUJA la ficha, que no siempre es donde está.
+   *
+   * Mientras camina, el motor ya la puso en el día nuevo pero la pantalla la
+   * tiene que enseñar saliendo del viejo: si no, la ficha aparecería de golpe
+   * al otro lado del tablero y el dado no se entendería. null = donde toca. */
+  var fichaEn = null;
+
+  /* Las medidas del anillo para un camino de `total` casillas.
+   *
+   * El perímetro de una cuadrícula de R por C son 2R+2C-4, siempre par. Se
+   * busca el par más chico que quepa y se reparte lo más cuadrado posible,
+   * porque un tablero de mesa es un cuadrado y no un pasillo. */
+  function medidasDelAnillo(total) {
+    var p = total % 2 === 0 ? total : total + 1;
+    var suma = p / 2 + 2;                  // R + C
+    var f = Math.ceil(suma / 2);
+    var c = suma - f;
+    return { f: f, c: c, total: 2 * f + 2 * c - 4 };
+  }
+
+  /* Dónde cae la casilla número `k` del camino, en el sentido de las agujas
+   * del reloj y empezando en la esquina de arriba a la izquierda: primero la
+   * fila de arriba, luego la columna derecha, luego la de abajo al revés y por
+   * último la columna izquierda subiendo. */
+  function casillaDelAnillo(k, f, c) {
+    var sitio;
+    if (k < c) sitio = { fila: 0, col: k };
+    else if (k < c + f - 1) sitio = { fila: k - c + 1, col: c - 1 };
+    else if (k < 2 * c + f - 2) sitio = { fila: f - 1, col: c - 1 - (k - (c + f - 2)) };
+    else sitio = { fila: f - 1 - (k - (2 * c + f - 3)), col: 0 };
+    sitio.esquina = (sitio.fila === 0 || sitio.fila === f - 1) &&
+                    (sitio.col === 0 || sitio.col === c - 1);
+    return sitio;
+  }
+
+  /* La ficha del jugador, de pie sobre su casilla.
+   *
+   * Va FUERA de las casillas y colocada con grid, no dentro de una de ellas.
+   * Metida dentro, moverla obligaba a redibujar el tablero en cada paso y la
+   * animación se veía a saltos; suelta, se mueve cambiando dos números. */
+  function fichaDelTablero(e, k) {
+    var t = Motor.tablero();
+    /* Y se dibuja también en la SALIDA (k = 0), que es donde está antes de la
+     * primera tirada. Sin eso, el primer paseo del mes no tenía ficha de la que
+     * salir y la primera tirada se veía como un salto. */
+    if (!t || k < 0) return '';
+    var anillo = medidasDelAnillo(t.dias + 1);
+    var sitio = casillaDelAnillo(k, anillo.f, anillo.c);
+    return '<div class="ficha" id="ficha-tablero" style="grid-column:' + (sitio.col + 1) +
+           ';grid-row:' + (sitio.fila + 1) + '">' +
+           Muneco({ estudia: !!e.estudio, trabajo: e.empleo ? e.empleo.id : null }) +
+           '</div>';
+  }
+
+  /* La ficha camina, casilla por casilla.
+   *
+   * Es la diferencia entre un tablero y una barra de progreso: el jugador tiene
+   * que VER por dónde pasó, porque los días que se salta son días que existen
+   * y que le podrían haber tocado. Tres tiradas de dos son seis pasos, y en
+   * seis pasos se entiende el tablero entero sin leer nada.
+   */
+  function caminarFicha(desde, hasta, alLlegar) {
+    var tab = document.querySelector('.tablero');
+    var ficha = document.getElementById('ficha-tablero');
+    /* Dos formas de no caminar, y las dos son legítimas.
+     *
+     * `prefers-reduced-motion` es del jugador: quien pidió menos movimiento ve
+     * la ficha aparecer en su día y no pierde nada, porque el paseo no lleva
+     * información que no esté en el tablero.
+     *
+     * `SIN_PASEO` es del banco de pruebas, igual que `RUTA_ASSETS`: sin él,
+     * `pruebas/dom-real.js` tendría que esperar cronómetros de verdad para
+     * comprobar qué preguntó la casilla, y una prueba que espera relojes es
+     * una prueba que un día falla sola. */
+    var quieto = (typeof SIN_PASEO !== 'undefined' && SIN_PASEO);
+    try {
+      if (!quieto) {
+        quieto = !!(window.matchMedia &&
+                    window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      }
+    } catch (err) { /* sin matchMedia se camina, que es lo normal */ }
+    if (!tab || !ficha || quieto || hasta <= desde) {
+      fichaEn = null;
+      return alLlegar();
+    }
+    var t = Motor.tablero();
+    var anillo = medidasDelAnillo(t.dias + 1);
+    var k = desde;
+    var reloj = setInterval(function () {
+      k++;
+      var sitio = casillaDelAnillo(k, anillo.f, anillo.c);
+      ficha.style.gridColumn = String(sitio.col + 1);
+      ficha.style.gridRow = String(sitio.fila + 1);
+      ficha.classList.remove('salta');
+      // Se fuerza el reinicio de la animación del salto
+      try { void ficha.offsetWidth; } catch (err) {}
+      ficha.classList.add('salta');
+      tab.querySelectorAll('.casilla.aqui').forEach(function (x) {
+        x.classList.remove('aqui');
+        x.classList.add('pasada');
+      });
+      var casilla = tab.querySelector('[data-paso="' + k + '"]');
+      if (casilla) { casilla.classList.remove('pasada'); casilla.classList.add('aqui'); }
+      Sonido.tono('toque');
+      if (k >= hasta) {
+        clearInterval(reloj);
+        fichaEn = null;
+        alLlegar();
+      }
+    }, 165);
+  }
 
   function tarjetaTablero(e) {
     var t = Motor.tablero();
@@ -374,41 +485,70 @@ var UI = (function () {
      * eso es lo que hace que un tablero sea un tablero: se mira lo que viene.
      * Lo que no se ve es lo que traen dentro —qué tarea, qué comodín—, que se
      * sortea al caer. */
-    /* El tablero va en PERSPECTIVA, y el dado es un cubo de seis caras.
+    /* EL TABLERO ES UN ANILLO CUADRADO, como el de mesa.
      *
-     * Es 3D de verdad —perspective, preserve-3d, rotaciones en X y en Y— y no
-     * lleva ninguna librería. Eso no es tacañería: la promesa de este juego es
-     * que se abre con doble clic y sin descargar nada, y las cosas que hay que
-     * dibujar aquí —un plano inclinado con relieve y un cubo que rueda— son
-     * exactamente lo que las transformaciones 3D del navegador hacen bien.
-     * Traer un motor de escena para eso costaría más que todo el arte junto y
-     * dejaría el tablero fuera del alcance de las pruebas, que tocan nodos.
+     * La primera versión iba en serpiente —filas de seis, la siguiente al
+     * revés— y se leía como un calendario, no como un tablero. Un tablero de
+     * mesa es un cuadrado con el camino por el borde y el centro libre, y esa
+     * forma no es decoración: dice de un vistazo que el mes es una vuelta que
+     * empieza y termina en el mismo sitio, y deja el centro para lo único que
+     * se toca, que es el dado.
      *
-     * La inclinación es corta a propósito (18°). Con más, los números de los
-     * días se vuelven ilegibles en la fila de arriba, y este tablero hay que
-     * poder leerlo, no solo mirarlo. */
-    var COLS = 6;
-    h += '<div class="tablero-3d"><div class="tablero">';
-    for (var d = 0; d < t.dias; d++) {
-      var c = t.casillas[d];
-      var fila = Math.floor(d / COLS);
-      var col = (fila % 2 === 0) ? (d % COLS) : (COLS - 1 - (d % COLS));
-      var pasada = d < t.pos - 1;
-      var aqui = d === t.pos - 1;
-      h += '<div class="casilla ' + (CLASE_CASILLA[c.tipo] || '') +
-           (pasada ? ' pasada' : '') + (aqui ? ' aqui' : '') +
-           '" style="grid-column:' + (col + 1) + ';grid-row:' + (fila + 1) + '"' +
-           ' title="' + T('Día {0}', d + 1) + '">' +
-           '<span class="dia">' + (d + 1) + '</span>' +
-           Ico(ICONO_CASILLA[c.tipo] || 'calendario') +
-           (aqui ? '<span class="ficha">' + Muneco({ estudia: !!e.estudio,
-              trabajo: e.empleo ? e.empleo.id : null }) + '</span>' : '') +
-           '</div>';
-    }
-    h += '</div></div>';
+     * El perímetro de una cuadrícula de R por C son 2R+2C-4 casillas, y eso
+     * siempre es un número par. Un mes de 31 días no encaja en un número par,
+     * así que el camino lleva SIEMPRE una casilla de SALIDA —la de "GO" del
+     * tablero de mesa— y las que sobren quedan como camino sin día. Con eso
+     * los tres largos de mes que existen caben:
+     *
+     *   28 días -> 9x8 = 30 casillas: salida + 28 + 1 de camino
+     *   30 días -> 9x9 = 32 casillas: salida + 30 + 1
+     *   31 días -> 9x9 = 32 casillas: salida + 31, justo
+     */
+    var t = Motor.tablero();
+    if (!t) return '';
+    var fin = Motor.tableroTerminado();
+    var anillo = medidasDelAnillo(t.dias + 1);
 
-    // El dado y el botón, que es la acción de esta pantalla
-    h += '<div class="dado-fila">';
+    var h = '<div class="tarjeta tablero-caja">';
+    h += '<div class="titulo">' + Ico('calendario') + ' ' +
+         T('{0}: día {1} de {2}', nombreMes(e.mes), t.pos, t.dias) + '</div>';
+
+    /* Se ve el tipo de TODAS las casillas, incluidas las que faltan, porque
+     * eso es lo que hace que un tablero sea un tablero: se mira lo que viene.
+     * Lo que no se ve es lo que traen dentro —qué tarea, qué comodín—, que se
+     * sortea al caer. */
+    var donde = fichaEn === null ? t.pos : fichaEn;
+    h += '<div class="tablero-3d"><div class="tablero" style="' +
+         'grid-template-columns:repeat(' + anillo.c + ',minmax(0,1fr));' +
+         'grid-template-rows:repeat(' + anillo.f + ',minmax(0,1fr))">';
+    for (var k = 0; k < anillo.total; k++) {
+      var sitio = casillaDelAnillo(k, anillo.f, anillo.c);
+      var esquina = sitio.esquina ? ' esquina' : '';
+      var estilo = 'grid-column:' + (sitio.col + 1) + ';grid-row:' + (sitio.fila + 1);
+
+      if (k === 0) {           // la salida
+        h += '<div class="casilla salida' + esquina + '" style="' + estilo + '">' +
+             '<span class="dia">' + T('Salida') + '</span>' + Ico('bandera') + '</div>';
+        continue;
+      }
+      if (k > t.dias) {        // camino sin día: el mes ya se acabó antes
+        h += '<div class="casilla camino' + esquina + '" style="' + estilo + '"></div>';
+        continue;
+      }
+      var c = t.casillas[k - 1];
+      var pasada = k < donde;
+      var aqui = k === donde;
+      h += '<div class="casilla ' + (CLASE_CASILLA[c.tipo] || '') + esquina +
+           (pasada ? ' pasada' : '') + (aqui ? ' aqui' : '') +
+           '" style="' + estilo + '" data-paso="' + k + '"' +
+           ' title="' + T('Día {0}', k) + '">' +
+           '<span class="dia">' + k + '</span>' +
+           Ico(ICONO_CASILLA[c.tipo] || 'calendario') + '</div>';
+    }
+
+    /* El centro del tablero, que es donde va el dado. En un tablero de mesa el
+     * centro son las cartas; aquí es la única cosa que se toca. */
+    h += '<div class="tablero-centro" style="grid-area:2/2/' + anillo.f + '/' + anillo.c + '">';
     h += dadoCubo(ultimoDado);
     if (fin) {
       h += '<button class="btn-primario chico" id="cerrar-turno">' +
@@ -418,6 +558,10 @@ var UI = (function () {
            T('Tirar el dado') + '</button>';
     }
     h += '</div>';
+
+    // Y la ficha, que es un elemento suelto: se mueve de casilla en casilla
+    h += fichaDelTablero(e, donde);
+    h += '</div></div>';
 
     if (notaTablero) h += '<p class="tablero-nota">' + notaTablero + '</p>';
     else if (fin) {
@@ -4208,8 +4352,15 @@ var UI = (function () {
         ultimoDado = tirada.dado;
         notaTablero = '';
         Sonido.tono('toque');
+        /* La ficha se dibuja donde ESTABA y camina hasta donde cayó. Sin esto
+         * aparecía de golpe al otro lado del tablero y el dado no se entendía:
+         * el jugador veía un número y una ficha teletransportada. */
+        fichaEn = tirada.desde;
         render();
-        return abrirCasilla(tirada);
+        return caminarFicha(tirada.desde, tirada.pos, function () {
+          render();
+          abrirCasilla(tirada);
+        });
       }
 
       if (el.id === 'cerrar-turno') {

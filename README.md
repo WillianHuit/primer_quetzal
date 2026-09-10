@@ -83,6 +83,8 @@ informal). De ahí en adelante:
   recorrerlos. Cada casilla ofrece algo —una tarea, un día de trabajo, un descanso, un día
   que se te atraviesa, un comodín con dos puertas— y lo tomas o lo dejas pasar. El mes se
   cierra cuando el dado llega al último día, no cuando aprietas un botón.
+- **Un anillo cuadrado, como el de mesa**: el camino por el borde, la casilla de SALIDA y el
+  dado en el centro. Y la ficha **camina casilla por casilla**, con su brinco y su sonido.
 - **En 3D, y sin descargar nada**: el tablero va en perspectiva, las casillas tienen grosor,
   la ficha se pone de pie sobre el día de hoy y el dado es un cubo de seis caras que rueda y
   se detiene en lo que salió. Todo con transformaciones 3D del navegador: cero librerías.

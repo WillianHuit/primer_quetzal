@@ -56,6 +56,16 @@ function abrirJuego(idioma) {
     el.textContent = codigo;
     w.document.body.appendChild(el);
   }
+  /* Y la ficha no camina en las pruebas.
+   *
+   * El paseo de casilla en casilla dura seis décimas y la ventana de la casilla
+   * se abre AL LLEGAR, así que sin esto habría que esperar cronómetros de
+   * verdad para ver qué preguntó. Una prueba que espera relojes es una prueba
+   * que un día falla sola. Es el mismo interruptor que `RUTA_ASSETS`, y va
+   * aquí y no fuera porque esta prueba abre VARIAS ventanas y todas lo
+   * necesitan: la primera versión solo lo puso en la principal y la ficha se
+   * quedó caminando en la otra. */
+  w.SIN_PASEO = true;
   return { dom, w, errores, errConsola, scripts };
 }
 
@@ -168,6 +178,7 @@ w.Element.prototype.getBoundingClientRect = function () {
   return { top: 300, left: 20, width: 160, height: 44, bottom: 344, right: 180,
            x: 20, y: 300, toJSON: function () { return {}; } };
 };
+
 
 ok(scripts.length > 20, `index.html carga ${scripts.length} scripts`);
 ok(typeof w.UI === 'object' && typeof w.Motor === 'object',
@@ -445,8 +456,19 @@ ok(!puerta.experienciaRequerida,
   const t3 = M3.tablero();
   ok(t3.dias >= 28 && t3.dias <= 31,
      `el mes trae sus ${t3.dias} días, los del calendario y no ocho casillas`);
-  ok(w3.document.querySelectorAll('.tablero .casilla').length === t3.dias,
-     'y el tablero los dibuja todos');
+  /* El camino es un ANILLO cuadrado, como el de mesa: los días van por el
+   * borde y el centro queda libre para el dado. El perímetro de una cuadrícula
+   * siempre es par, así que además de los días lleva la casilla de SALIDA y,
+   * en los meses cortos, una de camino sin día. */
+  ok(w3.document.querySelectorAll('.tablero .casilla[data-paso]').length === t3.dias,
+     'y el tablero dibuja los días, uno por casilla');
+  ok(!!w3.document.querySelector('.tablero .casilla.salida'),
+     'con su casilla de salida, la de la que se sale');
+  ok(w3.document.querySelectorAll('.tablero .casilla.esquina').length === 4,
+     'y cuatro esquinas, que es lo que tiene un cuadrado');
+  const centro = w3.document.querySelector('.tablero-centro');
+  ok(!!centro && !!centro.querySelector('#tirar-dado'),
+     'el dado va en el centro del tablero, que es lo único que se toca');
   ok(!!w3.document.querySelector('#tirar-dado'), 'con un dado para recorrerlos');
   ok(!w3.document.querySelector('#cerrar-turno'),
      'y SIN botón de terminar el mes: primero hay que llegar al final');
@@ -467,6 +489,8 @@ ok(!puerta.experienciaRequerida,
      `el dado movió ${ahora - antes} días, que es lo que puede mover un dado`);
   ok(w3.document.querySelectorAll('.tablero .casilla.aqui').length === 1,
      'y la ficha está en un solo día');
+  ok(!!w3.document.getElementById('ficha-tablero'),
+     'y la ficha es un elemento suelto, que es lo que le deja caminar');
 
   /* La casilla en la que cayó: si pedía algo, hay una ventana con las dos
    * salidas. Aceptar mete la jornada en la contabilidad del mes; dejarla pasar
@@ -1048,29 +1072,24 @@ w.Motor.get().energia = w.CONFIG.energia.maxima;
   ok(clases.length > 1,
      `hay ${clases.length} tareas que le pueden salir, y el tablero elige`);
 
-  /* Se planta una casilla de tarea justo donde va a caer y se le pone 'sumas'
-   * dentro. Es la misma casilla que sortea el motor, con el sorteo hecho a
-   * mano para que la prueba sea repetible. */
+  /* Se plantan casillas de tarea en los SEIS primeros días, con 'sumas'
+   * dentro. Seis porque el dado tiene seis caras: así la primera tirada cae en
+   * una de ellas saque lo que saque.
+   *
+   * La primera versión plantaba solo el día 1 y reintentaba doce veces, y
+   * fallaba una de cada ocho corridas: hacía falta sacar un 1 y a veces no
+   * salía. Una prueba que depende de un dado es una prueba que un día falla
+   * sola. */
   const t = w.Motor.tablero();
   t.pos = 0;
-  t.casillas[0] = { id: 'dia_tarea', tipo: 'tarea', sorteado: { tareaId: 'sumas' } };
-  for (let k = 1; k < 6; k++) t.casillas[k] = { id: 'dia_libre', tipo: 'libre' };
+  for (let k = 0; k < 6; k++) {
+    t.casillas[k] = { id: 'dia_tarea', tipo: 'tarea', sorteado: { tareaId: 'sumas' } };
+  }
   w.Motor.guardar();
 })();
 
-/* Y se tira hasta caer en ella. El dado puede pasarla de largo, así que se
- * repite: es lo que haría un jugador con paciencia. */
-let venta = null;
-for (let intento = 0; intento < 12 && !venta; intento++) {
-  const t = w.Motor.tablero();
-  t.pos = 0;
-  t.casillas[0] = { id: 'dia_tarea', tipo: 'tarea', sorteado: { tareaId: 'sumas' } };
-  w.Motor.guardar();
-  clic(w, w.document.querySelector('#tirar-dado'));
-  const v = w.document.querySelector('.velo');
-  if (v && v.textContent.indexOf('Suma') >= 0) venta = v;
-  else if (v) { cerrarModales(w); }
-}
+clic(w, w.document.querySelector('#tirar-dado'));
+const venta = w.document.querySelector('.velo');
 ok(!!venta, 'el tablero deja caer en la tarea de sumar y pregunta si se hace');
 const bJugar = venta && venta.querySelector('[data-acepto]');
 ok(!!bJugar, 'con las dos salidas: hacerla o dejarla pasar');

@@ -142,6 +142,37 @@ podía tocar "terminar el mes" en cualquier momento, y el jugador que no entend�
 acababa tocando ese botón cinco veces sin haber decidido nada. Para llegar al último día hay
 que haber pasado por los treinta.
 
+#### Un anillo cuadrado, como el de mesa
+
+El camino va por el **borde de un cuadrado** y el centro queda libre para el dado, igual que
+un tablero de mesa. La primera versión iba en serpiente —filas de seis, la siguiente al
+revés— y se leía como un calendario, no como un tablero. La forma no es decoración: dice de
+un vistazo que el mes es una vuelta que empieza y termina en el mismo sitio.
+
+El perímetro de una cuadrícula de R×C son `2R+2C-4` casillas, y eso **siempre es par**. Un
+mes de 31 días no encaja en un número par, así que el camino lleva siempre una casilla de
+**SALIDA** —la de "GO"— y las que sobren quedan como camino sin día:
+
+| Mes | Anillo | Reparto |
+|---|---|---|
+| 28 días | 9×8 = 30 | salida + 28 días + 1 de camino |
+| 30 días | 9×9 = 32 | salida + 30 días + 1 de camino |
+| 31 días | 9×9 = 32 | salida + 31 días, justo |
+
+**Y la ficha camina, casilla por casilla.** Un brinco cada 165 ms, con su sonido. Es la
+diferencia entre un tablero y una barra de progreso: el jugador tiene que ver por dónde
+pasó, porque los días que se salta son días que existen y que le podrían haber tocado. Tres
+tiradas de dos son seis pasos, y en seis pasos se entiende el tablero sin leer nada.
+
+La ficha va **fuera** de las casillas, colocada con `grid` igual que ellas, y se mueve
+cambiando su fila y su columna. Metida dentro de una casilla habría que redibujar el tablero
+en cada paso y el paseo se vería a saltos.
+
+Y como la ventana de la casilla se abre **al llegar**, `pruebas/dom-real.js` tendría que
+esperar cronómetros de verdad para comprobar qué preguntó. Para eso está `SIN_PASEO`, el
+mismo patrón que `RUTA_ASSETS`: un interruptor que el banco de pruebas enciende, documentado
+donde se lee. Una prueba que espera relojes es una prueba que un día falla sola.
+
 #### Y va en 3D, sin una sola librería
 
 El tablero se dibuja **en perspectiva**: el plano del mes inclinado 18 grados, cada casilla

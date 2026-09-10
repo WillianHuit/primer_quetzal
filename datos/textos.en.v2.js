@@ -332,6 +332,7 @@
    * El tablero del mes: treinta dias y un dado
    * ========================================================== */
   ui['Tirar el dado'] = 'Roll the die';
+  ui['Salida'] = 'Start';
   ui['El dado cayó en {0}'] = 'The die landed on {0}';
   ui['{0}: día {1} de {2}'] = '{0}: day {1} of {2}';
   ui['Día {0}'] = 'Day {0}';
