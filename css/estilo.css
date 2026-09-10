@@ -656,6 +656,17 @@ p  { margin: 0 0 10px; }
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 12px; font-weight: 700; color: var(--gris);
 }
+/* El interruptor del sonido, al lado del dado. Chico y sin ruido: esta ahi
+   para el que lo busque y para el que quiera callarlo de un toque. */
+.consola-son {
+  flex: 0 0 auto;
+  width: 30px; height: 30px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--borde); border-radius: 9px;
+  background: var(--tarjeta); color: var(--gris);
+  cursor: pointer;
+}
+.consola-son svg { width: 16px; height: 16px; }
 .consola-barrio svg { width: 14px; height: 14px; }
 .consola .btn-primario.chico {
   margin: 0 0 0 auto; flex: 0 1 auto; min-width: 150px;

@@ -1,15 +1,30 @@
 /* Mi Primer Quetzal — sonido
  * Efectos generados por el navegador. Cero archivos, cero peso, cero descargas.
- * Silenciado por defecto: mucha gente juega en el bus.
+ *
+ * VIENE ENCENDIDO, y antes no. Estuvo apagado por omision con un argumento
+ * razonable —mucha gente juega en el bus— y el resultado fue que el juego era
+ * mudo para todo el mundo: el interruptor vivia dentro del menu de los tres
+ * puntos y nadie entra ahi a buscar algo que no sabe que existe. Medio juego
+ * suena (el dado, los pasos de la ficha, lo que te toca al caer) y nadie lo
+ * habia oido nunca.
+ *
+ * Ahora arranca encendido y el interruptor esta EN EL TABLERO, al lado del
+ * boton del dado, que es donde suena. Un toque para callarlo, y quien lo calla
+ * se queda callado para siempre: la eleccion del jugador manda sobre el
+ * arranque.
  */
 
 var Sonido = (function () {
 
   var CLAVE = 'miPrimerQuetzal.sonido';
   var ctx = null;
-  var activo = false;
+  var activo = true;
 
-  try { activo = localStorage.getItem(CLAVE) === '1'; } catch (e) {}
+  /* Lo que diga el jugador manda; si nunca dijo nada, suena. */
+  try {
+    var guardado = localStorage.getItem(CLAVE);
+    if (guardado !== null) activo = (guardado === '1');
+  } catch (e) {}
 
   var TONOS = {
     acierto:  { notas: [660, 880],        dur: 0.10, tipo: 'sine' },

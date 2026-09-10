@@ -208,7 +208,17 @@ tablero de mesa tampoco. Por eso hay dos formas de leer el tablero, y las dos ha
 
 Una tarea y un comodín **no suenan** ni a bueno ni a malo, y es a propósito: son decisiones,
 no cosas que te pasan, y el juego no va a decirle cuál es la buena. El comodín sí suena
-después de elegir, cuando ya se sabe cómo salió.
+después de elegir, cuando ya se sabe cómo salió. Y suena también para quien pidió menos
+movimiento: pedir menos movimiento no es pedir menos sonido, y el aviso de si te tocó algo
+bueno o algo malo es justo el que no conviene perderse.
+
+**El sonido viene encendido, y antes no.** Estuvo apagado por omisión con un argumento
+razonable —mucha gente juega en el bus— y el resultado fue que el juego era mudo para todo
+el mundo: el interruptor vivía dentro del menú de los tres puntos y nadie entra ahí a buscar
+algo que no sabe que existe. Medio juego suena y nadie lo había oído nunca. Ahora arranca
+encendido y el interruptor está **en el tablero**, al lado del botón del dado, que es donde
+suena; un toque lo calla y quien lo calla se queda callado para siempre, porque la elección
+del jugador manda sobre el arranque.
 
 #### La cámara: medida, no calculada
 
@@ -331,7 +341,7 @@ librerías**, y no por tacañería:
   motor de escena son unos 600 KB, casi tres veces todo lo que hay hoy en `vendor/` y la
   mitad del presupuesto de arte, para dibujar un plano inclinado y un cubo.
 - Y sobre todo: un `<canvas>` de WebGL **no se puede probar**. `pruebas/dom-real.js` juega el
-  juego tocando nodos —194 comprobaciones— y el tablero es justo la pantalla donde más hay
+  juego tocando nodos —200 comprobaciones— y el tablero es justo la pantalla donde más hay
   que romper. Con transformaciones CSS cada día del mes sigue siendo un `<div>` que la suite
   puede mirar y tocar.
 

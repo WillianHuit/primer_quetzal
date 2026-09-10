@@ -1085,6 +1085,15 @@ var UI = (function () {
      * casas no se lee ni se atina. Abajo y de frente se lee, y de paso queda
      * al lado de lo que pasó en la última tirada. */
     h += '<div class="consola">';
+    /* El interruptor del sonido va AQUI, al lado del dado, porque aqui es
+     * donde suena: el dado, los pasos de la ficha y lo que te toca al caer.
+     * Vivia dentro del menu de los tres puntos y con eso el juego era mudo
+     * para casi todos, que es lo mismo que no tenerlo. */
+    h += '<button class="consola-son" id="son-tablero" title="' +
+         (Sonido.activo() ? T('Sonido activado') : T('Sonido apagado')) +
+         '" aria-label="' +
+         (Sonido.activo() ? T('Sonido activado') : T('Sonido apagado')) + '">' +
+         Ico(Sonido.activo() ? 'sonido' : 'sonido-off') + '</button>';
     if (barrio) {
       h += '<span class="consola-barrio">' + Ico('casa') + ' ' +
            esc(K('barrio', barrio.id, barrio.nombre)) + '</span>';
@@ -4457,7 +4466,7 @@ var UI = (function () {
         '[data-ver-perfil],[data-mejora],' +
         '[data-abrir-negocio],[data-subir-negocio],[data-contratar],[data-despedir],' +
         '[data-traspasar],' +
-        '#tirar-dado,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
+        '#tirar-dado,#son-tablero,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
         '#pedir-tarjeta,#pedir-informal,#gastar-tarjeta,#pagar-tarjeta,#alternar-minimo,' +
         '#abrir-pension,#cambiar-pension,#retirar-pension,#migrar,#regresar,' +
         '#ver-glosario,#ver-reporte,#ver-reporte-final');
@@ -4908,6 +4917,11 @@ var UI = (function () {
        * Tirar es gratis y no se puede no tirar: el mes pasa igual. Lo que se
        * decide es lo que se hace con la casilla en la que caes, y de eso se
        * encarga `abrirCasilla`. */
+      if (el.id === 'son-tablero') {
+        Sonido.alternar();
+        return render();
+      }
+
       if (el.id === 'tirar-dado') {
         var tirada = Motor.tirarDado();
         if (!tirada) return render();
@@ -4923,10 +4937,14 @@ var UI = (function () {
         render();
 
         /* Sin animaciones —el banco de pruebas, o quien pidió menos
-         * movimiento— la casilla contesta de una vez. */
+         * movimiento— la casilla contesta de una vez. Pero SUENA igual: pedir
+         * menos movimiento no es pedir menos sonido, y el aviso de si te tocó
+         * algo bueno o algo malo es justo el que no conviene perderse. */
         if (sinMovimiento()) {
           fichaEn = null;
           render();
+          var an = tirada.fin ? null : ANIMO_CASILLA[tirada.casilla && tirada.casilla.tipo];
+          if (an) Sonido.tono(an);
           return abrirCasilla(tirada);
         }
 

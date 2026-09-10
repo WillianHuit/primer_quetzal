@@ -476,6 +476,17 @@ ok(!puerta.experienciaRequerida,
      'y el dado, tirado en su placita');
   ok(!!w3.document.querySelector('.tablero-caja .consola #tirar-dado'),
      'con el botón de tirarlo debajo del tablero y de frente');
+
+  /* Y el interruptor del sonido al lado, porque el tablero es lo que suena:
+   * el dado, los pasos de la ficha y lo que te toca al caer. Vivía dentro del
+   * menú de los tres puntos y con eso el juego era mudo para casi todos. */
+  ok(!!w3.document.querySelector('.consola #son-tablero'),
+     'y el interruptor del sonido al lado, que es donde suena');
+  ok(w3.Sonido.activo(), 'que arranca encendido: un juego mudo no avisa de nada');
+  clic(w3, w3.document.querySelector('#son-tablero'));
+  ok(!w3.Sonido.activo(), 'un toque lo calla');
+  clic(w3, w3.document.querySelector('#son-tablero'));
+  ok(w3.Sonido.activo(), 'y otro lo devuelve');
   ok(!w3.document.querySelector('#cerrar-turno'),
      'y SIN botón de terminar el mes: primero hay que llegar al final');
 
@@ -548,10 +559,29 @@ ok(!puerta.experienciaRequerida,
   ok(tipos.size >= 3,
      `y se ven ${tipos.size} clases de día distintas antes de caer en ninguna`);
 
-  // Una tirada mueve la ficha y la casilla pregunta lo suyo
+  /* Una tirada mueve la ficha y la casilla pregunta lo suyo. Y SUENA: se
+   * apunta lo que se toca para comprobar que el tablero avisa de lo que pasa.
+   * jsdom no tiene AudioContext, asi que el sonido no llega a sonar; lo que
+   * se comprueba es el cableado, que es lo que se rompe al mover cosas. */
+  const sonados = [];
+  const tonoReal = w3.Sonido.tono;
+  w3.Sonido.tono = function (n) { sonados.push(n); return tonoReal.apply(null, arguments); };
+
   const antes = M3.tablero().pos;
   clic(w3, w3.document.querySelector('#tirar-dado'));
   const ahora = M3.tablero().pos;
+  ok(sonados.indexOf('dado') >= 0, 'el dado suena al tirarlo');
+  const tipoCaido = (M3.casillaActual() || {}).tipo;
+  const ANIMO = { trabajo: 'alegre', extra: 'alegre', descanso: 'alegre',
+                  dificultad: 'triste' };
+  if (ANIMO[tipoCaido]) {
+    ok(sonados.indexOf(ANIMO[tipoCaido]) >= 0,
+       `y cayó en ${tipoCaido}, que suena ${ANIMO[tipoCaido]}`);
+  } else {
+    ok(sonados.indexOf('alegre') < 0 && sonados.indexOf('triste') < 0,
+       `y cayó en ${tipoCaido}, que no suena ni a bueno ni a malo: es una decisión`);
+  }
+  w3.Sonido.tono = tonoReal;
   ok(ahora > antes && ahora - antes <= 6,
      `el dado movió ${ahora - antes} días, que es lo que puede mover un dado`);
   ok(w3.document.querySelectorAll('.tablero .casilla.aqui').length === 1,

@@ -92,9 +92,10 @@ informal). De ahí en adelante:
 - **La cámara sigue al personaje**: tiras el dado con el mes entero a la vista, la cámara
   baja hasta la ficha, **el tablero gira** para poner el lado por el que va de frente —así
   su tarjeta se lee derecha—, la ficha camina casilla por casilla con una nota por paso, y
-  al llegar hay un **respiro** antes de que se abra la tarjeta. Suena alegre si le tocó algo
-  bueno y triste si le tocó algo malo. (El sonido va apagado por defecto; se enciende en el
-  menú de los tres puntos.)
+  al llegar hay un **respiro** antes de que se abra la tarjeta.
+- **Y suena**: el dado al caer, una nota por paso —cada una un semitono más alta— y al
+  llegar, alegre si le tocó algo bueno y triste si le tocó algo malo. Todo con osciladores
+  del navegador: cero archivos. El interruptor está en el tablero, al lado del dado.
 - **El barrio, en el centro**: en un tablero de mesa el centro son las cartas; aquí son las
   casas donde vive el personaje, en tres dimensiones. Se empieza en el barrio que le tocó
   —la dificultad que elegiste— y sube con lo que junta: del asentamiento de lámina a la
