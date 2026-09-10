@@ -236,53 +236,45 @@ ok(e.efectivo === 50, 'y no le cobran nada al fallar');
      ME.energiaDeEspacio('descanso') < Math.abs(ME.energiaDeEspacio('tarea')),
      'y un solo descanso no la paga: hacen falta dos');
 
-  /* El primer mes de quien estudia es UNA casilla, y esa es la primera pantalla
-   * del juego. Ocho casillas vacías no son libertad, son un formulario. */
-  ok(ME.espaciosDisponibles() === 2,
-     `sin decidir nada, el mes empieza con ${ME.espaciosDisponibles()} casillas`);
+  /* Las ocho casillas existen todas desde el primer día: la apertura por
+   * semanas se fue con la rejilla, porque lo que resolvía —dar UNA decisión y
+   * no ocho en la primera pantalla— lo resuelve el tablero por su forma. */
+  ok(ME.espaciosDisponibles() === CONFIG.jornadasPorMes,
+     `el mes tiene sus ${ME.espaciosDisponibles()} casillas de contabilidad`);
   ME.inscribirse('basicos', false, 'am');
-  ok(ME.espaciosDisponibles() === 1,
-     'y al inscribirse queda UNA: la mañana es del colegio y la tarde es suya');
-  ok(ME.semanasAbiertas() === 1, 'porque solo está abierta la primera semana del mes');
+  ok(ME.espaciosDisponibles() === CONFIG.jornadasPorMes / 2,
+     'y al inscribirse el colegio se queda con la mitad: las mañanas');
 
-  // Esa jornada se le va en la tarea, y se nota
-  const hueco = z.espacios.findIndex((v, i) =>
-    !v && ME.espacioAbierto(i) && !ME.espacioBloqueado(i));
+  // Una tarea, y se nota en el cuerpo
+  const hueco = z.espacios.findIndex((v, i) => !v && !ME.espacioBloqueado(i));
   ME.asignarEspacio(hueco, 'tarea');
   const tras1 = ME.energiaProyectada();
-  ok(tras1 < 70 && tras1 > 0,
+  ok(tras1 < 60 && tras1 > 0,
      `una tarea y el colegio dejan la energía en ${tras1}, no en noventa y tantos`);
-  ME.cerrarTurno();
 
-  // Mes dos: dos casillas, y las dos tareas NO caben
-  ok(ME.semanasAbiertas() === 2 && ME.espaciosDisponibles() === 2,
-     'al segundo mes se abre la segunda semana: dos casillas');
+  /* Y la SEGUNDA no cabe. Es la cuenta que sostiene todo el colegio: una tarea
+   * se lleva un tercio del cuerpo, así que dos en el mismo mes piden descansar
+   * en medio. Da igual que el jugador las ponga a mano o que el tablero se las
+   * ofrezca: la regla vive en el motor. */
   const libres = [];
   for (let i = 0; i < CONFIG.jornadasPorMes; i++) {
-    if (!z.espacios[i] && ME.espacioAbierto(i) && !ME.espacioBloqueado(i)) libres.push(i);
+    if (!z.espacios[i] && !ME.espacioBloqueado(i)) libres.push(i);
   }
-  ok(ME.puedeAsignar(libres[0], 'tarea').ok, 'la primera tarea del mes cabe');
   ME.asignarEspacio(libres[0], 'tarea');
   const segunda = ME.puedeAsignar(libres[1], 'tarea');
   ok(!segunda.ok && segunda.motivo === 'energia',
-     'y la segunda NO: el mes lo dejaría por debajo de cero');
+     'con dos tareas puestas, la tercera ya no cabe: dejaría el mes en negativo');
   ok(ME.puedeAsignar(libres[1], 'descanso').ok,
      'descansar sí cabe, y es lo único que cabe: ahí está la decisión');
   ok(!ME.asignarEspacio(libres[1], 'tarea'),
      'y el motor tampoco la deja poner por la puerta de atrás');
 
-  /* Y las que no hizo se le quedan debiendo. Antes se borraban con el mes y el
-   * contador decía "1" los treinta y seis meses de básicos. */
-  ok(ME.tareasDelMes().length >= 2,
-     `lo que no hizo se acumuló: el colegio le pide ${ME.tareasDelMes().length}`);
-  ok(ME.tareasDelMes().length <= CONFIG.experiencia.tareasMaximas,
-     `y nunca pasa del tope de ${CONFIG.experiencia.tareasMaximas}`);
-
-  /* De los 14 el mes está entero: la apertura por semanas es la pantalla de
-   * aprender a jugar, no una regla del juego. */
-  z.edad = 15;
-  ok(ME.semanasAbiertas() === CONFIG.jornadasPorMes / CONFIG.jornadasPorSemana,
-     'y a los 15 el mes ya está entero, con sus cuatro semanas');
+  /* Y lo mismo desde el tablero, que es por donde entra de verdad: aceptar una
+   * casilla es meter la jornada en la misma contabilidad. */
+  const desdeTablero = ME.aceptarCasilla('tarea');
+  ok(!desdeTablero.ok && desdeTablero.motivo === 'energia',
+     'aceptar una casilla de tarea sin cuerpo tampoco se puede');
+  ok(ME.aceptarCasilla('descanso').ok, 'y un día de descanso sí');
 })();
 
 /* ==========================================================================

@@ -202,50 +202,175 @@ p  { margin: 0 0 10px; }
 
 /* ---------- espacios de la semana ---------- */
 
-/* ---------- el mes: cuatro semanas de dos jornadas ----------
-   Una columna estrecha a la izquierda con el sol y la luna, y encima los
-   números de semana. Las casillas del colegio salen rayadas y apagadas. */
+/* ---------- el mes: un tablero de treinta dias ----------
+   Aqui vivia la rejilla de ocho casillas. Ahora el mes es un camino de dias y
+   se recorre con un dado.
 
-.jornadas {
+   El camino va en SERPIENTE, como un tablero de mesa: la fila de arriba de
+   izquierda a derecha, la siguiente al reves. Eso no lo hace el CSS, lo pone
+   la interfaz con grid-column y grid-row casilla por casilla, porque hacerlo
+   con selectores por posicion se rompe en cuanto el mes tiene 30 dias en vez
+   de 31. Con seis columnas un mes cabe en un telefono sin scroll. */
+
+/* ---------- y va en 3D ----------
+   Perspectiva de verdad: el plano del mes se inclina hacia atras, las casillas
+   tienen grosor y la de hoy se levanta del tablero. No hay ninguna libreria
+   detras, y es a proposito: lo que hay que dibujar aqui —un plano inclinado
+   con relieve y un cubo que rueda— es exactamente lo que las transformaciones
+   3D del navegador hacen bien, y traer un motor de escena costaria mas que
+   todo el arte del juego junto y dejaria el tablero fuera del alcance de las
+   pruebas, que tocan nodos.
+
+   La inclinacion es corta (18 grados) porque este tablero hay que poder LEERLO:
+   con mas, los numeros de los dias de la fila de arriba se cierran y no se ven.
+   Y `--alto-casilla` es el grosor: la misma medida la usan la cara de arriba y
+   el canto, asi que cambiar el relieve es cambiar un numero. */
+.tablero-3d {
+  perspective: 900px;
+  perspective-origin: 50% 30%;
+  margin: 12px 0 16px;
+  padding-bottom: 6px;
+}
+.tablero {
   display: grid;
-  grid-template-columns: 22px repeat(var(--semanas, 4), 1fr);
-  gap: 6px; margin: 4px 0;
-  align-items: center;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+  transform: rotateX(18deg);
+  transform-style: preserve-3d;
 }
-.jor-cab {
-  font-size: 10px; font-weight: 700; color: var(--gris);
-  text-align: center; text-transform: uppercase; letter-spacing: .4px;
-}
-.jor-eje {
-  display: flex; align-items: center; justify-content: center;
-  color: var(--gris); font-size: 15px;
-}
-.jornada {
-  border: 2px solid var(--borde); border-radius: 13px;
+.casilla {
+  position: relative;
+  aspect-ratio: 1;
+  border: 2px solid var(--borde); border-radius: 11px;
   background: var(--tarjeta);
-  padding: 8px 2px 6px; text-align: center; cursor: pointer;
-  box-shadow: inset 0 1px 0 var(--brillo), 0 var(--labio) 0 var(--linea-honda);
+  display: flex; align-items: center; justify-content: center;
   color: var(--gris);
+  box-shadow: inset 0 1px 0 var(--brillo);
+  transform-style: preserve-3d;
+  transition: transform .18s ease;
 }
-.jornada:active { transform: translateY(2px) scale(.97); box-shadow: inset 0 1px 0 var(--brillo); }
-.jornada .nom { font-size: 9px; margin-top: 2px; font-weight: 700; }
-.jornada.lleno {
-  border-color: var(--verde-borde); background: var(--verde-claro); color: var(--verde);
-  box-shadow: inset 0 1px 0 #fff, 0 var(--labio) 0 var(--verde-labio);
+/* El canto de la casilla: una copia detras, empujada hacia abajo en Z. Con eso
+   cada dia tiene grosor y el tablero deja de ser un dibujo plano. */
+.casilla::after {
+  content: ''; position: absolute; inset: -2px;
+  border-radius: 11px; background: var(--linea-honda);
+  transform: translateZ(-7px);
+  z-index: -1;
 }
-.jornada.sel {
-  border-color: var(--azul); color: var(--azul);
-  box-shadow: inset 0 1px 0 var(--brillo), 0 0 0 3px rgba(44,95,138,.18);
+.casilla .dia {
+  position: absolute; top: 2px; left: 4px;
+  font-size: 8.5px; font-weight: 800; opacity: .5;
+  font-variant-numeric: tabular-nums;
 }
-/* El colegio ya la tomó: se ve tomada y no se ve tocable */
-.jornada.bloqueado {
-  background: repeating-linear-gradient(135deg,
-              var(--verde-claro) 0 5px, #fff 5px 10px);
-  border-color: var(--verde-borde); color: var(--verde);
-  box-shadow: none; cursor: default; opacity: .82;
+.casilla svg { width: 17px; height: 17px; }
+/* Los dias por los que ya pasaste se apagan: el tablero se lee de un vistazo
+   como "por aqui voy". */
+/* Los dias por los que ya pasaste se apagan, pero no desaparecen: a .42 los
+   numeros dejaban de leerse y el tablero perdia la mitad de su informacion. */
+.casilla.pasada { opacity: .58; }
+/* Y el de hoy manda: se LEVANTA del tablero, no solo crece */
+.casilla.aqui {
+  border-color: var(--verde); z-index: 3;
+  transform: translateZ(22px) scale(1.06);
+  box-shadow: inset 0 1px 0 #fff, 0 10px 18px rgba(10,25,20,.28);
 }
-.jornada.bloqueado:active { transform: none; }
-.acciones-jornada { margin-top: 10px; }
+.casilla.aqui svg { display: none; }
+/* La ficha se pone DE PIE: se contragira la inclinacion del tablero para que
+   mire a la cámara, como una pieza puesta sobre el tablero y no pintada en el. */
+.casilla .ficha {
+  position: absolute; left: 50%; bottom: 2px;
+  width: 112%; height: 132%;
+  transform: translateX(-50%) rotateX(-18deg) translateZ(14px);
+  transform-origin: 50% 100%;
+  display: flex; align-items: flex-end; justify-content: center;
+  filter: drop-shadow(0 4px 4px rgba(10,25,20,.35));
+}
+.casilla .ficha svg, .casilla .ficha img {
+  width: 100%; height: 100%; display: block;
+}
+
+/* Un color por tipo de dia, y son los mismos que tenian las actividades
+   cuando el mes era una rejilla: el jugador que venia de alli no reaprende
+   nada. */
+.casilla.c-tarea      { background: #fbf0d8; border-color: color-mix(in srgb, var(--ambar) 55%, var(--linea)); color: var(--ambar-hondo); }
+.casilla.c-trabajo    { background: #e2f0e9; border-color: var(--verde-borde); color: var(--verde); }
+.casilla.c-extra      { background: #fde8de; border-color: #f0bfa4; color: #b5541f; }
+.casilla.c-descanso   { background: #e0edf7; border-color: #b3d1e8; color: #2b6a99; }
+.casilla.c-dificultad { background: #fdf0ec; border-color: color-mix(in srgb, var(--rojo) 30%, var(--linea)); color: var(--rojo); }
+.casilla.c-comodin    { background: #ece7f7; border-color: #c3b6e4; color: #6b4fa8; }
+.casilla.c-fin        { background: var(--verde-claro); border-color: var(--verde); color: var(--verde); }
+
+/* ---------- el dado, un cubo de seis caras ----------
+   Cada cara va girada y empujada media arista hacia fuera; el cubo entero gira
+   hasta poner delante la que salio. `--fin` lo escribe la interfaz y es la
+   rotacion inversa exacta de la que coloco esa cara.
+
+   La animacion arranca de un giro largo y termina en `--fin`, asi que el cubo
+   RUEDA y se para en lo que salio: el resultado no se anuncia, se ve caer. */
+.dado-fila { display: flex; align-items: center; gap: 12px; }
+.dado3d {
+  flex: 0 0 auto;
+  width: 52px; height: 52px;
+  perspective: 260px;
+}
+.dado-inclina {
+  width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateX(-16deg) rotateY(-18deg);
+}
+.dado-cubo {
+  position: relative; width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transform: var(--fin, none);
+}
+.dado-cubo.rueda { animation: dado-rueda .72s cubic-bezier(.18,.7,.2,1) both; }
+@keyframes dado-rueda {
+  0%   { transform: rotateX(-560deg) rotateY(-430deg) scale(.55); }
+  100% { transform: var(--fin, none); }
+}
+.dado3d .cara {
+  position: absolute; inset: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+  padding: 6px; gap: 1px;
+  border-radius: 9px;
+  background: linear-gradient(150deg, #fff, #eef2ef);
+  border: 1.5px solid var(--borde);
+  box-shadow: inset 0 1px 0 #fff;
+}
+.dado3d .cara i { display: block; }
+.dado3d .cara i.pip {
+  width: 7px; height: 7px; border-radius: 99px;
+  background: var(--tinta);
+  align-self: center; justify-self: center;
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,.35);
+}
+/* Media arista son 26px: el cubo mide 52 */
+.dado3d .c1 { transform: translateZ(26px); }
+.dado3d .c6 { transform: rotateY(180deg) translateZ(26px); }
+.dado3d .c3 { transform: rotateY(90deg) translateZ(26px); }
+.dado3d .c4 { transform: rotateY(-90deg) translateZ(26px); }
+.dado3d .c2 { transform: rotateX(90deg) translateZ(26px); }
+.dado3d .c5 { transform: rotateX(-90deg) translateZ(26px); }
+
+.dado-fila .btn-primario.chico { flex: 1 1 auto; margin: 0; }
+
+/* Quien pidio menos movimiento se queda con el tablero plano y el dado quieto.
+   El 3D es como se ve mejor, no como se juega: la informacion es la misma. */
+@media (prefers-reduced-motion: reduce) {
+  .tablero { transform: none; }
+  .casilla.aqui { transform: scale(1.1); }
+  .casilla .ficha { transform: translateX(-50%); }
+  .dado-cubo.rueda { animation: none; }
+}
+
+/* Lo que paso en la ultima tirada, en una linea. Es el registro del mes: sin
+   esto, el jugador cierra una ventana y no queda rastro de lo que decidio. */
+.tablero-nota {
+  margin: 10px 0 0; font-size: 12.5px; color: var(--gris);
+  min-height: 1.2em;
+}
+
+.tablero-caja .titulo { font-variant-numeric: tabular-nums; }
 
 .semanas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 4px; }
 .semana {
@@ -986,95 +1111,24 @@ main.vista-entra.desde-izq { animation: entrar-izq .27s cubic-bezier(.2,.8,.3,1)
   50%      { stroke: var(--verde); fill: rgba(31, 122, 90, .10); }
 }
 
-/* -------------------------------------------------------------------------
-   Un color por actividad
-   -------------------------------------------------------------------------
-   Ocho casillas con el mismo fondo y un icono chico se leen una por una. Con
-   color, el reparto del mes se ve de un golpe: cuanto verde de trabajo, cuanto
-   ambar de tarea, cuanto azul de descanso. Es la misma informacion y se tarda
-   un segundo en vez de ocho.
-
-   Los mismos colores van en los botones de asignar, y eso es la mitad del
-   truco: el boton que se toca y la casilla que se pinta son del mismo color,
-   asi que no hay que aprender ninguna leyenda. */
-.jornada.j-trabajo.lleno  { background: #e2f0e9; border-color: var(--verde-borde); }
-.jornada.j-trabajo.lleno  .ic-caja { color: var(--verde); }
-.jornada.j-tarea.lleno    { background: #fbf0d8; border-color: color-mix(in srgb, var(--ambar) 55%, var(--linea)); }
-.jornada.j-tarea.lleno    .ic-caja { color: var(--ambar-hondo); }
-.jornada.j-estudio.lleno  { background: #ece7f7; border-color: #c3b6e4; }
-.jornada.j-estudio.lleno  .ic-caja { color: #6b4fa8; }
-.jornada.j-extra.lleno    { background: #fde8de; border-color: #f0bfa4; }
-.jornada.j-extra.lleno    .ic-caja { color: #b5541f; }
-.jornada.j-descanso.lleno { background: #e0edf7; border-color: #b3d1e8; }
-.jornada.j-descanso.lleno .ic-caja { color: #2b6a99; }
-.jornada.j-negocio.lleno  { background: #fbecef; border-color: #eebfc8; }
-.jornada.j-negocio.lleno  .ic-caja { color: #a33a54; }
-
-/* Y el boton de cada actividad lleva su color en una barra a la izquierda: no
-   pinta el boton entero, que competiria con el de cerrar el mes. */
-.btn-chico.j-trabajo  { box-shadow: inset 3px 0 0 var(--verde); }
-.btn-chico.j-tarea    { box-shadow: inset 3px 0 0 var(--ambar); }
-.btn-chico.j-estudio  { box-shadow: inset 3px 0 0 #6b4fa8; }
-.btn-chico.j-extra    { box-shadow: inset 3px 0 0 #b5541f; }
-.btn-chico.j-descanso { box-shadow: inset 3px 0 0 #2b6a99; }
-.btn-chico.j-negocio  { box-shadow: inset 3px 0 0 #a33a54; }
-
-/* Lo que cuesta de energia, dentro del boton. En rojo lo que quita y en verde
-   lo que devuelve: es el unico sitio donde el jugador ve el precio ANTES. */
-.cuesta {
-  margin-left: auto; font-size: 11.5px; font-weight: 800;
-  display: inline-flex; align-items: center; gap: 2px;
-  padding: 1px 6px 1px 4px; border-radius: 99px;
-  background: #fdf0ec; color: var(--rojo);
-  border: 1px solid color-mix(in srgb, var(--rojo) 26%, var(--linea));
-  font-variant-numeric: tabular-nums;
-}
-.cuesta.gana {
-  background: var(--verde-claro); color: var(--verde);
-  border-color: var(--verde-borde);
-}
-.cuesta svg { width: 12px; height: 12px; flex: 0 0 auto; }
-.acciones-jornada .btn-chico { justify-content: flex-start; gap: 7px; }
+/* Aqui vivian los colores de las actividades de la rejilla y la pastilla que
+   decia lo que cada una costaba de energia. Los colores no se perdieron: se
+   mudaron arriba, a las casillas del tablero, con los mismos valores. La
+   pastilla del costo tampoco: ahora es una `pastilla` normal dentro de la
+   ventana de la casilla, que es donde el jugador decide.
 
 /* La barra de energia proyectada cuando va mal */
 .progreso-relleno.bajo {
   background: linear-gradient(180deg, color-mix(in srgb, var(--rojo) 72%, #fff), var(--rojo));
 }
 
-/* La franja de debajo de la calle: lo unico que el juego te esta pidiendo */
-.calle-barra {
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 8px; flex-wrap: wrap;
-}
-.calle-barra .pendientes, .calle-barra .listo {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-weight: 700; font-size: 12.5px; line-height: 1.25;
-  flex: 1 1 90px; min-width: 0;
-}
-/* El contador de tareas es un boton, y tiene que parecerlo lo justo: si
-   gritara competiria con el de cerrar el mes, que es la accion grande de la
-   franja. Sin fondo, sin borde, subrayado al pasar. */
-.calle-barra .pendientes {
-  color: var(--ambar-hondo);
-  background: none; border: 0; padding: 0; margin: 0;
-  font: inherit; font-weight: 700; text-align: left; cursor: pointer;
-}
-.calle-barra .pendientes:hover, .calle-barra .pendientes:focus-visible {
-  text-decoration: underline;
-}
-.calle-barra .listo { color: var(--verde); }
-.calle-barra .pendientes svg, .calle-barra .listo svg { width: 16px; height: 16px; }
-.calle-barra .btn-chico { flex: 0 0 auto; }
-
-/* El boton de cerrar el mes, dentro de la barra de la calle. Chico mientras
-   queda mes por repartir y entero cuando ya no: son dos momentos distintos y
-   la pantalla tiene que decir cual es. */
+/* Y aqui la franja de debajo de la calle, con el boton de cerrar el mes y el
+   contador de tareas pendientes. Las dos cosas eran de la rejilla: el boton se
+   fue al tablero y las tareas pendientes dejaron de existir. */
 .btn-primario.chico {
   width: auto; flex: 0 0 auto;
   padding: 9px 14px; font-size: 14px; margin: 0;
 }
-.calle-barra.listo { gap: 10px; }
-.calle-barra.listo .btn-primario.chico { flex: 1 1 auto; padding: 11px 14px; font-size: 15px; }
 
 /* La hoja de un negocio, debajo de la calle. Va pegada a la tarjeta de arriba
    para que se lea como que sale DE ella, y no como una tarjeta suelta mas. */

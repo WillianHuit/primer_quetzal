@@ -327,6 +327,58 @@
   ui['Tasa efectiva'] = 'Effective rate';
 
 
+
+  /* ==========================================================
+   * El tablero del mes: treinta dias y un dado
+   * ========================================================== */
+  ui['Tirar el dado'] = 'Roll the die';
+  ui['El dado cayó en {0}'] = 'The die landed on {0}';
+  ui['{0}: día {1} de {2}'] = '{0}: day {1} of {2}';
+  ui['Día {0}'] = 'Day {0}';
+  ui['El mes son {0} días. Tira el dado para recorrerlos.'] =
+    'The month is {0} days. Roll the die to walk them.';
+  ui['Llegaste al final del mes.'] = 'You made it to the end of the month.';
+  ui['Día {0}: un día cualquiera.'] = 'Day {0}: nothing much.';
+  ui['Día {0}: lo dejaste pasar.'] = 'Day {0}: you let it go.';
+  ui['Día {0}: {1}'] = 'Day {0}: {1}';
+  ui['Lo que hagas este mes se repite los {0} meses del {1}.'] =
+    'Whatever you do this month repeats for all {0} months of the {1}.';
+
+  ui['Se te atravesó el día'] = 'The day got in the way';
+  ui['Ni modo'] = 'Oh well';
+  ui['Te toca elegir'] = 'Your call';
+  ui['Ninguna de las dos dice lo que va a pasar. Así es.'] =
+    'Neither one tells you what will happen. That is how it goes.';
+  ui['Elegiste'] = 'You chose';
+  ui['Energía'] = 'Energy';
+  ui['Dinero'] = 'Money';
+
+  ui['Tarea: {0}'] = 'Homework: {0}';
+  ui['Hacerla'] = 'Do it';
+  ui['Te sale un día de trabajo'] = 'A day of work comes up';
+  ui['Una jornada más de las que te cuentan para el sueldo del mes.'] =
+    'One more half-day of the ones that count toward this month pay.';
+  ui['Tomarlo'] = 'Take it';
+  ui['Un trabajito suelto'] = 'A one-off gig';
+  ui['Se paga aparte y no cuenta para el sueldo.'] =
+    'It pays on the side and does not count toward your wage.';
+  ui['Un día para ti'] = 'A day for yourself';
+  ui['Nada que hacer. Puedes usarlo para recuperar cuerpo.'] =
+    'Nothing to do. You can use it to get your body back.';
+  ui['Dejarlo pasar'] = 'Let it go';
+  ui['Con esa jornada el mes te dejaría por debajo de cero. Un día de descanso te devuelve {0}.'] =
+    'With that half-day the month would leave you below zero. A day of rest gives you {0} back.';
+  ui['El mes ya está lleno'] = 'The month is already full';
+  ui['Ya tienes las ocho jornadas del mes ocupadas. Lo que venga, se va a quedar sin ti.'] =
+    'All eight half-days of the month are taken. Whatever comes now will have to do without you.';
+
+  ui['Las tareas que te pueden salir'] = 'The homework that can come up';
+  ui['Son las {0} que te pueden salir. El tablero del mes decide cuál te toca y qué día: no se eligen de esta lista.'] =
+    'These are the {0} that can come up. The month board decides which one and which day: you do not pick from this list.';
+  ui['Te puede salir en el tablero del mes.'] = 'It can come up on the month board.';
+  ui['Ya te salió este mes y la hiciste.'] = 'It came up this month and you did it.';
+  ui['Te sale en el tablero, en un día suelto.'] = 'It comes up on the board, on a spare day.';
+
   /* ==========================================================
    * Version 3: la ninez, las jornadas, el personaje y las
    * tarjetas de decision.
@@ -421,7 +473,6 @@
   ui['Tienes que decidir'] = 'You have to decide';
 
   // ---------- las jornadas del mes ----------
-  ui['Sem {0}'] = 'Wk {0}';
   ui['Mañana'] = 'Morning';
   ui['Tarde'] = 'Afternoon';
   ui['mañana'] = 'morning';
@@ -431,17 +482,12 @@
   ui['Jornada de la mañana'] = 'Morning shift';
   ui['Jornada de la tarde'] = 'Afternoon shift';
   ui['Horario libre'] = 'Free schedule';
-  ui['Esa jornada es del colegio. Mientras estés inscrito no se puede vaciar.'] =
-    'That half-day belongs to school. While you are enrolled it cannot be cleared.';
   ui['El colegio te toma esa jornada de las cuatro semanas y no se puede vaciar. La otra jornada es tuya.'] =
     'School takes that half-day of all four weeks and it cannot be cleared. The other half-day is yours.';
   ui['Cada jornada que le dedicas avanza un cuarto de mes de carrera. Cuatro al mes es el ritmo normal.'] =
     'Each half-day you give it advances a quarter of a month of the program. Four a month is the normal pace.';
   ui['Trabajas {0} de {1} jornadas: cobras el {2} del sueldo.'] =
     'You work {0} of {1} half-days: you collect {2} of the pay.';
-  ui['Reparte al menos una jornada antes de cerrar.'] = 'Assign at least one half-day before closing.';
-  ui['Todavía no tienes trabajo. Búscalo en la pestaña Trabajo.'] =
-    'You have no job yet. Look for one under Work.';
 
   // ---------- la decision de estudiar ----------
   ui['Saliste de primaria. ¿Y ahora?'] = 'You finished primary school. Now what?';
@@ -585,12 +631,16 @@
   px.primeraTarea = 'That half-day did not earn you a single quetzal, and it was still the best paid of the month: experience is what will get you into the courses that ask for more.';
   pl.primeraTarea = 'Money gets spent; what you learned does not. It is the one thing in this game that, once you have it, is yours.';
 
-  /* Cerrar el mes, y donde mirar de ahora en adelante. */
-  pp.cerrarPrimerMes = 'Your homework is set. Now end the month: you will do it right before it closes.';
-  pt.cerrarPrimerMes = 'You closed your first month';
-  px.cerrarPrimerMes = 'Every month school leaves you homework, and the top of the street tells you how much is still due. Giving it a half-day is up to you.';
-  pl.cerrarPrimerMes = 'The month does not move on its own. You split it, you do what you promised, and you close it: that is the whole game, and you will do it some two hundred times.';
-  pp.verPendientes = 'Up there it tells you how much homework you were left. Tap it and it sets the half-day for you.';
+  /* El tablero: tirar el dado y llegar al final del mes. */
+  pp.primeraTirada = 'The month is thirty days. Roll the die to walk them: something happens on every square.';
+  pt.primeraTirada = 'This is how a month is played';
+  px.primeraTirada = 'Every roll drops you on a day, and that day offers you something: homework, a rest, a day that gets in the way. You take it or you let it go.';
+  pl.primeraTirada = 'Nobody decides a whole month at once. You decide one day at a time, and by the end it turns out you decided the month.';
+
+  pp.primerMes = 'Keep rolling to the last day. The month closes when you get to the end, not before.';
+  pt.primerMes = 'You closed your first month';
+  px.primerMes = 'Thirty days, eight rolls and a handful of decisions. That is a month, and the game is two hundred of them.';
+  pl.primerMes = 'What the month costs you is not decided on the first day: it is decided on the odd days, and it almost never feels like deciding anything.';
 
   /* El trabajo llega despues: los primeros cuatro turnos son solo colegio.
    * Ya no lleva pista: es una espera, y la cinta se apaga durante ella. */
@@ -804,11 +854,9 @@
   /* Las tareas del colegio y la experiencia: la tarea no paga, ensena, y lo
    * que ensena es lo que despues abre las carreras que piden mas. */
   ui['Las tareas'] = 'Homework';
-  ui['Tareas pendientes: {0}'] = 'Homework due: {0}';
 
   /* Las tareas del turno salen sorteadas, y hay que decirlo: sin eso, ver tres
    * de las once que existen parece un fallo, no la regla. */
-  ui['Tus tareas de este {0}'] = 'Your homework for this {0}';
 
   /* La energia, que ahora se siente, y la tienda que se paga con saber. */
   ui['Cómo vas a quedar'] = 'How you will end up';
@@ -817,18 +865,12 @@
   ui['Vas a quedar muy cansado, y cansado las tareas rinden la mitad.'] =
     'You will end up worn out, and worn out homework is worth half.';
   ui['No te da el cuerpo'] = 'Your body will not take it';
-  ui['No te queda cuerpo para más. Descansar es lo único que cabe: recuperas {0}.'] =
-    'You have nothing left. Resting is the only thing that fits: you get {0} back.';
   ui['Con esa jornada el mes te dejaría por debajo de cero. Ponle una a descansar primero: recuperas {0}.'] =
     'With that half-day the month would leave you below zero. Put one into rest first: you get {0} back.';
   ui['El colegio no se acelera'] = 'School does not speed up';
   ui['Básicos y el diversificado duran los años que duran. Ponerle más jornadas no los adelanta.'] =
     'Middle school and high school take the years they take. More half-days will not shorten them.';
   ui['Esa jornada no está libre.'] = 'That half-day is not free.';
-  ui['La última semana del mes se te abre el mes que viene.'] =
-    'The last week of the month opens up next month.';
-  ui['Las otras {0} semanas del mes se abren una por mes.'] =
-    'The other {0} weeks of the month open up one a month.';
   ui['La hiciste agotado, y agotado rinde la mitad. Descansa antes de la siguiente.'] =
     'You did it worn out, and worn out is worth half. Rest before the next one.';
 
@@ -845,12 +887,7 @@
     'It cost you {0} experience. Now each piece of homework takes {1} energy instead of {2}.';
   ui['Se gana haciendo tareas, y más despacio con solo estar inscrito. Se puede gastar en mejorar tu forma de estudiar, y eso es una decisión: lo que gastas no lo tienes para la carrera.'] =
     'It comes from homework, and more slowly from just being enrolled. It can be spent on improving how you study, and that is a decision: what you spend is not there for the course.';
-  ui['El colegio te dejó {0} de sus {1}, al azar. Cambian cada {2}: no eliges cuál te toca.'] =
-    'School set you {0} of its {1}, at random. They change every {2}: you do not pick which.';
-  ui['Estas son todas las que tienes abiertas por ahora. Al abrirse más, cada {0} te tocan unas cuantas.'] =
-    'These are all the ones open to you so far. As more open up, each {0} you get a few of them.';
   ui['hecha'] = 'done';
-  ui['Ya la hiciste'] = 'Already done';
 
   /* Elegir rama del diversificado: siete ramas, diecinueve titulos y las notas
    * que ordenan la lista. */
@@ -869,15 +906,6 @@
     'Four mistakes and that is it. The half-day is spent all the same, but you can retake it next month.';
 
   /* Al cerrar el mes, primero se hace lo que se prometio. */
-  ui['Te toca hacer una tarea'] = 'You have one homework to do';
-  ui['Te tocan {0} tareas'] = 'You have {0} homeworks to do';
-  ui['Pusiste una jornada en tareas. Hazla antes de cerrar el mes.'] =
-    'You put a half-day into homework. Do it before closing the month.';
-  ui['Pusiste {0} jornadas en tareas. Elige cuál haces primero.'] =
-    'You put {0} half-days into homework. Pick which one you do first.';
-  ui['Dejarlas para otro mes'] = 'Leave them for another month';
-  ui['Si las dejas, esas jornadas se pierden: el tiempo no se guarda.'] =
-    'If you leave them, those half-days are gone: time does not carry over.';
 
   /* Y la boleta del mes, mientras el juego todavia no habla de dinero. */
   ui['Experiencia'] = 'Experience';
@@ -892,10 +920,6 @@
   ui['hasta +{0} de experiencia'] = 'up to +{0} experience';
   ui['No pagan nada: dan experiencia, y la experiencia es lo que te deja entrar a las carreras que piden más. Cada una cuesta una jornada.'] =
     'They pay nothing: they give experience, and experience is what gets you into the courses that ask for more. Each one costs a half-day.';
-  ui['Ponle una jornada a las tareas en la pestaña del mes.'] =
-    'Put a half-day into homework on the month screen.';
-  ui['Ponle una jornada a Extra en la pestaña del mes.'] =
-    'Put a half-day into Extra on the month screen.';
   ui['Tu experiencia'] = 'Your experience';
   ui['Con {0} más se abre {1}'] = '{0} more opens up {1}';
   ui['Te alcanza para cualquier carrera del juego. Las tareas ya hicieron su trabajo.'] =
@@ -934,7 +958,6 @@
   ui['Por ahora no hay nada que puedas abrir.'] = 'There is nothing you can open right now.';
 
   /* La calle como tablero: se toca un local y se mete una jornada adentro. */
-  ui['Mes repartido'] = 'Month spent';
   ui['El mes ya está repartido'] = 'The month is already spent';
   ui['Las ocho jornadas están ocupadas. Vacía una en la rejilla de abajo si quieres cambiar algo.'] =
     'All eight half-days are taken. Empty one in the grid below if you want to change something.';

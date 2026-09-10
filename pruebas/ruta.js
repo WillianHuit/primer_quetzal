@@ -223,13 +223,15 @@ ok(!abre[0].titulo, 'y lo hace en silencio: aceptar un trabajito no desbloquea n
 ok(!Motor.desbloqueado('banco'),
    'el banco NO se abre por aceptar un trabajo: a los 13 no hay razón para tener cuenta');
 const abiertosAqui = Motor.peldanosAbiertos();
-// Ocho, y dos de ellos en silencio: los pasos de las tareas no existen para
-// quien no estudia, así que se cumplen en el mismo instante en que dice que no
-ok(abiertosAqui === 8, `van ${abiertosAqui} peldaños abiertos`);
+/* Cinco: los dos primeros pasos, el trabajo que se le abrió al decir que no,
+ * y los dos de ir a Trabajo y aceptar un trabajito. Los del tablero —tirar el
+ * dado, llegar al final del mes— siguen cerrados porque este jugador no ha
+ * tirado ni una vez. */
+ok(abiertosAqui === 5, `van ${abiertosAqui} peldaños abiertos`);
 
 const segundo = Motor.siguientePeldano();
-ok(!!segundo && segundo.peldano.id === 'verMes',
-   'y el tutorial ya apunta al paso siguiente');
+ok(!!segundo && segundo.peldano.id === 'primeraTirada',
+   'y el tutorial ya apunta al paso siguiente: tirar el dado');
 
 /* El banco llega cuando duele no tenerlo: cuando el efectivo ya se le fue en
  * cosas que no recuerda. Es la unica llave del juego que se abre por haber
@@ -395,6 +397,15 @@ ok(Motor.desbloqueado('trabajo') && Motor.peldanosAbiertos() === abiertosAqui,
       // cierran nunca y la ruta parecería incompleta al final.
       ['casa', 'estudio', 'trabajo', 'banco'].forEach(
         pes => M2.revisarProgreso({ pestana: pes, espacioSel: 0 }));
+      /* Y se recorre el mes con el dado, que es como se juega ahora: sin esto
+       * los peldaños del tablero no se abren nunca y la ruta parecería
+       * incompleta al final. */
+      let vueltasDado = 0;
+      while (!M2.tableroTerminado() && vueltasDado < 40) { M2.tirarDado(); vueltasDado++; }
+      /* Y se revisa CON el mes recorrido y antes de cerrarlo, que es cuando la
+       * interfaz revisa: al cerrar el turno el tablero se sortea de nuevo y la
+       * posición vuelve a cero, así que después ya no hay nada que ver. */
+      M2.revisarProgreso({ pestana: 'casa' });
       M2.cerrarTurno();
       M2.revisarProgreso({ pestana: 'casa', espacioSel: null });
     }
@@ -426,8 +437,10 @@ ok(Motor.desbloqueado('trabajo') && Motor.peldanosAbiertos() === abiertosAqui,
     let vueltas = 0;
     while (!z.jubilado && vueltas < 700) {
       vueltas++;
-      // Lo unico que hace: descansar y cerrar el mes
+      // Lo unico que hace: descansar, tirar el dado y cerrar el mes
       for (let i = 0; i < sb4.CONFIG.jornadasPorMes; i++) M4.asignarEspacio(i, 'descanso');
+      let dado4 = 0;
+      while (!M4.tableroTerminado() && dado4 < 40) { M4.tirarDado(); dado4++; }
       M4.cerrarTurno();
       M4.revisarProgreso();
     }

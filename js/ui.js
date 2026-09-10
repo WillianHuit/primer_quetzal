@@ -221,15 +221,6 @@ var UI = (function () {
       '</div>';
   }
 
-  /* El mes, dibujado: cuatro semanas de dos jornadas.
-   *
-   * Antes eran cuatro cuadros y una semana entera era la unidad más chica que
-   * el jugador podía mover, así que "estudio por la mañana y trabajo por la
-   * tarde" —que es como vive medio país— no se podía representar. Ahora la
-   * fila de arriba son las mañanas y la de abajo las tardes.
-   *
-   * Las casillas del colegio salen marcadas y no se pueden tocar: eso no es
-   * una limitación de la interfaz, es la regla. */
   /* La calle, que es la pantalla principal del juego.
    *
    * Se dibuja en dos sitios y con la MISMA función a propósito: arriba del mes,
@@ -285,60 +276,15 @@ var UI = (function () {
     return h + '</div>';
   }
 
-  /* La franja de debajo de la calle: lo único que el juego te está pidiendo.
+  /* Aquí vivía la franja de debajo de la calle: el botón de cerrar el mes y el
+   * contador de tareas pendientes.
    *
-   * Empezó contando el mes —"te quedan 4 jornadas", "sin tareas"— y eso era
-   * ruido: las jornadas que faltan se ven en los cuadros vacíos de la rejilla,
-   * y las tareas puestas se ven al ponerlas. Repetir en palabras lo que ya
-   * está dibujado no informa; entrena a no leer la franja.
-   *
-   * Lo que queda es lo que NO se ve en ningún otro sitio: cuántas tareas te
-   * dejó el colegio y todavía no has puesto. Esa es la pista sutil que
-   * sustituye a media cinta de tutorial. Sin nada pendiente, no dice nada. */
-  function barraDeCalle(e) {
-    var libres = Motor.espaciosLibres();
-
-    /* El botón de cerrar el mes vive AQUÍ, pegado a la calle.
-     *
-     * Estaba al final de la pantalla, después de la rejilla, de la ruta y de
-     * las tres cifras: en un teléfono, a dos pantallazos de scroll de lo que
-     * el jugador acababa de decidir. La acción que cierra el ciclo del juego
-     * —reparto el mes, lo cierro, entra el dinero, abro otro negocio— no puede
-     * estar donde hay que ir a buscarla.
-     *
-     * Y cambia de cara según si queda mes por repartir, porque son dos
-     * momentos distintos: uno dice "te falta", el otro dice "ya, dale". */
-    /* Las tareas que el colegio dejó y todavía no tienen jornada.
-     *
-     * Cuenta las puestas Y las ya hechas, porque una tarea hecha deja de estar
-     * pendiente: si no, la franja seguiría pidiendo lo que el jugador acaba de
-     * hacer. Sin colegio no hay tareas, y con las del mes cubiertas la franja
-     * se calla en vez de felicitar. */
-    var pendientes = Motor.tareasPendientes();
-
-    /* Y el contador es un BOTON, no un cartel.
-     *
-     * Decirle al jugador que le quedan tareas pendientes y obligarlo a bajar a
-     * la rejilla, tocar una casilla y buscar "Tarea" entre seis actividades es
-     * dar una instruccion en vez de una salida. Tocarlo pone la jornada. */
-    var h = '<div class="calle-barra' + (libres ? '' : ' listo') + '">';
-    if (pendientes) {
-      h += '<button class="pendientes" data-poner-tarea="1">' + Ico('libro') + ' ' +
-           T('Tareas pendientes: {0}', pendientes) + '</button>';
-    } else if (!libres) {
-      h += '<span class="listo">' + Ico('visto') + ' ' + T('Mes repartido') + '</span>';
-    }
-    /* El botón solo grita cuando el mes ya está repartido.
-     *
-     * Subirlo a la calle lo puso encima de las cifras, y con ocho jornadas sin
-     * repartir eso era una trampa: un botón verde enorme invitando a cerrar un
-     * mes en el que no trabajas —o sea, a cerrarlo en pérdida— antes de que el
-     * jugador haya visto lo que va a pasar. Sigue estando, porque cerrar un mes
-     * a medias es una decisión legítima, pero deja de ser la invitación. */
-    h += '<button class="' + (libres ? 'btn-chico' : 'btn-primario chico') +
-         '" id="cerrar-turno">' + T('Terminar el {0}', turnoNombre()) + ' ▸</button>';
-    return h + '</div>';
-  }
+   * Las dos cosas eran de la rejilla. El botón de cerrar se fue al tablero,
+   * que es donde el mes se acaba, y las tareas pendientes dejaron de existir:
+   * ahora el colegio no te "deja" tareas para que las reparta a mano, te las
+   * pone en el camino y caes en ellas. La calle vuelve a ser lo que es, que es
+   * lo que tienes.
+   */
 
   /* La primera jornada libre que se puede usar, o null si no queda ninguna.
    *
@@ -348,7 +294,7 @@ var UI = (function () {
   function primeraLibre() {
     var e = Motor.get();
     for (var i = 0; i < e.espacios.length; i++) {
-      if (!e.espacios[i] && Motor.espacioAbierto(i) && !Motor.espacioBloqueado(i)) return i;
+      if (!e.espacios[i] && !Motor.espacioBloqueado(i)) return i;
     }
     return null;
   }
@@ -377,77 +323,318 @@ var UI = (function () {
                Ico('flecha') + '</button>' + cuerpo + '</div>';
   }
 
-  function rejillaJornadas(e) {
-    var iconos = { trabajo: 'maletin', estudio: 'birrete', minijuego: 'mando',
-                   'minijuego-usado': 'visto', tarea: 'libro', 'tarea-usada': 'visto',
-                   descanso: 'luna', '': 'mas' };
-    var claves = { trabajo: 'Trabajo', estudio: 'Estudio', minijuego: 'Extra',
-                   'minijuego-usado': 'Hecho', tarea: 'Tarea', 'tarea-usada': 'Hecha',
-                   descanso: 'Descanso', '': 'Libre' };
+  /* =========================================================================
+   * EL TABLERO DEL MES
+   * =========================================================================
+   * Aquí vivía la rejilla de ocho casillas que el jugador rellenaba antes de
+   * cerrar el mes. Era un formulario, y le pedía planificar un mes a alguien
+   * que todavía no sabe qué es un mes: ocho decisiones a la vez, todas
+   * dependiendo unas de otras, antes de haber visto una sola consecuencia.
+   *
+   * Ahora el mes es un TABLERO de treinta o treinta y un días y se recorre con
+   * un dado. Un tablero pide UNA cosa a la vez por su propia forma, y cada
+   * tirada trae una decisión chica y cerrada —esta tarea la hago o la dejo—
+   * que se entiende sin que nadie la explique. Al final del mes el jugador ha
+   * decidido siete u ocho veces sin que ninguna le haya pedido pensar en las
+   * otras.
+   *
+   * La contabilidad no cambió: aceptar una casilla mete la jornada en
+   * `espacios`, que es de donde salen el sueldo por jornadas trabajadas, lo
+   * que producen los negocios y lo que avanza la carrera. Lo que cambió es
+   * quién la mete: antes el jugador a mano, ahora el tablero.
+   */
+  var ICONO_CASILLA = {
+    libre: 'calendario', tarea: 'libro', trabajo: 'maletin', extra: 'mando',
+    descanso: 'luna', dificultad: 'alerta', comodin: 'mundo', fin: 'bandera'
+  };
+  var CLASE_CASILLA = {
+    libre: '', tarea: 'c-tarea', trabajo: 'c-trabajo', extra: 'c-extra',
+    descanso: 'c-descanso', dificultad: 'c-dificultad', comodin: 'c-comodin',
+    fin: 'c-fin'
+  };
 
-    /* Una casilla puede decir 'negocio:dulces'. Se dibuja con el icono de ESE
-     * negocio y con su nombre, no con un genérico: cuando el jugador tiene
-     * tres, tiene que ver de un golpe a cuál le puso cada jornada. */
-    function pintaCasilla(v) {
-      var tn = Motor.negocioDeEspacio(v);
-      if (!tn) return { ic: iconos[v], nom: T(claves[v]) };
-      var t = Motor.tipoDeNegocio(tn);
-      return t ? { ic: t.icono, nom: esc(D(t, 'nombre')) }
-               : { ic: 'tienda', nom: T('Tu negocio') };
-    }
-    /* El color de cada actividad, y no es adorno.
+  // Lo que dijo el dado la última vez, para poder dibujarlo
+  var ultimoDado = null;
+  var notaTablero = '';
+
+  function tarjetaTablero(e) {
+    var t = Motor.tablero();
+    if (!t) return '';
+    var fin = Motor.tableroTerminado();
+
+    var h = '<div class="tarjeta tablero-caja">';
+    h += '<div class="titulo">' + Ico('calendario') + ' ' +
+         T('{0}: día {1} de {2}', nombreMes(e.mes), t.pos, t.dias) + '</div>';
+
+    /* El camino va en serpiente, como un tablero de mesa: la primera fila de
+     * izquierda a derecha, la siguiente al revés. Con seis columnas, un mes
+     * son cinco filas y media y cabe en un teléfono sin scroll.
      *
-     * Ocho casillas con el mismo fondo y un icono chico se leen una por una.
-     * Con color, el reparto del mes se ve de un golpe: cuánto verde de trabajo,
-     * cuánto ámbar de tarea, cuánto azul de descanso. Es la misma información
-     * y se tarda un segundo en vez de ocho. */
-    var COLOR = { trabajo: 'j-trabajo', estudio: 'j-estudio',
-                  tarea: 'j-tarea', 'tarea-usada': 'j-tarea',
-                  minijuego: 'j-extra', 'minijuego-usado': 'j-extra',
-                  descanso: 'j-descanso' };
-    function colorDe(v) {
-      if (!v) return '';
-      if (Motor.negocioDeEspacio(v)) return 'j-negocio';
-      return COLOR[v] || '';
-    }
-
-    /* Y SOLO las semanas que ya se abrieron.
+     * Se ve el tipo de TODAS las casillas, incluidas las que faltan, porque
+     * eso es lo que hace que un tablero sea un tablero: se mira lo que viene.
+     * Lo que no se ve es lo que traen dentro —qué tarea, qué comodín—, que se
+     * sortea al caer. */
+    /* El tablero va en PERSPECTIVA, y el dado es un cubo de seis caras.
      *
-     * El mes empieza con una semana y se abre otra cada mes. Las que faltan no
-     * se dibujan con candado: dibujar tres candados es enseñar tres veces lo
-     * mismo. Debajo va una línea que dice cuántas faltan, y ya. */
-    var semanas = Motor.semanasAbiertas();
-    var deLasCuatro = CONFIG.jornadasPorMes / CONFIG.jornadasPorSemana;
+     * Es 3D de verdad —perspective, preserve-3d, rotaciones en X y en Y— y no
+     * lleva ninguna librería. Eso no es tacañería: la promesa de este juego es
+     * que se abre con doble clic y sin descargar nada, y las cosas que hay que
+     * dibujar aquí —un plano inclinado con relieve y un cubo que rueda— son
+     * exactamente lo que las transformaciones 3D del navegador hacen bien.
+     * Traer un motor de escena para eso costaría más que todo el arte junto y
+     * dejaría el tablero fuera del alcance de las pruebas, que tocan nodos.
+     *
+     * La inclinación es corta a propósito (18°). Con más, los números de los
+     * días se vuelven ilegibles en la fila de arriba, y este tablero hay que
+     * poder leerlo, no solo mirarlo. */
+    var COLS = 6;
+    h += '<div class="tablero-3d"><div class="tablero">';
+    for (var d = 0; d < t.dias; d++) {
+      var c = t.casillas[d];
+      var fila = Math.floor(d / COLS);
+      var col = (fila % 2 === 0) ? (d % COLS) : (COLS - 1 - (d % COLS));
+      var pasada = d < t.pos - 1;
+      var aqui = d === t.pos - 1;
+      h += '<div class="casilla ' + (CLASE_CASILLA[c.tipo] || '') +
+           (pasada ? ' pasada' : '') + (aqui ? ' aqui' : '') +
+           '" style="grid-column:' + (col + 1) + ';grid-row:' + (fila + 1) + '"' +
+           ' title="' + T('Día {0}', d + 1) + '">' +
+           '<span class="dia">' + (d + 1) + '</span>' +
+           Ico(ICONO_CASILLA[c.tipo] || 'calendario') +
+           (aqui ? '<span class="ficha">' + Muneco({ estudia: !!e.estudio,
+              trabajo: e.empleo ? e.empleo.id : null }) + '</span>' : '') +
+           '</div>';
+    }
+    h += '</div></div>';
 
-    var h = '<div class="jornadas" style="--semanas:' + semanas + '">';
-    h += '<div class="jor-eje"></div>';
-    for (var c = 0; c < semanas; c++) h += '<div class="jor-cab">' + T('Sem {0}', c + 1) + '</div>';
-
-    ['am', 'pm'].forEach(function (j) {
-      var icoJornada = j === 'am' ? 'manana' : 'tarde';
-      h += '<div class="jor-eje" title="' + (j === 'am' ? T('Mañana') : T('Tarde')) + '">' +
-           Ico(icoJornada) + '</div>';
-      for (var sm = 0; sm < semanas; sm++) {
-        var i = Motor.indiceDe(sm, j);
-        var tipo = e.espacios[i];
-        var bloq = Motor.espacioBloqueado(i);
-        var pin = pintaCasilla(tipo);
-        h += '<div class="jornada ' + colorDe(tipo) + (tipo ? ' lleno' : '') +
-             (bloq ? ' bloqueado' : '') +
-             (espacioSel === i ? ' sel' : '') + '" data-espacio="' + i + '">' +
-             '<div class="ic-caja">' + Ico(bloq ? 'birrete' : pin.ic) + '</div>' +
-             '<div class="nom">' + pin.nom + '</div></div>';
-      }
-    });
+    // El dado y el botón, que es la acción de esta pantalla
+    h += '<div class="dado-fila">';
+    h += dadoCubo(ultimoDado);
+    if (fin) {
+      h += '<button class="btn-primario chico" id="cerrar-turno">' +
+           T('Terminar el {0}', turnoNombre()) + ' ▸</button>';
+    } else {
+      h += '<button class="btn-primario chico" id="tirar-dado">' +
+           T('Tirar el dado') + '</button>';
+    }
     h += '</div>';
-    if (semanas < deLasCuatro) {
-      h += '<p class="sutil centrado" style="margin:8px 0 0">' + Ico('reloj') + ' ' +
-           (deLasCuatro - semanas === 1
-             ? T('La última semana del mes se te abre el mes que viene.')
-             : T('Las otras {0} semanas del mes se abren una por mes.', deLasCuatro - semanas)) +
-           '</p>';
+
+    if (notaTablero) h += '<p class="tablero-nota">' + notaTablero + '</p>';
+    else if (fin) {
+      h += '<p class="tablero-nota">' + T('Llegaste al final del mes.') + '</p>';
+    } else if (t.pos === 0) {
+      h += '<p class="tablero-nota">' +
+           T('El mes son {0} días. Tira el dado para recorrerlos.', t.dias) + '</p>';
     }
+    return h + '</div>';
+  }
+
+  /* El dado, como cubo de seis caras.
+   *
+   * Cada cara se coloca girada y empujada media arista hacia fuera; el cubo
+   * entero gira hasta poner delante la que salió. Los puntos son puntos y no
+   * un número, porque un dado con un "4" escrito no es un dado.
+   *
+   * `--fin` es la rotación que deja esa cara mirando a la cámara, y es la
+   * inversa exacta de la que colocó la cara. La animación arranca de un giro
+   * largo y termina ahí, así que el cubo rueda y se detiene en lo que salió:
+   * el resultado no se anuncia, se ve caer.
+   */
+  var CARA_FIN = {
+    1: 'rotateX(0deg) rotateY(0deg)',
+    2: 'rotateX(-90deg)',
+    3: 'rotateY(-90deg)',
+    4: 'rotateY(90deg)',
+    5: 'rotateX(90deg)',
+    6: 'rotateY(-180deg)'
+  };
+  // Dónde van los puntos de cada cara, en una cuadrícula de 3x3
+  var PUNTOS = {
+    1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8],
+    5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]
+  };
+
+  function caraDelDado(n) {
+    var h = '<span class="cara c' + n + '">';
+    for (var i = 0; i < 9; i++) {
+      h += '<i' + (PUNTOS[n].indexOf(i) >= 0 ? ' class="pip"' : '') + '></i>';
+    }
+    return h + '</span>';
+  }
+
+  function dadoCubo(n) {
+    var cara = n || 1;
+    var h = '<div class="dado3d" role="img" aria-label="' +
+            (n ? T('El dado cayó en {0}', n) : T('Tirar el dado')) + '">';
+    h += '<div class="dado-inclina"><div class="dado-cubo' + (n ? ' rueda' : '') +
+         '" style="--fin:' + CARA_FIN[cara] + '">';
+    for (var c = 1; c <= 6; c++) h += caraDelDado(c);
+    h += '</div></div></div>';
     return h;
+  }
+
+  /* La ventana de la casilla en la que caí.
+   *
+   * Cada tipo pregunta lo suyo, y la regla es que si hay algo que decidir se
+   * pregunta, y si no hay nada se cuenta y se sigue. Un día cualquiera no
+   * abre ventana: sería una ventana para decir que no pasó nada.
+   */
+  function abrirCasilla(res) {
+    var c = res.casilla;
+    var e = Motor.get();
+
+    if (res.fin) {
+      notaTablero = T('Llegaste al final del mes.');
+      return render();
+    }
+
+    if (c.tipo === 'libre') {
+      notaTablero = T('Día {0}: un día cualquiera.', res.pos);
+      return render();
+    }
+
+    if (c.tipo === 'dificultad') {
+      var d = c.sorteado || { texto: '', energia: 0 };
+      Motor.aplicarEfecto({ energia: d.energia });
+      notaTablero = esc(K('tablero_dificultad', d.id, d.texto));
+      render();
+      return modal('<span class="icono alerta">' + Ico('alerta') + '</span>' +
+        '<h2>' + T('Se te atravesó el día') + '</h2>' +
+        '<p>' + esc(K('tablero_dificultad', d.id, d.texto)) + '</p>' +
+        fila(T('Energía'), String(Math.round(d.energia)), 'neg') +
+        '<button class="btn-primario" data-cerrar>' + T('Ni modo') + '</button>');
+    }
+
+    if (c.tipo === 'comodin') {
+      var k = c.sorteado;
+      if (!k) { notaTablero = ''; return render(); }
+      var dm = modal('<span class="icono">' + Ico('mundo') + '</span>' +
+        '<h2>' + T('Te toca elegir') + '</h2>' +
+        '<p>' + esc(K('tablero_comodin', k.id, k.pregunta)) + '</p>' +
+        '<button class="btn-primario claro" data-lado="a">A · ' +
+          esc(K('tablero_comodin', k.id + ':a', k.a.texto)) + '</button>' +
+        '<button class="btn-primario claro" data-lado="b" style="margin-top:8px">B · ' +
+          esc(K('tablero_comodin', k.id + ':b', k.b.texto)) + '</button>' +
+        '<p class="sutil centrado" style="margin-top:10px">' +
+          T('Ninguna de las dos dice lo que va a pasar. Así es.') + '</p>');
+      dm.querySelectorAll('[data-lado]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var lado = k[b.getAttribute('data-lado')];
+          Motor.aplicarEfecto(lado.efecto);
+          dm.remove();
+          notaTablero = esc(K('tablero_comodin', k.id + ':' + b.getAttribute('data-lado') + ':r',
+                              lado.resultado));
+          render();
+          modal('<span class="icono">' + Ico('mundo') + '</span>' +
+            '<h2>' + T('Elegiste') + '</h2>' +
+            '<p>' + esc(K('tablero_comodin', k.id + ':' + b.getAttribute('data-lado') + ':r',
+                          lado.resultado)) + '</p>' +
+            filasDeEfecto(lado.efecto) +
+            '<button class="btn-primario" data-cerrar>' + T('Listo') + '</button>');
+        });
+      });
+      return null;
+    }
+
+    // Las tres que se aceptan o se dejan: tarea, trabajo, extra y descanso
+    return casillaConDecision(c, res);
+  }
+
+  function filasDeEfecto(ef) {
+    var h = '';
+    if (!ef) return h;
+    if (ef.energia) h += fila(T('Energía'), (ef.energia > 0 ? '+' : '') + ef.energia,
+                              ef.energia > 0 ? 'pos' : 'neg');
+    if (ef.experiencia) h += fila(T('Experiencia'), '+' + ef.experiencia, 'pos');
+    if (ef.dinero) h += fila(T('Dinero'), (ef.dinero > 0 ? '+' : '') + Q0(ef.dinero),
+                             ef.dinero > 0 ? 'pos' : 'neg');
+    return h;
+  }
+
+  /* Aceptar o dejar pasar. Es la decisión que se repite todo el mes, así que
+   * la ventana es siempre la misma: qué te sale, qué te cuesta, qué te deja. */
+  function casillaConDecision(c, res) {
+    var e = Motor.get();
+    var jornada = { tarea: 'tarea', trabajo: 'trabajo', extra: 'minijuego',
+                    descanso: 'descanso' }[c.tipo];
+    var cuesta = Math.round(Motor.energiaDeEspacio(jornada));
+    var def = (c.tipo === 'tarea' && c.sorteado)
+      ? Minijuegos.porId(c.sorteado.tareaId) : null;
+
+    var titulo, cuerpo, si;
+    if (c.tipo === 'tarea') {
+      if (!def) { notaTablero = ''; return render(); }
+      titulo = T('Tarea: {0}', esc(D(def, 'nombre')));
+      cuerpo = esc(D(def, 'descripcion'));
+      si = T('Hacerla');
+    } else if (c.tipo === 'trabajo') {
+      titulo = T('Te sale un día de trabajo');
+      cuerpo = T('Una jornada más de las que te cuentan para el sueldo del mes.');
+      si = T('Tomarlo');
+    } else if (c.tipo === 'extra') {
+      titulo = T('Un trabajito suelto');
+      cuerpo = T('Se paga aparte y no cuenta para el sueldo.');
+      si = T('Hacerlo');
+    } else {
+      titulo = T('Un día para ti');
+      cuerpo = T('Nada que hacer. Puedes usarlo para recuperar cuerpo.');
+      si = T('Descansar');
+    }
+
+    var permiso = Motor.aceptarCasilla ? null : null;
+    var h = '<span class="icono">' + Ico(ICONO_CASILLA[c.tipo]) + '</span>' +
+            '<h2>' + titulo + '</h2><p>' + cuerpo + '</p>';
+    h += '<div class="pastillas">' +
+         pastilla('rayo', (cuesta > 0 ? '+' : '') + cuesta, cuesta > 0 ? 'ok' : 'mal');
+    if (def) h += pastilla('birrete', T('hasta +{0} de experiencia',
+                                       def.experienciaMaxima || 0), 'ok');
+    h += '</div>';
+    h += '<button class="btn-primario" data-acepto="1">' + si + '</button>';
+    h += '<div class="btn-fila" style="margin-top:8px">' +
+         '<button class="btn-chico" data-dejo="1">' + T('Dejarlo pasar') + '</button></div>';
+
+    var dm = modal(h, null);
+    dm.querySelector('[data-dejo]').addEventListener('click', function () {
+      dm.remove();
+      notaTablero = T('Día {0}: lo dejaste pasar.', res.pos);
+      render();
+    });
+    dm.querySelector('[data-acepto]').addEventListener('click', function () {
+      var r = Motor.aceptarCasilla(jornada);
+      if (!r.ok) {
+        dm.remove();
+        Sonido.tono('error');
+        if (r.motivo === 'energia') {
+          return aviso(T('No te da el cuerpo'),
+            T('Con esa jornada el mes te dejaría por debajo de cero. Un día de descanso te devuelve {0}.',
+              Math.round(Motor.energiaDeEspacio('descanso'))));
+        }
+        return aviso(T('El mes ya está lleno'),
+          T('Ya tienes las ocho jornadas del mes ocupadas. Lo que venga, se va a quedar sin ti.'));
+      }
+      dm.remove();
+      Sonido.tono('toque');
+      notaTablero = T('Día {0}: {1}', res.pos, titulo);
+      /* Y si lo que se acepta se JUEGA —una tarea, un extra— se abre ahí
+       * mismo. Aceptar y tener que ir a buscarla a otra pestaña sería partir
+       * en dos una decisión que el jugador acaba de tomar. */
+      if (c.tipo === 'tarea' && def) return jugarMinijuego(def.id);
+      if (c.tipo === 'extra') {
+        var sueltos = listaDeExtras();
+        if (sueltos.length) return jugarMinijuego(sueltos[0]);
+      }
+      render();
+    });
+    return null;
+  }
+
+  // Los oficios sueltos que puede hacer ahora mismo, por id
+  function listaDeExtras() {
+    var e = Motor.get();
+    return Minijuegos.disponibles(e.educacion, e.carrerasTerminadas,
+        e.estudio ? e.estudio.carreraId : null, Motor.experiencia())
+      .filter(function (j) { return j.tipo !== 'clase'; })
+      .map(function (j) { return j.id; });
   }
 
   /* Lo que le queda al cuerpo con el reparto puesto.
@@ -554,7 +741,6 @@ var UI = (function () {
   }
 
   var verDetalle = false;
-  var avisoBloqueo = false;
 
   function vistaCasa() {
     var e = Motor.get();
@@ -584,7 +770,6 @@ var UI = (function () {
 
     h += '<div class="tarjeta escenario mando">';
     h += calle(true);
-    h += barraDeCalle(e);
     h += '</div>';
 
     // Y justo debajo, si el jugador tocó un negocio o el lote
@@ -598,118 +783,29 @@ var UI = (function () {
      * lo diga. Los meses de gracia siguen en CONFIG.mesesDeGracia; lo que se
      * fue es el cartel. */
 
+    /* EL TABLERO, que es donde se juega el mes.
+     *
+     * Aquí estaba la rejilla de ocho casillas y la fila de actividades que la
+     * llenaba. Las dos se fueron con el tablero: ahora el mes se recorre con
+     * el dado y cada casilla pregunta lo suyo cuando toca. */
+    h += tarjetaTablero(e);
+
     h += '<div class="tarjeta">';
     if (etapa.mesesPorTurno > 1) {
       h += '<p class="sutil">' +
-        T('Este reparto se repite los {0} meses del {1}.', etapa.mesesPorTurno, turnoNombre()) +
-        '</p>';
+        T('Lo que hagas este mes se repite los {0} meses del {1}.',
+          etapa.mesesPorTurno, turnoNombre()) + '</p>';
     }
-    h += rejillaJornadas(e);
     h += tarjetaEnergia(e);
-
-    var puedeTrabajar = t || e.migracion;
-    if (avisoBloqueo) {
-      h += '<p class="aviso">' + T('Esa jornada es del colegio. Mientras estés inscrito no se puede vaciar.') + '</p>';
-      avisoBloqueo = false;
-    }
-    if (espacioSel !== null) {
-      /* Y cada botón dice lo que le cuesta al cuerpo.
-       *
-       * Una tarea se lleva un tercio de la energía y hasta ahora eso se
-       * descubría cerrando el mes. Un costo que no se ve antes de pagarlo no
-       * es una decisión, es una trampa. */
-      /* Lo que la jornada le cuesta al cuerpo, CON su icono.
-       *
-       * El número solo —"-35"— no dice de qué: podría ser dinero, meses o
-       * puntos. El rayo es el mismo de la barra de arriba, así que el jugador
-       * ya sabe qué es sin que nadie se lo explique, y es lo único que hace que
-       * "-35" y "+26" se lean como la misma cosa que la barra que va bajando. */
-      function coste(tipo) {
-        var n = Math.round(Motor.energiaDeEspacio(tipo));
-        if (!n) return '';
-        return '<span class="cuesta' + (n > 0 ? ' gana' : '') + '">' + Ico('rayo') +
-               (n > 0 ? '+' : '') + n + '</span>';
-      }
-      /* Y lo que no cabe sale APAGADO, no se rechaza al tocarlo.
-       *
-       * Un botón que se puede tocar y contesta que no es peor que un botón
-       * apagado: el jugador ya decidió cuando le dicen que no podía. Apagado
-       * con el número al lado dice lo mismo antes. */
-      function cabe(tipo) {
-        return Motor.puedeAsignar(espacioSel, tipo).ok ? '' : ' disabled';
-      }
-      /* Y si lo que no cabe es por energia, se dice.
-       *
-       * Un boton apagado sin motivo es peor que uno que contesta: el jugador
-       * ve la tarea en gris y no sabe si le falta algo o si el juego se rompio.
-       * Se mira el motivo y no solo el si/no, porque "Trabajar" tambien sale
-       * apagado cuando todavia no tiene trabajo y eso es otra cosa. */
-      var faltaCuerpo = Motor.puedeAsignar(espacioSel, 'tarea').motivo === 'energia' ||
-                        (Motor.desbloqueado('trabajo') &&
-                         Motor.puedeAsignar(espacioSel, 'trabajo').motivo === 'energia');
-      h += '<div class="btn-fila acciones-jornada">';
-      /* El botón de trabajar no existe mientras no exista el trabajo.
-       *
-       * Salía apagado desde el primer mes, con un aviso que mandaba a "la
-       * pestaña Trabajo" cuatro meses antes de que esa pestaña se abriera.
-       * Mandar a alguien a un sitio que no está es peor que no decirle nada:
-       * lo pone a buscarlo y a dudar de si se le rompió algo. Va atado a la
-       * LLAVE y no a tener empleo, que son dos momentos distintos. */
-      if (Motor.desbloqueado('trabajo')) {
-        h += '<button class="btn-chico j-trabajo" data-poner="trabajo"' +
-             (puedeTrabajar ? cabe('trabajo') : ' disabled') + '>' + Ico('maletin') + ' ' +
-             T('Trabajar') + coste('trabajo') + '</button>';
-      }
-      /* Un botón por cada negocio abierto. Es donde el jugador decide a cuál
-       * de sus negocios le pone la cara este mes, y esa decisión importa: al
-       * que no le pone ninguna jornada le rinde menos. */
-      Motor.negociosAbiertos().forEach(function (neg) {
-        var tneg = Motor.tipoDeNegocio(neg.tipoId);
-        if (!tneg) return;
-        h += '<button class="btn-chico j-negocio" data-poner="negocio:' + neg.tipoId + '"' +
-             cabe('negocio:' + neg.tipoId) + '>' +
-             Ico(tneg.icono) + ' ' + esc(D(tneg, 'nombre')) + coste('negocio') + '</button>';
-      });
-      // Estudiar solo tiene sentido con una carrera de horario libre: en el
-      // colegio las jornadas ya vienen puestas y no se agregan a mano.
-      if (e.estudio && !e.estudio.jornada) {
-        h += '<button class="btn-chico j-estudio" data-poner="estudio">' + Ico('birrete') + ' ' + T('Estudiar') + coste('estudio') + '</button>';
-      }
-      /* La tarea es una jornada aparte de "Estudiar", y la diferencia importa:
-       * estudiar adelanta los meses de la carrera, la tarea da experiencia.
-       * Solo sale mientras esté inscrito, porque no hay tareas sin colegio. */
-      if (e.estudio) {
-        h += '<button class="btn-chico j-tarea" data-poner="tarea"' + cabe('tarea') + '>' +
-             Ico('libro') + ' ' + T('Tarea') + coste('tarea') + '</button>';
-      }
-      if (Motor.desbloqueado('extra')) {
-        h += '<button class="btn-chico j-extra" data-poner="minijuego"' + cabe('minijuego') + '>' +
-             Ico('mando') + ' ' + T('Extra') + coste('minijuego') + '</button>';
-      }
-      h += '<button class="btn-chico j-descanso" data-poner="descanso">' + Ico('luna') + ' ' + T('Descansar') + coste('descanso') + '</button>';
-      h += '<button class="btn-chico" data-poner="">' + T('Vaciar') + '</button>';
-      h += '</div>';
-      if (faltaCuerpo) {
-        h += '<p class="sutil">' + Ico('rayo') + ' ' +
-          T('No te queda cuerpo para más. Descansar es lo único que cabe: recuperas {0}.',
-            Math.round(Motor.energiaDeEspacio('descanso'))) + '</p>';
-      }
-      // Y el aviso solo cuando el consejo se puede seguir: con la pestaña abierta
-      if (!puedeTrabajar && Motor.desbloqueado('trabajo')) {
-        h += '<p class="aviso">' +
-          T('Todavía no tienes trabajo. Búscalo en la pestaña Trabajo.') + '</p>';
-      }
-    }
     h += '</div>';
 
     h += tarjetaLoQueSigue();
 
-    /* Las tres cifras van DEBAJO de la rejilla y ya no encima del botón de
-     * cerrar, porque el botón se subió a la calle. Siguen aquí y no se quitan:
-     * son la consecuencia de lo que se acaba de repartir, y quien quiera
-     * mirarlas antes de cerrar las tiene a un dedo de scroll. */
+    /* Las tres cifras van DEBAJO del tablero: son la consecuencia de lo que se
+     * decidió recorriendo el mes, y quien quiera mirarlas antes de cerrarlo
+     * las tiene a un dedo de scroll. */
     // Mientras el juego no hable de dinero, esta tarjeta no tiene qué decir
-    if (!sinDineroTodavia()) h += tarjetaLoQueViene(e, t, v, puedeTrabajar);
+    if (!sinDineroTodavia()) h += tarjetaLoQueViene(e, t, v, !!(t || e.migracion));
 
     /* Y aquí iba "Adelantar hasta que pase algo".
      *
@@ -1458,7 +1554,7 @@ var UI = (function () {
   function estudioPracticar() {
     var e = Motor.get();
     var lista = listaMinijuegos(esDeEstudio);
-    var h = '<h3>' + T('Tus tareas de este {0}', turnoNombre()) + '</h3>';
+    var h = '<h3>' + T('Las tareas que te pueden salir') + '</h3>';
 
     /* Sin carrera en curso no hay tareas, y eso no es un hueco: es que las
      * tareas son del colegio. Se dice, en vez de dejar la sección vacía. */
@@ -1482,15 +1578,10 @@ var UI = (function () {
      * están bloqueadas. Decir de cuántas son y que cambian convierte lo que
      * parece un error en la regla que es: el colegio manda la tarea, no la
      * eliges. */
-    var dejadas = Motor.tareasDelMes().length;
-    var posibles = Motor.tareasPosibles();
-    var sorteo = posibles > dejadas
-      ? T('El colegio te dejó {0} de sus {1}, al azar. Cambian cada {2}: no eliges cuál te toca.',
-          dejadas, posibles, turnoNombre())
-      : T('Estas son todas las que tienes abiertas por ahora. Al abrirse más, cada {0} te tocan unas cuantas.',
-          turnoNombre());
+    var sorteo = T('Son las {0} que te pueden salir. El tablero del mes decide cuál te toca y qué día: no se eligen de esta lista.',
+                   Motor.tareasPosibles());
     return h +
-      '<p class="sutil">' + Ico('mando') + ' ' + sorteo + '</p>' +
+      '<p class="sutil">' + Ico('mundo') + ' ' + sorteo + '</p>' +
       '<p class="sutil">' +
       T('No pagan nada: dan experiencia, y la experiencia es lo que te deja entrar a las carreras que piden más. Cada una cuesta una jornada.') +
       '</p>' + lista;
@@ -2465,11 +2556,14 @@ var UI = (function () {
        * distintas, y la tarjeta tiene que decir cuál es cuál sin que haya que
        * leerla dos veces. */
       var clase = j.tipo === 'clase';
-      var libres = Motor.espaciosUsados(clase ? 'tarea' : 'minijuego');
+      /* Una CLASE ya no se hace desde aquí: te sale en el tablero del mes y la
+       * haces o la dejas ahí. Esta lista pasó a ser el temario —lo que te
+       * puede tocar— y eso es justo lo que hace visible que es al azar. */
+      var libres = clase ? 0 : Motor.espaciosUsados('minijuego');
       /* Una tarea del turno que ya se hizo se queda a la vista y apagada: si
        * desapareciera, la lista cambiaría sola a mitad del turno y el jugador
        * no sabría si la hizo o si el juego se la comió. */
-      var hecha = clase && Motor.tareasSinHacer().indexOf(j.id) < 0;
+      var hecha = clase && (Motor.get().tareasHechas || []).indexOf(j.id) >= 0;
       var etiqueta = hecha ? T('hecha')
                    : (clase ? T('clase')
                    : (j.tipo === 'generico' ? T('paga') : T('de tu profesión')));
@@ -2485,15 +2579,19 @@ var UI = (function () {
       /* En `sutil` y no en `aviso`: no es un error, es una instrucción. El
        * rojo de aviso está para cuando algo va mal, y gastarlo en "te falta
        * una jornada" es gritar donde solo hacía falta decir. */
-      if (libres === 0 && !hecha) {
-        h += '<p class="sutil">' + (clase
-          ? T('Ponle una jornada a las tareas en la pestaña del mes.')
-          : T('Ponle una jornada a Extra en la pestaña del mes.')) + '</p>';
+      if (clase) {
+        // Sin botón: esta tarea llega cuando el dado te deja en ella
+        h += '<p class="sutil">' + (hecha
+          ? T('Ya te salió este mes y la hiciste.')
+          : T('Te puede salir en el tablero del mes.')) + '</p></div>';
+        return;
+      }
+      if (libres === 0) {
+        h += '<p class="sutil">' + T('Te sale en el tablero, en un día suelto.') + '</p>';
       }
       h += '<div class="btn-fila" style="margin-top:10px"><button class="btn-chico" data-jugar="' +
-           j.id + '"' + (libres > 0 && !hecha ? '' : ' disabled') + '>' +
-           Ico(clase ? 'libro' : 'mando') + ' ' +
-           (hecha ? T('Ya la hiciste') : T('Hacerlo')) + '</button></div></div>';
+           j.id + '"' + (libres > 0 ? '' : ' disabled') + '>' +
+           Ico('mando') + ' ' + T('Hacerlo') + '</button></div></div>';
     });
     return h;
   }
@@ -2505,9 +2603,7 @@ var UI = (function () {
    * azar. Es lo que hace que el colegio se sienta un colegio y no un menú —no
    * eliges qué tarea te toca— y, con las tareas de rama, es de donde sale el
    * perfil que después ordena la lista de carreras. */
-  var esDeEstudio = function (j) {
-    return j.tipo === 'clase' && Motor.tareasDelMes().indexOf(j.id) >= 0;
-  };
+  var esDeEstudio = function (j) { return j.tipo === 'clase'; };
 
   /* La pestaña Extra: los ocho juntos.
    *
@@ -3635,78 +3731,27 @@ var UI = (function () {
     });
   }
 
-  /* -------------------------------------------------------------------------
-   * Lo que dejaste pendiente este mes
-   * -------------------------------------------------------------------------
-   * Repartir el mes y cerrarlo no puede ser el mismo gesto. Una jornada puesta
-   * en tareas es una promesa: dijiste que ibas a estudiar esa media semana. Si
-   * el mes se cierra sin más, esa casilla no fue una decisión, fue un adorno, y
-   * el jugador acaba tocando el mismo botón cinco veces sin hacer nada.
+  /* Aquí vivía `hacerPendientes`: la ventana que, antes de cerrar el mes, te
+   * hacía las tareas que habías prometido repartiendo jornadas.
    *
-   * Así que al terminar el mes, primero se hace lo que se prometió. Una por
-   * una, y con la lista delante para elegir cuál. Dejarlas también se puede
-   * —el jugador manda— pero se dice en voz alta lo que cuesta.
-   *
-   * `alTerminar` se llama cuando ya no queda nada pendiente. Es lo que deja
-   * que esto se meta ANTES del cierre del mes sin que el cierre sepa nada.
+   * Se fue con la rejilla. Existía porque poner una jornada en tareas era una
+   * promesa a futuro y cerrar el mes sin cobrarla dejaba esa casilla en un
+   * adorno. En el tablero no hay promesas: caes en la tarea y la haces ahí
+   * mismo o la dejas pasar ahí mismo. La decisión y su consecuencia ocurren en
+   * el mismo toque, que es como tiene que ser.
    */
-  function hacerPendientes(alTerminar) {
-    var e = Motor.get();
-    var faltan = Motor.espaciosUsados('tarea');
-    if (!faltan) return alTerminar();
-
-    /* Solo las del turno que todavía no ha hecho: repetir la misma tarea dos
-     * veces en el mismo turno no es estudiar, es exprimir el ejercicio. */
-    var sinHacer = Motor.tareasSinHacer();
-    var lista = Minijuegos.disponibles(e.educacion, e.carrerasTerminadas,
-      e.estudio ? e.estudio.carreraId : null, Motor.experiencia())
-      .filter(function (j) { return sinHacer.indexOf(j.id) >= 0; });
-    // Sin ninguna clase disponible no hay nada que hacer y no se castiga
-    if (!lista.length) return alTerminar();
-
-    var h = '<span class="icono">' + Ico('libro') + '</span>' +
-      '<h2>' + (faltan === 1 ? T('Te toca hacer una tarea')
-                             : T('Te tocan {0} tareas', faltan)) + '</h2>' +
-      '<p>' + (faltan === 1
-        ? T('Pusiste una jornada en tareas. Hazla antes de cerrar el mes.')
-        : T('Pusiste {0} jornadas en tareas. Elige cuál haces primero.', faltan)) + '</p>';
-    lista.forEach(function (j) {
-      h += '<button class="btn-primario claro tarea-elegir" data-tarea="' + j.id + '">' +
-           Ico(j.icono) + ' ' + esc(D(j, 'nombre')) +
-           '<span class="etiqueta ok">+' + (j.experienciaMaxima || 0) + '</span></button>';
-    });
-    h += '<div class="btn-fila" style="margin-top:10px">' +
-         '<button class="btn-chico" data-dejarlas>' + T('Dejarlas para otro mes') +
-         '</button></div>' +
-         '<p class="sutil centrado">' +
-         T('Si las dejas, esas jornadas se pierden: el tiempo no se guarda.') + '</p>';
-
-    var d = modal(h, null);
-    d.querySelectorAll('[data-tarea]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        d.remove();
-        // Al terminar la tarea se vuelve a preguntar: quedan las que queden
-        jugarMinijuego(b.getAttribute('data-tarea'), function () {
-          hacerPendientes(alTerminar);
-        });
-      });
-    });
-    var dejar = d.querySelector('[data-dejarlas]');
-    if (dejar) dejar.addEventListener('click', function () { d.remove(); alTerminar(); });
-    return null;
-  }
 
   // =============== eventos de la interfaz ===============
 
   function conectar() {
     app.addEventListener('click', function (ev) {
-      var el = ev.target.closest('[data-pestana],[data-sub],[data-espacio],[data-poner],[data-poner-tarea],[data-titulo],[data-ver-ramas],[data-comprar-saber],[data-lote],[data-gestion],[data-cerrar-hoja],[data-tomar],[data-abrir],' +
+      var el = ev.target.closest('[data-pestana],[data-sub],[data-poner],[data-titulo],[data-ver-ramas],[data-comprar-saber],[data-lote],[data-gestion],[data-cerrar-hoja],[data-tomar],[data-abrir],' +
         '[data-mover],[data-mudar],[data-inscribir],[data-jugar],[data-abonar],[data-abrir-menu],' +
         '[data-casa],[data-envio],[data-canal],[data-porque],[data-detalle],[data-no-estudiar],' +
         '[data-ver-perfil],[data-mejora],' +
         '[data-abrir-negocio],[data-subir-negocio],[data-contratar],[data-despedir],' +
         '[data-traspasar],' +
-        '#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
+        '#tirar-dado,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
         '#pedir-tarjeta,#pedir-informal,#gastar-tarjeta,#pagar-tarjeta,#alternar-minimo,' +
         '#abrir-pension,#cambiar-pension,#retirar-pension,#migrar,#regresar,' +
         '#ver-glosario,#ver-reporte,#ver-reporte-final');
@@ -3718,14 +3763,6 @@ var UI = (function () {
       if (d.verPerfil !== undefined) return mostrarPerfil();
       if (d.pestana) { irAPestana(d.pestana); return render(); }
       if (d.sub) { subDe[pestana] = d.sub; return render(); }
-
-      if (d.espacio !== undefined) {
-        var i = parseInt(d.espacio, 10);
-        // Las jornadas del colegio no se tocan: se explica y no se selecciona
-        if (Motor.espacioBloqueado(i)) { avisoBloqueo = true; espacioSel = null; return render(); }
-        espacioSel = espacioSel === i ? null : i;
-        return render();
-      }
 
       if (d.porque) {
         abiertos[d.porque] = !abiertos[d.porque];
@@ -4160,16 +4197,32 @@ var UI = (function () {
       if (el.id === 'ver-reporte') return mostrarReporte();
       if (el.id === 'ver-reporte-final') return mostrarReporteFinal(function () { render(); });
 
+      /* El dado, que es la acción de la pantalla del mes.
+       *
+       * Tirar es gratis y no se puede no tirar: el mes pasa igual. Lo que se
+       * decide es lo que se hace con la casilla en la que caes, y de eso se
+       * encarga `abrirCasilla`. */
+      if (el.id === 'tirar-dado') {
+        var tirada = Motor.tirarDado();
+        if (!tirada) return render();
+        ultimoDado = tirada.dado;
+        notaTablero = '';
+        Sonido.tono('toque');
+        render();
+        return abrirCasilla(tirada);
+      }
+
       if (el.id === 'cerrar-turno') {
-        if (Motor.espaciosLibres() === Motor.espaciosDisponibles()) {
-          return aviso(T('No has hecho nada'), T('Reparte al menos una jornada antes de cerrar.'));
-        }
-        /* Primero lo que prometiste, y después el mes. Ese orden es lo que
-         * convierte repartir las jornadas en una decisión y no en un trámite. */
-        return hacerPendientes(function () {
-          latirBarra = true;
-          procesarTurno(Motor.cerrarTurno());
-        });
+        /* Ya no hay nada que comprobar antes de cerrar.
+         *
+         * Antes se exigía haber repartido algo, porque un mes vacío era un mes
+         * que el jugador se había saltado. Con el tablero eso no puede pasar:
+         * para llegar al final hay que haber recorrido los treinta días, y lo
+         * que se haya hecho o dejado de hacer en ellos ya está decidido. */
+        latirBarra = true;
+        ultimoDado = null;
+        notaTablero = '';
+        return procesarTurno(Motor.cerrarTurno());
       }
     });
   }

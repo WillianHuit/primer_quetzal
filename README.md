@@ -79,10 +79,16 @@ informal). De ahí en adelante:
   y pone una flecha sobre lo que hay que tocar. Avanza según lo que ya hiciste, no con un
   botón de siguiente. Se sale de él en un toque, con un enlace chiquito que no compite con
   el paso.
+- **El mes es un tablero**: treinta o treinta y un días, los del calendario, y un dado para
+  recorrerlos. Cada casilla ofrece algo —una tarea, un día de trabajo, un descanso, un día
+  que se te atraviesa, un comodín con dos puertas— y lo tomas o lo dejas pasar. El mes se
+  cierra cuando el dado llega al último día, no cuando aprietas un botón.
+- **En 3D, y sin descargar nada**: el tablero va en perspectiva, las casillas tienen grosor,
+  la ficha se pone de pie sobre el día de hoy y el dado es un cubo de seis caras que rueda y
+  se detiene en lo que salió. Todo con transformaciones 3D del navegador: cero librerías.
 - **Energía que se acaba**: una tarea cuesta seis veces lo que cuesta trabajar, y un mes no
-  puede dejarte por debajo de cero. Lo que no cabe sale apagado con su costo al lado.
-- **El mes se abre por semanas**: el primero es una sola casilla y al cuarto está entero.
-- **Turnos de ocho jornadas**: cuatro semanas de mañana y tarde. Los colegios de Guatemala
+  puede dejarte por debajo de cero. Lo que no cabe no se puede aceptar, y se dice por qué.
+- **Ocho jornadas de contabilidad**: cuatro semanas de mañana y tarde. Los colegios de Guatemala
   son de jornada, así que el chico que estudia por la mañana puede trabajar por la tarde, y
   esa es la decisión central del juego. En básicos el colegio te toma una jornada de cada
   semana y **no se puede vaciar**; en el diversificado eliges mañana o tarde al

@@ -98,24 +98,45 @@ function pestanasVisibles(w) {
   return w.document.querySelectorAll('nav.pestanas [data-pestana]');
 }
 
-/* Las jornadas del mes que el jugador puede tocar.
+/* El mes ya no se reparte: se recorre con el dado.
  *
- * Las que tiene tomadas el colegio salen con la clase `bloqueado` y no se
- * seleccionan: tocarlas solo saca el aviso de que esa jornada no se negocia. */
-function jornadasLibres(w) {
-  return w.document.querySelectorAll('.jornada:not(.bloqueado)');
+ * Aquí vivían `jornadasLibres` y `repartirJornadas`, que tocaban las ocho
+ * casillas de la rejilla. La rejilla se fue con el tablero, y con ella la idea
+ * de que el mes se planifica de una vez.
+ *
+ * `resolverVentana` contesta lo que la casilla pregunte. `acepta` decide qué
+ * clase de jugador es este paseo: uno que toma todo lo que le ofrecen o uno
+ * que lo deja pasar. Las dos cosas se prueban.
+ */
+function resolverVentana(w, acepta) {
+  const v = w.document.querySelector('.velo');
+  if (!v) return false;
+  /* Una tarea aceptada abre su minijuego encima, con cronómetros de verdad.
+   * Este paseo no los juega: los cierra, que es lo que hace un jugador que
+   * abandona a media tarea. */
+  if (v.querySelector('.modal.mj')) { cerrarModales(w); return true; }
+  const b = (acepta && v.querySelector('[data-acepto]')) ||
+            v.querySelector('[data-lado]') ||        // comodín: se elige A
+            v.querySelector('[data-dejo]') ||
+            v.querySelector('[data-cerrar]');
+  if (!b) { cerrarModales(w); return true; }
+  clic(w, b);
+  return true;
 }
 
-/* Reparte las jornadas libres: las primeras a trabajar y las dos últimas a
- * descansar, que es lo que haría un jugador que no quiere enfermarse. */
-function repartirJornadas(w) {
-  const libres = [...jornadasLibres(w)].map(j => j.getAttribute('data-espacio'));
-  libres.forEach(function (idx, n) {
-    clic(w, w.document.querySelector('[data-espacio="' + idx + '"]'));
-    const que = n < libres.length - 2 ? 'trabajo' : 'descanso';
-    clic(w, w.document.querySelector('[data-poner="' + que + '"]'));
-  });
-  return libres.length;
+/* Tira hasta el último día del mes. Devuelve cuántas tiradas hizo. */
+function recorrerMes(w, acepta) {
+  let tiradas = 0;
+  while (!w.Motor.tableroTerminado() && tiradas < 40) {
+    const dado = w.document.querySelector('#tirar-dado');
+    if (!dado) break;
+    clic(w, dado);
+    tiradas++;
+    for (let k = 0; k < 5 && w.document.querySelector('.velo'); k++) {
+      if (!resolverVentana(w, acepta)) break;
+    }
+  }
+  return tiradas;
 }
 
 function cerrarModales(w) {
@@ -216,26 +237,12 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
        * le da el cuerpo y, si no le da, descansar. Esa es exactamente la
        * decisión que esos meses le están pidiendo, y el bucle se atascaba
        * noventa veces por no tomarla. */
-      const libre = jornadasLibres(w)[0];
-      if (libre) {
-        clic(w, libre);
-        /* Con la casilla elegida, la fila de actividades está en pantalla: es
-         * el único momento en que se puede comprobar qué se ofrece.
-         *
-         * Y lo que NO se ofrece es trabajar. Salía apagado desde el primer mes
-         * con un aviso que mandaba a "la pestaña Trabajo" cuatro meses antes de
-         * que esa pestaña existiera. Mandar a alguien a un sitio que no está lo
-         * pone a buscarlo y a dudar de si algo se rompió. */
-        if (w.document.querySelector('[data-poner="trabajo"]')) durante.trabajar++;
-        if (w.document.querySelector('main').textContent.indexOf('pestaña Trabajo') >= 0) {
-          durante.trabajar++;
-        }
-        const bTarea = w.document.querySelector('[data-poner="tarea"]');
-        const bDesc = w.document.querySelector('[data-poner="descanso"]');
-        const cabe = bTarea &&
-          w.Motor.puedeAsignar(Number(libre.getAttribute('data-espacio')), 'tarea').ok;
-        clic(w, cabe ? bTarea : bDesc);
+      /* Con la cinta apagada, lo que hace un jugador es tirar el dado hasta el
+       * final del mes y contestar lo que cada casilla le pregunte. */
+      if (w.document.querySelector('main').textContent.indexOf('pestaña Trabajo') >= 0) {
+        durante.trabajar++;
       }
+      recorrerMes(w, true);
       const cerrar = w.document.querySelector('#cerrar-turno');
       if (!cerrar) break;
       /* Y con la cinta apagada la pantalla tiene que quedar limpia de verdad:
@@ -244,17 +251,11 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
       if (w.document.querySelector('.foco')) durante.velo++;
       if (w.document.querySelector('.tarjeta.sigue')) durante.meta++;
       if (w.document.querySelectorAll('nav.pestanas [data-pestana]').length > 2) durante.pestanas++;
-      /* Y la pista solo se pide cuando de verdad queda algo pendiente: con las
-       * tareas del turno ya puestas, la franja se calla en vez de felicitar.
-       *
-       * Se mide contra `tareasPendientes` y no contra las jornadas puestas,
-       * porque las tareas que no se hacen se acumulan: se puede tener una
-       * jornada puesta y seguir debiendo dos. */
-      const barra = w.document.querySelector('.calle-barra');
-      const pend = w.Motor.tareasPendientes();
-      const dice = barra && barra.textContent.indexOf('Tareas pendientes') >= 0;
-      if (pend > 0 && !dice) durante.sinPista++;
-      if (pend === 0 && dice) durante.sinPista++;
+      /* Y la pista de qué hacer es el TABLERO: el día en el que estás y el
+       * botón del dado. Si eso faltara, el jugador se quedaría con la pantalla
+       * apagada, sin cinta y sin nada que tocar. */
+      if (!w.document.querySelector('#tirar-dado') &&
+          !w.document.querySelector('#cerrar-turno')) durante.sinPista++;
       if (w.document.querySelector('main').textContent.indexOf('Q') >= 0) durante.dinero++;
       clic(w, cerrar);
       cerrarModales(w);
@@ -328,7 +329,7 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
    * meses, y si desapareciera el jugador se quedaría sin saber qué hacer con
    * la pantalla apagada y sin instrucciones. */
   ok(durante.sinPista === 0,
-     'lo que queda es una pista de dos palabras, y solo mientras haya algo pendiente');
+     'y lo que queda para saber qué hacer es el tablero y su dado');
   ok(!w.document.querySelector('.guia'), 'y al final no queda cinta en pantalla');
   /* Y al terminarlo la pantalla queda limpia.
    *
@@ -361,8 +362,13 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
  * es que las tareas NO sean una forma de ganar dinero: si pagaran, el jugador
  * las haría por el pago y el mensaje se perdería. */
 clic(w, w.document.querySelector('[data-pestana="estudio"]'));
-const clasesEnPantalla = w.document.querySelectorAll('[data-jugar]').length;
-ok(clasesEnPantalla > 0, `las ${clasesEnPantalla} tareas viven en Estudio, no en un cajón aparte`);
+/* El temario vive en Estudio y no en un cajón aparte. Sin botones: las tareas
+ * se hacen en el tablero del mes, y esta lista es para saber qué te puede
+ * tocar. Se cuentan las tarjetas, no los botones. */
+const clasesEnPantalla = [...w.document.querySelectorAll('.opcion')]
+  .filter(o => o.textContent.indexOf('clase') >= 0).length;
+ok(clasesEnPantalla > 0,
+   `las ${clasesEnPantalla} tareas se listan en Estudio, no en un cajón aparte`);
 
 /* Y son las de BÁSICOS: sencillas y generales. Cuadrar un sueldo entero es de
  * diversificado, porque a los trece no hay sueldo que cuadrar. */
@@ -387,24 +393,17 @@ ok(xpAntes > 0, `estar inscrito ya dio ${xpAntes} de experiencia`);
  * "Extra": estudiar adelanta los meses de la carrera, la tarea da
  * experiencia. Solo sale mientras esté inscrito, porque no hay tareas sin
  * colegio. */
-/* Con el cuerpo descansado, que es lo que esta comprobacion mide.
+/* Y una tarea aceptada en el tablero gasta su propia casilla del mes.
  *
- * Una tarea cuesta un tercio de la energía y el botón sale apagado cuando no
- * cabe, así que sin esto la prueba mediría el presupuesto de energía del
- * paseo de más arriba en vez de lo que dice medir: que la tarea es una casilla
- * propia, distinta de Estudiar y de Extra. */
+ * Con el cuerpo descansado, que es lo que esta comprobación mide: una tarea
+ * cuesta un tercio de la energía, y sin esto la prueba mediría el presupuesto
+ * del paseo de más arriba en vez de lo que dice medir. */
 w.Motor.get().energia = w.CONFIG.energia.maxima;
-clic(w, w.document.querySelector('[data-pestana="casa"]'));
-const libreParaTarea = jornadasLibres(w)[0];
-if (libreParaTarea) {
-  clic(w, libreParaTarea);
-  const botonTarea = w.document.querySelector('[data-poner="tarea"]');
-  ok(!!w.Motor.get().estudio && !!botonTarea,
-     'estando inscrito, el mes ofrece gastar una jornada en tareas');
-  clic(w, botonTarea);
-  ok(w.Motor.espaciosUsados('tarea') === 1,
-     'y la jornada de tarea es una casilla propia, distinta de Estudiar y de Extra');
-}
+const antesTarea = w.Motor.espaciosUsados('tarea') + w.Motor.espaciosUsados('tarea-usada');
+const acepto = w.Motor.aceptarCasilla('tarea');
+ok(acepto.ok, 'estando inscrito y descansado, una casilla de tarea se puede tomar');
+ok(w.Motor.espaciosUsados('tarea') === antesTarea + 1,
+   'y la jornada de tarea es una casilla propia, distinta de Estudiar y de Extra');
 
 /* Y es lo que abre las carreras de arriba. Con la experiencia en cero, la
  * carrera más exigente no se puede empezar y la pantalla dice cuánto falta. */
@@ -422,13 +421,15 @@ const puerta = w.CARRERAS.find(c => c.requiere === 'primaria');
 ok(!puerta.experienciaRequerida,
    `${puerta.nombre} no pide experiencia: la puerta de entrada no se cierra`);
 
-// ---------- repartir el mes es una promesa, y el juego la cobra ----------
+// ---------- el mes se recorre, y no se puede saltar ----------
 
-/* La regla: una jornada puesta en tareas NO es un adorno. Al terminar el mes,
- * el juego lleva a hacer lo que se prometió, una por una. Sin esto, repartir
- * las casillas era un trámite y el jugador acababa tocando el mismo botón
- * cinco veces sin hacer nada. */
-(function laPromesaSeCobra() {
+/* La regla nueva: el mes no se cierra con un botón que está siempre ahí. Se
+ * cierra cuando el dado llega al último día. Antes se podía tocar "terminar el
+ * mes" en cualquier momento, y el jugador que no entendía la rejilla acababa
+ * tocando ese botón cinco veces sin haber decidido nada. Ahora para llegar al
+ * final hay que haber pasado por los treinta días.
+ */
+(function elMesSeRecorre() {
   const { w: w3 } = abrirJuego('es');
   const M3 = w3.Motor;
   M3.iniciar('normal', 1, 'apoyo');
@@ -439,59 +440,64 @@ ok(!puerta.experienciaRequerida,
   /* UI.iniciar() dibuja la portada; al juego se entra por 'seguir',
    * igual que hace pruebas/vista.html. */
   clic(w3, w3.document.querySelector('[data-seguir="1"]'));
-
   clic(w3, w3.document.querySelector('[data-pestana="casa"]'));
 
-  /* Cerrar el mes SIN tareas puestas no interrumpe: no hay nada prometido. */
-  const libres3 = () => [...w3.document.querySelectorAll('.jornada:not(.lleno):not(.bloqueado)')];
-  clic(w3, libres3()[0]);
-  clic(w3, w3.document.querySelector('[data-poner="descanso"]'));
-  clic(w3, w3.document.querySelector('#cerrar-turno'));
-  const sinPromesa = modalAbierto(w3);
-  ok(!!sinPromesa && sinPromesa.textContent.indexOf('tarea') < 0,
-     'sin tareas puestas, cerrar el mes no interrumpe con nada');
-  cerrarModales(w3);
+  const t3 = M3.tablero();
+  ok(t3.dias >= 28 && t3.dias <= 31,
+     `el mes trae sus ${t3.dias} días, los del calendario y no ocho casillas`);
+  ok(w3.document.querySelectorAll('.tablero .casilla').length === t3.dias,
+     'y el tablero los dibuja todos');
+  ok(!!w3.document.querySelector('#tirar-dado'), 'con un dado para recorrerlos');
+  ok(!w3.document.querySelector('#cerrar-turno'),
+     'y SIN botón de terminar el mes: primero hay que llegar al final');
 
-  /* Con dos jornadas en tareas, sí: y dice cuántas son. */
-  clic(w3, w3.document.querySelector('[data-pestana="casa"]'));
-  for (let n = 0; n < 2; n++) {
-    clic(w3, libres3()[0]);
-    clic(w3, w3.document.querySelector('[data-poner="tarea"]'));
+  /* Y el tablero se ve entero desde el principio: los tipos de día que vienen
+   * están a la vista, que es lo que hace que un tablero sea un tablero. Lo que
+   * no se ve es lo que traen dentro. */
+  const tipos = new Set([...w3.document.querySelectorAll('.tablero .casilla')]
+    .map(c => [...c.classList].find(x => x.indexOf('c-') === 0) || 'libre'));
+  ok(tipos.size >= 3,
+     `y se ven ${tipos.size} clases de día distintas antes de caer en ninguna`);
+
+  // Una tirada mueve la ficha y la casilla pregunta lo suyo
+  const antes = M3.tablero().pos;
+  clic(w3, w3.document.querySelector('#tirar-dado'));
+  const ahora = M3.tablero().pos;
+  ok(ahora > antes && ahora - antes <= 6,
+     `el dado movió ${ahora - antes} días, que es lo que puede mover un dado`);
+  ok(w3.document.querySelectorAll('.tablero .casilla.aqui').length === 1,
+     'y la ficha está en un solo día');
+
+  /* La casilla en la que cayó: si pedía algo, hay una ventana con las dos
+   * salidas. Aceptar mete la jornada en la contabilidad del mes; dejarla pasar
+   * no mete nada. Las dos son decisiones y las dos se pueden tomar. */
+  const v = w3.document.querySelector('.velo');
+  if (v && v.querySelector('[data-acepto]')) {
+    ok(!!v.querySelector('[data-dejo]'),
+       'la casilla ofrece tomarla y también dejarla pasar');
+    const usadasAntes = M3.espaciosLibres();
+    clic(w3, v.querySelector('[data-dejo]'));
+    ok(M3.espaciosLibres() === usadasAntes,
+       'y dejarla pasar no gasta ninguna jornada del mes');
   }
-  ok(M3.espaciosUsados('tarea') === 2, 'quedan dos jornadas puestas en tareas');
 
+  // Se recorre el resto del mes y ahí sí aparece el botón de cerrarlo
+  const tiradas = recorrerMes(w3, true);
+  ok(M3.tableroTerminado(), `el mes se recorrió en ${tiradas + 1} tiradas`);
+  ok(tiradas + 1 >= 5 && tiradas + 1 <= 20,
+     'que son las que caben en treinta días con un dado de seis caras');
+  ok(!!w3.document.querySelector('#cerrar-turno'),
+     'y al llegar al final aparece el botón de terminar el mes');
+
+  const mesesAntes = M3.get().mesesJugados;
   clic(w3, w3.document.querySelector('#cerrar-turno'));
-  const pide = modalAbierto(w3);
-  ok(!!pide && pide.textContent.indexOf('2 tareas') >= 0,
-     'al terminar de repartir, el juego lleva a hacer las dos tareas');
-  /* Y lo que sale son LAS TAREAS QUE DEJÓ EL COLEGIO, no el catálogo entero.
-   *
-   * Antes salían las cuatro clases que estuvieran abiertas y el jugador elegía
-   * cuál hacer, que es exactamente lo que un colegio no hace. Ahora cada turno
-   * deja unas cuantas al azar y esas son las que hay. */
-  const aElegir = pide.querySelectorAll('[data-tarea]');
-  const dejadas3 = M3.tareasSinHacer();
-  ok(aElegir.length === dejadas3.length && aElegir.length > 0,
-     `y deja elegir entre las ${aElegir.length} que el colegio dejó este turno`);
-  const est3 = M3.get();
-  const abiertas3 = w3.Minijuegos.disponibles(est3.educacion, est3.carrerasTerminadas,
-      est3.estudio ? est3.estudio.carreraId : null, M3.experiencia())
-    .filter(j => j.tipo === 'clase');
-  ok(abiertas3.length > aElegir.length,
-     `y no el catálogo entero, que tiene ${abiertas3.length}`);
-  ok(pide.textContent.indexOf('cambio') < 0,
-     'la de dar el cambio todavía no: esa se abre con la experiencia de las primeras');
-  ok(!pide.querySelector('[data-cerrar]'),
-     'no hay forma de escaparse sin decidir: o la haces o la dejas');
-  ok(!!pide.querySelector('[data-dejarlas]'),
-     'y dejarlas también se puede, pero se dice lo que cuesta');
+  cerrarModales(w3);
+  ok(M3.get().mesesJugados === mesesAntes + 1, 'y el mes se cierra');
 
-  /* El mes NO se cerró todavía: primero lo prometido. */
-  ok(M3.get().mesesJugados === 1,
-     'y el mes no se cierra hasta que se resuelva lo que se prometió');
-
-  clic(w3, pide.querySelector('[data-dejarlas]'));
-  ok(M3.get().mesesJugados === 2, 'al dejarlas, el mes sí se cierra');
+  /* Y el mes siguiente trae OTRO tablero: otros días y otro sorteo. Si fuera
+   * el mismo, el jugador aprendería el mes de memoria y el azar dejaría de
+   * significar nada. */
+  ok(M3.tablero().pos === 0, 'el mes nuevo empieza en el día cero');
 })();
 
 // ---------- el juego no habla de dinero mientras el chico está en clases ----------
@@ -649,32 +655,44 @@ clic(w, w.document.querySelector('[data-abrir="ahorro"]'));
 cerrarModales(w);
 ok(w.Motor.get().ahorro !== null, 'la cuenta de ahorro queda abierta');
 
-// ---------- asignar semanas y cerrar otro turno ----------
+// ---------- recorrer el mes con el dado y cerrarlo ----------
 clic(w, w.document.querySelector('[data-pestana="casa"]'));
-const casillas = w.document.querySelectorAll('[data-espacio]');
-ok(casillas.length === 8, `el mes son ocho jornadas (hay ${casillas.length})`);
 
-const bloqueadas = w.document.querySelectorAll('.jornada.bloqueado').length;
+/* Las ocho jornadas siguen siendo la contabilidad del mes —de ahí sale el
+ * sueldo por jornadas trabajadas— pero ya no se reparten a mano: las llena el
+ * tablero al aceptar casillas. Lo que se comprueba es que el colegio sigue
+ * teniendo las suyas tomadas. */
+ok(w.Motor.get().espacios.length === 8,
+   `el mes sigue contándose en ocho jornadas (hay ${w.Motor.get().espacios.length})`);
 const estudiando = w.Motor.get().estudio;
-ok(estudiando ? bloqueadas === 4 : bloqueadas === 0,
-   estudiando ? `el colegio tiene tomadas ${bloqueadas} jornadas` : 'sin colegio no hay jornadas tomadas');
+ok(estudiando ? w.Motor.espaciosDisponibles() === 4 : w.Motor.espaciosDisponibles() === 8,
+   estudiando
+     ? `estudiando, le quedan ${w.Motor.espaciosDisponibles()} jornadas suyas de las ocho`
+     : 'sin colegio, las ocho son suyas');
 
-/* Tocar una jornada del colegio no hace nada más que explicar por qué. */
-if (bloqueadas) {
-  const tomada = w.document.querySelector('.jornada.bloqueado');
-  clic(w, tomada);
-  ok(!w.document.querySelector('.jornada.sel'),
-     'una jornada del colegio no se puede seleccionar');
-  ok(w.document.querySelector('main').textContent.indexOf('del colegio') >= 0,
-     'y el juego explica por qué en vez de quedarse callado');
-}
-
-const cuantas = repartirJornadas(w);
-const enTrabajo2 = w.Motor.espaciosUsados('trabajo');
-ok(enTrabajo2 === cuantas - 2,
-   `quedaron ${enTrabajo2} jornadas de trabajo y dos de descanso`);
-ok(w.Motor.get().espacios.every(x => !!x), 'el mes quedó repartido completo');
+/* Y se recorre el mes aceptando todo lo que ofrezca, que es lo que hace un
+ * jugador que quiere aprovechar el mes. */
+const tiradasMes = recorrerMes(w, true);
+ok(tiradasMes >= 4, `el mes se recorrió en ${tiradasMes} tiradas`);
+ok(w.Motor.espaciosLibres() < w.Motor.espaciosDisponibles(),
+   'y algo de lo que salió se aceptó: el mes no quedó vacío');
 cerrarModales(w);
+
+/* Y una jornada de trabajo, para que el resumen tenga salario que enseñar.
+ *
+ * En el tablero eso depende de que salga una casilla de trabajo y el dado
+ * mande; aquí se pone a mano porque lo que esta parte mide es el RESUMEN del
+ * mes, no la suerte del dado. */
+const dondeTrabajar = w.Motor.get().espacios.findIndex(
+  (v, i) => !w.Motor.espacioBloqueado(i));
+if (dondeTrabajar >= 0 && w.Motor.trabajoActual()) {
+  w.Motor.get().energia = w.CONFIG.energia.maxima;
+  // Se vacía primero: el tablero pudo haber llenado las ocho
+  w.Motor.asignarEspacio(dondeTrabajar, '');
+  w.Motor.asignarEspacio(dondeTrabajar, 'trabajo');
+}
+ok(w.Motor.espaciosUsados('trabajo') >= 1,
+   'con una jornada de trabajo puesta, el mes tiene sueldo que cobrar');
 
 const mesAntes = w.Motor.get().mesesJugados;
 clic(w, w.document.querySelector('#cerrar-turno'));
@@ -753,8 +771,8 @@ clic(w, w.document.querySelector('[data-pestana="casa"]'));
 const calleViva = w.document.querySelector('.escena.viva');
 ok(!!calleViva, 'la pantalla del mes abre con la calle, y la calle está viva');
 ok(w.document.querySelector('main').innerHTML.indexOf('escena') <
-   w.document.querySelector('main').innerHTML.indexOf('jornadas'),
-   'y va ANTES de la rejilla de jornadas: primero lo que tienes, luego el reparto');
+   w.document.querySelector('main').innerHTML.indexOf('tablero'),
+   'y va ANTES del tablero del mes: primero lo que tienes, luego lo que te pasa');
 
 const localToca = w.document.querySelector('[data-poner="negocio:refrescos"].calle-toque');
 ok(!!localToca, 'el local de la calle es un botón que pone una jornada adentro');
@@ -769,14 +787,11 @@ ok(despuesEnNeg === antesEnNeg + 1,
 ok(!!w.document.querySelector('.tuyas'),
    'y la calle lo muestra: salen tus jornadas encima del local');
 
-/* Y la forma vieja sigue viva, porque es la que enseña el tutorial y la única
- * que deja elegir en QUÉ casilla va. */
-const libre = jornadasLibres(w)[0];
-clic(w, libre);
-ok(!!w.document.querySelector('.jornada.sel'), 'tocar una casilla sigue seleccionándola');
-clic(w, w.document.querySelector('[data-poner="descanso"]'));
-ok(w.Motor.espaciosUsados('descanso') >= 1,
-   'y con una casilla elegida, la actividad va a ESA casilla');
+/* Y ya no hay otra forma: la rejilla se fue con el tablero. La jornada va a la
+ * primera casilla libre del mes, que es lo que el jugador espera cuando señala
+ * su tortillería y no está eligiendo un día concreto. */
+ok(w.Motor.espaciosUsados('negocio:refrescos') >= 1,
+   'la jornada quedó dentro del negocio, en la primera casilla libre del mes');
 
 /* El lote vacío no gasta jornada: abre lo que se puede abrir, AHÍ MISMO.
  * Que llevara a otra pestaña era irse de la pantalla para volver. */
@@ -814,9 +829,17 @@ if (negRojo && w.Motor.proyeccionDeNegocio(negRojo).neto < 0) {
      'y el aviso va encima del botón que lo resuelve');
 }
 
-/* El mes se cierra desde la calle, no al final de la pantalla. */
-const cerrar = w.document.querySelector('.calle-barra #cerrar-turno');
-ok(!!cerrar, 'y el botón de terminar el mes está en la barra de la calle');
+/* El mes se cierra en el TABLERO, y solo cuando el dado llegó al último día.
+ * Mientras queden días, lo que hay es el dado. */
+if (w.Motor.tableroTerminado()) {
+  ok(!!w.document.querySelector('.tablero-caja #cerrar-turno'),
+     'con el mes recorrido, el botón de terminarlo está en el tablero');
+} else {
+  ok(!!w.document.querySelector('.tablero-caja #tirar-dado'),
+     'mientras queden días, lo que hay en el tablero es el dado');
+  ok(!w.document.querySelector('#cerrar-turno'),
+     'y ningún botón para saltarse el mes');
+}
 
 // El imperio dibuja la MISMA calle, pero quieta: ahí las acciones son tarjetas
 clic(w, w.document.querySelector('[data-pestana="mejoras"]'));
@@ -889,9 +912,9 @@ clic(w, w.document.querySelector('[data-pestana="estudio"]'));
 const estudioTxt = w.document.querySelector('main').textContent;
 const zEst = w.Motor.get();
 if (zEst.estudio || zEst.decisionEstudio !== null) {
-  ok(w.document.querySelectorAll('[data-jugar]').length > 0 ||
-     !w.Motor.desbloqueado('extra'),
-     'estudio ofrece ejercicios que enseñan, no solo una barra de avance');
+  ok([...w.document.querySelectorAll('.opcion')]
+       .some(o => o.textContent.indexOf('clase') >= 0),
+     'estudio lista los ejercicios que enseñan, no solo una barra de avance');
   ok(!w.document.querySelector('[data-jugar="reparto"]'),
      'y los turnos de reparto no están aquí: esos son de trabajo');
 }
@@ -899,6 +922,14 @@ if (zEst.estudio && !zEst.estudio.jornada) {
   ok(!!w.document.querySelector('[data-poner="estudio"]'),
      'y con horario libre se le puede poner una jornada desde aquí mismo');
 }
+/* Y las CLASES de esta pantalla son el temario, no botones.
+ *
+ * Se hacen en el tablero, cuando el dado deja al jugador en una tarea. Que
+ * esta lista no tenga botón es justo lo que hace visible que no se eligen. */
+const clasesEnLista = [...w.document.querySelectorAll('.opcion')]
+  .filter(o => o.textContent.indexOf('clase') >= 0);
+ok(clasesEnLista.every(o => !o.querySelector('[data-jugar]')),
+   `las ${clasesEnLista.length} clases de la lista no se juegan desde aquí: salen en el tablero`);
 
 // ---------- el mercado laboral vive en noticias ----------
 clic(w, w.document.querySelector('[data-pestana="noticias"]'));
@@ -1000,43 +1031,50 @@ cerrarModales(w);
 // ---------- una TAREA, con sus temporizadores de verdad ----------
 
 /* Se juega una CLASE y no un trabajo de oficio, a propósito: es el camino
- * nuevo entero de punta a punta —casilla de tarea, pantalla de Estudio,
- * minijuego, experiencia— y es donde hay más que se pueda romper. */
-clic(w, w.document.querySelector('[data-pestana="casa"]'));
-clic(w, jornadasLibres(w)[0]);
-clic(w, w.document.querySelector('[data-poner="tarea"]'));
-
-/* El colegio deja unas cuantas tareas al azar, no todas las que existen: por
- * eso el resto de esta prueba fija cuál dejó. Sin esto, qué tarea se abre
- * dependería del sorteo y la prueba fallaría una de cada tantas.
+ * nuevo entero de punta a punta —casilla del tablero, decisión, minijuego,
+ * experiencia— y es donde hay más que se pueda romper.
  *
- * Y antes de fijarla se comprueba justo eso, que el sorteo hace su trabajo. */
-(function elColegioDejaUnasCuantas() {
+ * Se entra por el tablero, que es la única puerta que tienen las tareas ahora,
+ * y se fija cuál sale: sin esto, qué tarea se abre dependería del dado y la
+ * prueba fallaría una de cada tantas. */
+clic(w, w.document.querySelector('[data-pestana="casa"]'));
+w.Motor.get().energia = w.CONFIG.energia.maxima;
+
+(function laTareaEntraPorElTablero() {
   const z0 = w.Motor.get();
   const clases = w.Minijuegos.disponibles(z0.educacion, z0.carrerasTerminadas,
       z0.estudio ? z0.estudio.carreraId : null, w.Motor.experiencia())
     .filter(j => j.tipo === 'clase');
-  const dejadas = w.Motor.tareasDelMes();
-  ok(clases.length > dejadas.length,
-     `de las ${clases.length} tareas de básicos el colegio dejó ${dejadas.length} este turno`);
-  ok(dejadas.every(id => clases.some(j => j.id === id)),
-     'y las dejadas son de las que se pueden hacer ahora');
-  ok(dejadas.length === new Set(dejadas).size, 'sin repetir ninguna');
-})();
-/* Se cuela 'sumas' entre las que dejó, sin cambiar cuántas son: si la lista
- * quedara con otro tamaño del que le toca al turno, el motor la volvería a
- * sortear y estaríamos donde empezamos. */
-(function forzarSumas() {
-  const lista = w.Motor.tareasDelMes().slice();
-  if (lista.indexOf('sumas') < 0) lista[0] = 'sumas';
-  w.Motor.get().tareasDelMes = lista;
+  ok(clases.length > 1,
+     `hay ${clases.length} tareas que le pueden salir, y el tablero elige`);
+
+  /* Se planta una casilla de tarea justo donde va a caer y se le pone 'sumas'
+   * dentro. Es la misma casilla que sortea el motor, con el sorteo hecho a
+   * mano para que la prueba sea repetible. */
+  const t = w.Motor.tablero();
+  t.pos = 0;
+  t.casillas[0] = { id: 'dia_tarea', tipo: 'tarea', sorteado: { tareaId: 'sumas' } };
+  for (let k = 1; k < 6; k++) t.casillas[k] = { id: 'dia_libre', tipo: 'libre' };
   w.Motor.guardar();
 })();
 
-clic(w, w.document.querySelector('[data-pestana="estudio"]'));
-const bJugar = w.document.querySelector('[data-jugar="sumas"]');
-ok(!!bJugar, 'la tarea de sumar está disponible en Estudio');
-ok(!bJugar.disabled, 'y con la jornada de tarea puesta, se puede hacer');
+/* Y se tira hasta caer en ella. El dado puede pasarla de largo, así que se
+ * repite: es lo que haría un jugador con paciencia. */
+let venta = null;
+for (let intento = 0; intento < 12 && !venta; intento++) {
+  const t = w.Motor.tablero();
+  t.pos = 0;
+  t.casillas[0] = { id: 'dia_tarea', tipo: 'tarea', sorteado: { tareaId: 'sumas' } };
+  w.Motor.guardar();
+  clic(w, w.document.querySelector('#tirar-dado'));
+  const v = w.document.querySelector('.velo');
+  if (v && v.textContent.indexOf('Suma') >= 0) venta = v;
+  else if (v) { cerrarModales(w); }
+}
+ok(!!venta, 'el tablero deja caer en la tarea de sumar y pregunta si se hace');
+const bJugar = venta && venta.querySelector('[data-acepto]');
+ok(!!bJugar, 'con las dos salidas: hacerla o dejarla pasar');
+ok(!!venta && !!venta.querySelector('[data-dejo]'), 'y dejarla pasar también está');
 
 const dineroAntes = w.Motor.patrimonio();
 const xpAntesTarea = w.Motor.experiencia();

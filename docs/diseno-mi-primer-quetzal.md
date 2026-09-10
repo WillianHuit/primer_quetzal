@@ -103,24 +103,66 @@ La otra penalización es la que funciona a los trece, cuando los golpes de diner
 absorbe la familia: **cansado se aprende la mitad**. Debajo de 20 de energía, una tarea da
 la mitad de experiencia.
 
-#### El mes se abre por semanas
+#### El mes no se reparte: se recorre
 
-Ocho casillas vacías el primer día no son libertad, son un formulario, y es la primera
-pantalla del juego. Se abre **una semana por mes** hasta las cuatro:
+Aquí hubo una **rejilla de ocho casillas** que el jugador rellenaba antes de cerrar el mes,
+y una versión en la que esas casillas se abrían de semana en semana para que la primera
+pantalla pidiera una decisión y no ocho. Las dos se fueron, y por el mismo motivo: la
+rejilla le pedía **planificar un mes a alguien que todavía no sabe qué es un mes**. Ocho
+decisiones a la vez, todas dependiendo unas de otras, antes de haber visto una sola
+consecuencia.
 
-| Mes | Semanas | Lo que decide quien estudia | Quien no estudia |
-|---|---|---|---|
-| 1 | 1 | una casilla de tarde | dos: mañana y tarde |
-| 2 | 2 | dos tardes | cuatro |
-| 3 | 3 | tres tardes | seis |
-| 4 | 4 | el mes entero | el mes entero |
+Ahora el mes es un **tablero de treinta o treinta y un días** —los del calendario, ver
+`TABLERO_DIAS_POR_MES`— y se recorre con un **dado**. Un tablero pide una cosa a la vez por
+su propia forma, y cada tirada trae una decisión chica y cerrada que se entiende sin que
+nadie la explique.
 
-Al cuarto mes, que es justo cuando se abre el trabajo, el mes ya está completo. Las semanas
-que faltan **no se dibujan con candado** —dibujar tres candados es enseñar tres veces lo
-mismo— y debajo de la rejilla va una línea que dice cuántas faltan.
+| Tipo de día | Qué hace | Etapa |
+|---|---|---|
+| Un día cualquiera | nada. Se cuenta en una línea y se sigue | las dos |
+| Tarea del colegio | te sale una tarea al azar. La haces o la dejas | las dos |
+| Un día para ti | descansas y recuperas cuerpo | las dos |
+| Se te atravesó el día | te cuesta cuerpo, y no se elige | las dos |
+| Te toca elegir | comodín: A o B, y ninguna dice lo que va a pasar | las dos |
+| Te sale trabajo | una jornada que cuenta para el sueldo | con trabajo |
+| Un trabajito suelto | un oficio de los de Extra, se paga aparte | con Extra |
 
-Pasado el primer año esto no se vuelve a mencionar: la apertura por semanas es la pantalla
-de aprender a jugar, no una regla del juego.
+Un mes son **ocho o nueve tiradas** con un dado de seis caras, así que el jugador decide
+siete u ocho veces por mes sin que ninguna decisión le haya pedido pensar en las otras.
+
+**La contabilidad no cambió.** Las ocho jornadas de `estado.espacios` siguen existiendo y
+siguen siendo de donde salen el sueldo por jornadas trabajadas, lo que producen los negocios
+y lo que avanza la carrera. Lo que cambió es **quién las llena**: antes el jugador a mano,
+ahora el tablero al aceptar una casilla. Y aceptar sigue pasando por la misma regla de
+energía, así que una tarea que dejaría el mes en negativo no se puede tomar ni desde el
+tablero ni desde ningún otro sitio.
+
+**Y el mes se cierra al llegar al final**, no con un botón que está siempre ahí. Antes se
+podía tocar "terminar el mes" en cualquier momento, y el jugador que no entendía la rejilla
+acababa tocando ese botón cinco veces sin haber decidido nada. Para llegar al último día hay
+que haber pasado por los treinta.
+
+#### Y va en 3D, sin una sola librería
+
+El tablero se dibuja **en perspectiva**: el plano del mes inclinado 18 grados, cada casilla
+con grosor —una copia detrás empujada en Z—, el día de hoy levantado del tablero y la ficha
+**de pie** sobre él, contragirada para que mire a la cámara. El dado es un **cubo de seis
+caras** con puntos de verdad: cada cara girada y empujada media arista hacia fuera, y el cubo
+entero rueda hasta poner delante la que salió. El resultado no se anuncia, se ve caer.
+
+Todo eso son `perspective`, `transform-style: preserve-3d` y rotaciones en X e Y. **Cero
+librerías**, y no por tacañería:
+
+- La promesa del proyecto es que el juego **abre con doble clic y sin descargar nada**. Un
+  motor de escena son unos 600 KB, casi tres veces todo lo que hay hoy en `vendor/` y la
+  mitad del presupuesto de arte, para dibujar un plano inclinado y un cubo.
+- Y sobre todo: un `<canvas>` de WebGL **no se puede probar**. `pruebas/dom-real.js` juega el
+  juego tocando nodos —172 comprobaciones— y el tablero es justo la pantalla donde más hay
+  que romper. Con transformaciones CSS cada día del mes sigue siendo un `<div>` que la suite
+  puede mirar y tocar.
+
+Quien pidió menos movimiento (`prefers-reduced-motion`) se queda con el tablero plano y el
+dado quieto. El 3D es cómo se ve mejor, no cómo se juega: la información es la misma.
 
 El sueldo se paga **según cuántas jornadas trabajaste**, y no de forma proporcional:
 

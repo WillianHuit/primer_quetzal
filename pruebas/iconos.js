@@ -52,9 +52,10 @@ for (const a of FUENTES.filter(f => f !== 'js/iconos.js')) {
 }
 // Los mapas internos de ui.js: iconos: { trabajo: 'maletin', ... } y las pestañas
 for (const m of leer('js/ui.js').matchAll(/\bic:\s*'([a-z-]+)'/g)) pedir(m[1], 'js/ui.js (pestañas)');
-for (const m of leer('js/ui.js').matchAll(/var iconos = \{([\s\S]*?)\};/g)) {
-  // Solo los valores: las claves ('minijuego-usado') son estados, no iconos
-  for (const n of m[1].matchAll(/:\s*'([a-z-]+)'/g)) pedir(n[1], 'js/ui.js (semanas)');
+// El mapa de las casillas del tablero, que es donde viven los iconos del mes
+for (const m of leer('js/ui.js').matchAll(/var ICONO_CASILLA = \{([\s\S]*?)\};/g)) {
+  // Solo los valores: las claves ('dificultad') son tipos de dia, no iconos
+  for (const n of m[1].matchAll(/:\s*'([a-z-]+)'/g)) pedir(n[1], 'js/ui.js (tablero)');
 }
 // pastilla('icono', 'dato') es la otra forma de pedir un icono en la interfaz
 for (const m of leer('js/ui.js').matchAll(/\bpastilla\('([a-z-]+)'/g)) {
@@ -68,7 +69,7 @@ for (const m of leer('js/ui.js').matchAll(/tarjetaEducativa\('[a-z]+',\s*'([a-z-
 const datos = []
   .concat(sb.TRABAJOS, sb.CARRERAS, sb.CASAS, sb.ORIGENES, sb.EVENTOS,
           sb.PROMOCIONES, sb.CREDITOS, sb.MIGRACION.empleos,
-          sb.Minijuegos.todos(), [sb.PENSION])
+          sb.Minijuegos.todos(), sb.TABLERO_CASILLAS, [sb.PENSION])
   .filter(Boolean);
 datos.forEach(o => { if (o.icono) pedir(o.icono, 'datos (' + o.id + ')'); });
 // Las categorías del minijuego de presupuesto viven dentro de su propio archivo

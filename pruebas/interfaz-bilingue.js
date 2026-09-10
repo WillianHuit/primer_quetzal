@@ -223,7 +223,7 @@ const esperadas = [
   'Side gigs', 'Job market', 'Pension plan', 'Owning a home',
   'Leaving the country',
   'In hand', 'See where it goes', 'My job',
-  'No, go to work', 'Morning shift', 'Wk 1',
+  'No, go to work', 'Morning shift', 'Roll the die',
   'Public: free', 'Morning or afternoon', 'no maintenance fee'
 ];
 const faltantes = esperadas.filter(f => textoEn.indexOf(f) < 0);

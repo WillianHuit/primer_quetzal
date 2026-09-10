@@ -164,101 +164,52 @@ var PROGRESO = [
     icono: 'birrete'
   },
 
-  /* La primera tarea, y es la que abre el trabajo.
+  /* La primera tirada del dado, que es aprender a jugar.
    *
-   * El orden es a propósito y es la parte más importante de esta ruta: el
-   * juego empieza con dos pestañas, Mes y Estudio, y el trabajo NO existe
-   * todavía. Se abre cuando el chico hace su primera tarea —o cuando decide no
-   * estudiar, porque entonces no tiene tareas que hacer y lo único que le
-   * queda es buscar trabajo—.
+   * El mes es un tablero de treinta dias y se recorre con un dado. Eso no se
+   * descubre solo: el jugador ve un tablero, unas casillas de colores y un
+   * boton, y hace falta una frase que le diga que el mes pasa tirando.
    *
-   * Así el jugador aprende en qué orden pasan las cosas de verdad: primero el
-   * colegio, y el colegio da experiencia, no dinero. Antes el trabajo se abría
-   * en el mismo momento de inscribirse, y un chico de trece salía a buscar
-   * empleo el primer mes sin haber pisado un aula.
+   * Y con la primera tirada aprende lo demas sin que nadie se lo diga, porque
+   * la casilla en la que cae le pregunta lo suyo: esta tarea la haces o la
+   * dejas. Una decision chica, cerrada, y con su consecuencia en el mismo
+   * toque.
    */
   {
-    id: 'primeraTarea',
+    id: 'primeraTirada',
     llaves: [],
-    /* SIN `requiere`, y no es un descuido: este peldaño abre una llave, y la
-     * regla de arriba dice que esos se miden por el ESTADO y nunca por el
-     * peldaño anterior. Así, quien salte el tutorial y haga las cosas en otro
-     * orden abre exactamente lo mismo.
-     *
-     * La condición se sostiene sola: mientras no haya decidido nada no se abre
-     * (es el primer momento del juego); si decidió no estudiar se abre de una,
-     * porque sin colegio no hay tareas que hacer y lo único que le queda es
-     * buscar con qué mantenerse; y si estudia, hace falta la tarea. */
     cuando: function (e) {
-      /* El mismo escape que usa el peldaño de decidir: a los 14, quien nunca
-       * abrió la pantalla de Estudio igual necesita poder buscar trabajo. Sin
-       * esto, un jugador que ignora el colegio se queda sin trabajo para
-       * siempre, y la ruta no está para castigar: está para enseñar el orden. */
       if (e.decisionEstudio === null && e.edad < 14) return false;
-      if (!e.estudio) return true;
-      if ((e.experiencia || 0) > 0) return true;
-      return e.espacios.some(function (x) { return x === 'tarea' || x === 'tarea-usada'; });
+      return !!(e.tablero && e.tablero.pos > 0);
     },
-    pista: 'Ponle una jornada a las tareas: toca una casilla libre y elige Tarea. Las tareas no pagan, dan experiencia.',
+    pista: 'El mes son treinta días. Tira el dado para recorrerlos: en cada casilla te va a pasar algo.',
     guia: true,
-    // Son dos toques —casilla y actividad— así que la cinta señala el que toca
-    senala: function (e, vista) {
-      return typeof vista.espacioSel === 'number'
-        ? '[data-poner="tarea"]'
-        : '.jornada:not(.lleno):not(.bloqueado)';
-    },
+    senala: '#tirar-dado',
     pestana: 'casa',
-    titulo: 'Hiciste tu primera tarea',
-    texto: 'Esa jornada no te dio un quetzal, y aun así fue la mejor pagada del mes: la experiencia es lo que te va a dejar entrar a las carreras que piden más.',
-    leccion: 'El dinero se gasta; lo que aprendiste, no. Es lo único de este juego que, una vez que lo tienes, ya es tuyo.',
-    icono: 'birrete'
+    titulo: 'Así se juega el mes',
+    texto: 'Cada tirada te deja en un día, y ese día te ofrece algo: una tarea, un descanso, un día que se te atraviesa. Lo tomas o lo dejas pasar.',
+    leccion: 'Nadie decide un mes entero de una vez. Se decide un día a la vez, y al final del mes resulta que decidiste el mes.',
+    icono: 'calendario'
   },
 
-  /* Y después de la tarea, lo otro que hay que aprender: cerrar el mes.
+  /* Y llegar al final del mes, que es lo que lo cierra.
    *
-   * Es el gesto que hace avanzar el juego y no se descubre solo: la tarea
-   * puesta se queda ahí, el mes no pasa, y el jugador se queda mirando una
-   * casilla llena esperando que algo ocurra. Va aquí y no antes porque cerrar
-   * el mes con la tarea puesta es lo que enseña el orden completo —repartes,
-   * cierras, y ANTES de cerrar haces lo que prometiste—, y ese orden es el
-   * bucle entero del juego. */
+   * El mes no se cierra con un boton en cualquier momento: se cierra cuando el
+   * dado llega al ultimo dia. Eso hace que cerrar el mes deje de ser un tramite
+   * que se puede tocar sin haber hecho nada. */
   {
-    id: 'cerrarPrimerMes',
+    id: 'primerMes',
     llaves: [],
-    requiere: 'primeraTarea',
-    /* Los dos pasos que siguen son del que ESTUDIA, y quien no estudia los
-     * cumple en el mismo instante en que dice que no.
-     *
-     * No es un truco para saltárselos: es que no existen sin colegio. "Termina
-     * el mes con tu tarea puesta" y "aquí te dice cuántas te dejaron" no le
-     * dicen nada a alguien que no tiene tareas, y una cinta que pide algo
-     * imposible es una cinta clavada. A ese jugador el juego le enseña a
-     * cerrar el mes más abajo, cuando ya repartió las ocho jornadas. */
-    cuando: function (e) { return !e.estudio || e.mesesJugados >= 1; },
-    pista: 'Ya tienes tu tarea puesta. Ahora termina el mes: antes de cerrarlo la vas a hacer.',
+    requiere: 'primeraTirada',
+    cuando: function (e) { return e.mesesJugados >= 1; },
+    pista: 'Sigue tirando hasta el último día. El mes se cierra cuando llegas al final, no antes.',
     guia: true,
-    senala: '#cerrar-turno',
-    pestana: 'casa'
-  },
-
-  /* Y dónde mirar de ahora en adelante.
-   *
-   * El contador de tareas pendientes es la única pista que va a quedar cuando
-   * la cinta se apague, así que hay que enseñarlo una vez, señalándolo. Y es
-   * un botón: tocarlo pone la jornada, así que el paso se cumple haciendo
-   * exactamente lo que enseña. */
-  {
-    id: 'verPendientes',
-    llaves: [],
-    requiere: 'cerrarPrimerMes',
-    cuando: function (e) {
-      if (!e.estudio) return true;
-      return e.espacios.some(function (x) { return x === 'tarea' || x === 'tarea-usada'; });
-    },
-    pista: 'Ahí arriba te dice cuántas tareas te dejaron. Tócalo y le pone la jornada solo.',
-    guia: true,
-    senala: '.calle-barra .pendientes',
-    pestana: 'casa'
+    senala: '#tirar-dado',
+    pestana: 'casa',
+    titulo: 'Cerraste tu primer mes',
+    texto: 'Treinta días, ocho tiradas y unas cuantas decisiones. Eso es un mes, y el juego son doscientos.',
+    leccion: 'Lo que se te va del mes no se decide el primer día: se decide en los días sueltos, y casi nunca se siente que se está decidiendo nada.',
+    icono: 'calendario'
   },
 
   /* Y el trabajo llega DESPUÉS, no de una.
@@ -349,84 +300,22 @@ var PROGRESO = [
     senala: '[data-pestana="casa"]'
   },
 
-  {
-    id: 'tocarJornada',
-    llaves: [],
-    requiere: 'verMes',
-    cuando: function (e, M, vista) {
-      // typeof y no !== null: quien llame sin vista manda undefined, y
-      // undefined !== null es true, así que el paso se cerraba solo.
-      // Y se ignora 'estudio' porque el colegio ya viene puesto: si contara,
-      // el paso nacería cumplido para cualquiera que se inscribiera.
-      return typeof vista.espacioSel === 'number' ||
-             e.espacios.some(function (x) { return x && x !== 'estudio'; });
-    },
-    pista: 'Cada semana tiene mañana y tarde. Toca una casilla libre.',
-    guia: true,
-    senala: '.jornada:not(.lleno):not(.bloqueado)',
-    pestana: 'casa'
-  },
-
-  {
-    id: 'ponerTrabajo',
-    llaves: [],
-    requiere: 'tocarJornada',
-    cuando: function (e) {
-      return e.espacios.some(function (x) { return x && x !== 'estudio'; });
-    },
-    pista: 'Se abrieron las actividades. Toca Trabajar para gastar esa jornada trabajando.',
-    guia: true,
-    senala: '[data-poner="trabajo"]',
-    pestana: 'casa'
-  },
-
-  {
-    id: 'jornadas',
-    llaves: [],
-    requiere: 'ponerTrabajo',
-    /* "Todas llenas" son las que EXISTEN, no las ocho: el mes empieza con una
-     * semana abierta y las demas todavia no se dibujan. Comparando contra ocho
-     * este paso no se cumplia nunca y el tutorial se quedaba clavado. */
-    cuando: function (e, M) { return M.espaciosLibres() === 0; },
-    pista: 'Llena las casillas que quedan. Trabajar todo paga más, pero te deja sin energía, y enfermarte cuesta más que una jornada.',
-    guia: true,
-    /* Este paso son varios toques: casilla, actividad, casilla, actividad. La
-     * cinta tiene que ir señalando el que toca, o apunta a algo que no hace
-     * nada.
-     *
-     * Y con la casilla elegida señala TODAS las actividades que caben, no solo
-     * "Trabajar". Señalar una sola era contestar por el jugador la pregunta
-     * que este paso existe para hacerle —trabajar paga más y te deja sin
-     * cuerpo—, y encima apuntaba a un botón que la energía puede tener
-     * apagado. */
-    senala: function (e, vista) {
-      return typeof vista.espacioSel === 'number'
-        ? '[data-poner]:not([disabled])'
-        : '.jornada:not(.lleno):not(.bloqueado)';
-    },
-    pestana: 'casa',
-    titulo: 'Repartiste el mes',
-    texto: 'Eso es el juego entero: ocho jornadas, y nunca alcanzan para todo lo que quisieras hacer.',
-    leccion: 'El colegio te toma una jornada de cada semana y esa no se puede vender. Lo que decides de verdad es la otra: trabajar, descansar o buscarte algo extra.',
-    icono: 'calendario'
-  },
-
-  /* Y cerrar el mes, para quien llegó hasta aquí sin pisar un aula.
+  /* La tarjeta de la primera tarea, sin cinta y sin pedir nada.
    *
-   * Al que estudia esto ya se lo enseñó `cerrarPrimerMes` cuatro meses antes,
-   * y para cuando llega aquí lleva cinco meses cerrados: el paso se cumple
-   * solo y no llega a salir. Al que no estudia no se lo enseñó nadie, porque
-   * aquel paso era de las tareas y él no tiene. Así que se queda: es el único
-   * sitio donde el camino corto aprende a cerrar el mes. */
+   * No es un paso del tutorial: es la unica cosa del juego que hay que decir en
+   * voz alta cuando pasa, y pasa cuando el dado quiera. Sin pista, asi que no
+   * se persigue ni sale en "lo que sigue"; su tarjeta salta el dia en que el
+   * jugador hace su primera tarea, que puede ser el mes uno o el mes cuatro.
+   */
   {
-    id: 'primerMes',
+    id: 'primeraTarea',
     llaves: [],
-    requiere: 'jornadas',
-    cuando: function (e) { return e.mesesJugados >= 1; },
-    pista: 'Cierra el mes y mira el resumen: te va a mostrar en una barra a dónde se fue cada quetzal.',
-    guia: true,
-    senala: '#cerrar-turno',
-    pestana: 'casa'
+    cuando: function (e) { return (e.totales && e.totales.tareasHechas) > 0; },
+    pista: null,
+    titulo: 'Hiciste tu primera tarea',
+    texto: 'Ese día no te dio un quetzal, y aun así fue el mejor pagado del mes: la experiencia es lo que te va a dejar entrar a las carreras que piden más.',
+    leccion: 'El dinero se gasta; lo que aprendiste, no. Es lo único de este juego que, una vez que lo tienes, ya es tuyo.',
+    icono: 'birrete'
   },
 
   /* El imperio, cuando ya hay con qué.
@@ -440,11 +329,22 @@ var PROGRESO = [
   {
     id: 'imperio',
     llaves: ['extra', 'mejoras'],
-    /* La condición es SOLO el dinero, y a propósito. Pedir además un trabajo
-     * dejaría el imperio cerrado para siempre a quien vive de una mesada o de
-     * remesas, y este juego no esconde contenido: lo pone donde tiene sentido.
-     * Con qué se juntó ese dinero es asunto del jugador. */
-    cuando: function (e, M) { return M.dineroDisponible() >= DINERO_PARA_IMPERIO; },
+    /* Dinero en la mano, o los veinte cumplidos.
+     *
+     * Lo primero es lo que da sentido a la pantalla: abrirla sin un quetzal
+     * seria ofrecerle nueve negocios a quien no puede pagar ninguno. Con qué
+     * se juntó ese dinero es asunto del jugador y por eso no se pide trabajo.
+     *
+     * Y lo segundo es la regla de esta lista: un peldaño CON LLAVES que pide
+     * algo que el jugador puede no hacer nunca lleva siempre una segunda
+     * salida. Un jugador que solo descansa y cierra meses llega a los sesenta
+     * y cinco con Q808 en el mejor momento de su vida —lo mide
+     * pruebas/ruta.js— y sin esta salida se moriría sin haber visto que el
+     * juego tenía un imperio. Que no pueda pagarlo es su historia; que no sepa
+     * que existe seria culpa nuestra. */
+    cuando: function (e, M) {
+      return M.dineroDisponible() >= DINERO_PARA_IMPERIO || e.edad >= 20;
+    },
     pista: null,
     titulo: 'Se abrió tu Imperio',
     texto: 'Ya tienes con qué abrir algo propio. Empieza chico: un puesto de dulces cuesta Q450. Y en Extra hay trabajos sueltos que se pagan aparte.',

@@ -18,11 +18,9 @@ var TEXTOS_EN = {
     'debe {0}': 'owes {0}',
     'Tu {0}': 'Your {0}',
     'Terminar el {0}': 'End the {0}',
-    'Este reparto se repite los {0} meses del {1}.': 'This split repeats for all {0} months of the {1}.',
 
     // week slots
     'Trabajo': 'Work', 'Estudio': 'School', 'Extra': 'Side gig', 'Hecho': 'Done',
-    'Descanso': 'Rest', 'Libre': 'Free', 'Mes': 'Month', 'Banco': 'Bank',
     'Trabajar': 'Work', 'Estudiar': 'Study', 'Descansar': 'Rest', 'Vaciar': 'Clear',
 
     // month preview
@@ -180,7 +178,6 @@ var TEXTOS_EN = {
     'Lo que importa.': 'What matters.', 'Letra chica:': 'Fine print:',
     'No se pudo': 'Could not do it', 'No se puede': 'Not possible',
     'No calificas': 'You do not qualify', 'No sirvió': 'That did not work',
-    'No has hecho nada': 'You have done nothing',
 
     // graduation and reports
     'Te graduaste': 'You graduated',

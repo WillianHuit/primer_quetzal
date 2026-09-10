@@ -84,6 +84,9 @@ var Motor = (function () {
 
       empleo: null,
       espacios: espaciosVacios(),
+      /* El tablero del mes: { dias, pos, casillas: [...] }.
+       * Se sortea al empezar cada turno. Ver generarTablero(). */
+      tablero: null,
       deudaHogar: 0,
 
       puntaje: PUNTAJE.inicial,
@@ -169,26 +172,22 @@ var Motor = (function () {
    *
    * Las semanas que todavia no se abrieron NO se dibujan. Dibujarlas con un
    * candado seria ensenar cuatro veces lo mismo. */
-  function semanasAbiertas() {
-    var total = semanasDelMes();
-    if (!estado) return total;
-    /* Pasado el primer anio, el mes esta entero y no se vuelve a hablar de
-     * esto. La apertura por semanas es la pantalla de aprender a jugar, no una
-     * regla del juego: a los catorce el jugador ya reparte los ocho espacios y
-     * la decision es de verdad. Se mide por EDAD y no solo por meses jugados
-     * para que una partida que empiece de adulto —o una prueba de balanceo—
-     * tenga el mes completo desde el primer turno. */
-    if ((estado.edad || 0) > CONFIG.inicio.edad) return total;
-    var desde = CONFIG.semanasAlEmpezar === undefined ? 1 : CONFIG.semanasAlEmpezar;
-    return Math.max(1, Math.min(total, desde + (estado.mesesJugados || 0)));
-  }
-  function espacioAbierto(i) { return semanaDe(i) < semanasAbiertas(); }
-
-  // Cuantas casillas puede repartir de verdad: abiertas y no tomadas por el colegio
+  /* Las ocho casillas del mes existen todas desde el primer dia.
+   *
+   * Hubo una version en que se abrian de semana en semana, para que la primera
+   * pantalla del juego fuera UNA decision y no ocho. Eso lo resolvio el
+   * TABLERO, que pide una cosa a la vez por su propia forma, asi que la
+   * apertura por semanas se fue: era una muleta para una rejilla que el jugador
+   * ya no rellena a mano.
+   *
+   * `espacios` sigue existiendo y sigue siendo la contabilidad del mes —de ahi
+   * salen el sueldo por jornadas, lo que producen los negocios y lo que avanza
+   * la carrera—, pero ahora la llena el tablero al aceptar una casilla. */
+  // Cuantas casillas puede llenar de verdad: las que no tiene tomadas el colegio
   function espaciosDisponibles() {
     var n = 0;
     for (var i = 0; i < CONFIG.jornadasPorMes; i++) {
-      if (espacioAbierto(i) && !espacioBloqueado(i)) n++;
+      if (!espacioBloqueado(i)) n++;
     }
     return n;
   }
@@ -208,8 +207,7 @@ var Motor = (function () {
    * solas en el turno siguiente. */
   function aplicarHorarioEstudio() {
     if (!estado || !estado.estudio || !estado.estudio.jornada) return;
-    // Solo en las semanas que ya existen: el colegio no ocupa lo que no se ve
-    for (var sem = 0; sem < semanasAbiertas(); sem++) {
+    for (var sem = 0; sem < semanasDelMes(); sem++) {
       estado.espacios[indiceDe(sem, estado.estudio.jornada)] = 'estudio';
     }
   }
@@ -966,7 +964,7 @@ var Motor = (function () {
   function espaciosLibres() {
     var n = 0;
     for (var i = 0; i < estado.espacios.length; i++) {
-      if (!estado.espacios[i] && espacioAbierto(i) && !espacioBloqueado(i)) n++;
+      if (!estado.espacios[i] && !espacioBloqueado(i)) n++;
     }
     return n;
   }
@@ -1035,7 +1033,7 @@ var Motor = (function () {
    * la interfaz no es una regla. */
   function puedeAsignar(i, tipo) {
     if (!estado) return { ok: false, motivo: 'sinpartida' };
-    if (!espacioAbierto(i)) return { ok: false, motivo: 'cerrado' };
+    if (i === null || i === undefined || i < 0) return { ok: false, motivo: 'sinsitio' };
     if (espacioBloqueado(i)) return { ok: false, motivo: 'colegio' };
     if (tipo === 'estudio' && estado.estudio && estado.estudio.jornada) {
       return { ok: false, motivo: 'jornadafija' };
@@ -1128,6 +1126,8 @@ var Motor = (function () {
     // Y el colegio deja las del turno nuevo aqui mismo, no cuando alguien mire
     sortearTareas();
     aplicarHorarioEstudio();
+    // Mes nuevo, tablero nuevo: otros treinta dias y otro sorteo
+    generarTablero();
   }
 
   function tomarTrabajo(id, formal) {
@@ -1223,6 +1223,166 @@ var Motor = (function () {
    * es tuyo. Eso tambien es una leccion.
    */
   function experiencia() { return estado ? (estado.experiencia || 0) : 0; }
+
+  /* =========================================================================
+   * EL TABLERO DEL MES
+   * =========================================================================
+   * Treinta o treinta y un dias, los que trae el mes de verdad, y un dado para
+   * recorrerlos. Cada casilla es un tipo de dia y lo que trae se sortea al
+   * caer en ella, no antes: el tablero se ve entero desde el principio —para
+   * eso es un tablero— pero lo que hay dentro de cada dia no.
+   *
+   * Ver datos/tablero.js, que es donde se pueden editar los pesos, las
+   * dificultades y los comodines sin tocar codigo.
+   */
+  function hayTablero() { return typeof TABLERO_CASILLAS !== 'undefined'; }
+
+  /* Dos etapas, y salen del ESTADO y no de la edad: mientras no se abra el
+   * trabajo, el mes es colegio y no hay una sola casilla de dinero. */
+  function etapaTablero() {
+    return desbloqueado('trabajo') ? 'trabajo' : 'colegio';
+  }
+
+  function diasDelMes() {
+    if (typeof TABLERO_DIAS_POR_MES === 'undefined') return 30;
+    return TABLERO_DIAS_POR_MES[estado ? estado.mes : 0] || 30;
+  }
+
+  /* Sortea un TIPO de dia con los pesos de la etapa. Una casilla que pide una
+   * llave que no esta abierta no sale nunca, aunque su peso diga otra cosa. */
+  function sortearTipoDeDia(etapa) {
+    var bolsa = [];
+    for (var i = 0; i < TABLERO_CASILLAS.length; i++) {
+      var c = TABLERO_CASILLAS[i];
+      if (c.requiere && !desbloqueado(c.requiere)) continue;
+      var peso = (c.peso && c.peso[etapa]) || 0;
+      for (var k = 0; k < peso; k++) bolsa.push(c);
+    }
+    if (!bolsa.length) return { id: 'dia_libre', tipo: 'libre' };
+    var e = bolsa[azarEntero(0, bolsa.length - 1)];
+    return { id: e.id, tipo: e.tipo };
+  }
+
+  function generarTablero() {
+    if (!estado || !hayTablero()) return null;
+    var dias = diasDelMes();
+    var etapa = etapaTablero();
+    var casillas = [];
+    for (var d = 0; d < dias; d++) {
+      // El ultimo dia es el final del mes y no trae nada: es la meta
+      if (d === dias - 1) { casillas.push({ id: 'fin', tipo: 'fin' }); continue; }
+      casillas.push(sortearTipoDeDia(etapa));
+    }
+    estado.tablero = { dias: dias, pos: 0, casillas: casillas };
+    return estado.tablero;
+  }
+
+  function tablero() {
+    if (!estado) return null;
+    if (!estado.tablero || !estado.tablero.casillas ||
+        estado.tablero.casillas.length !== diasDelMes()) {
+      generarTablero();
+    }
+    return estado.tablero;
+  }
+
+  function tableroTerminado() {
+    var t = tablero();
+    return !t || t.pos >= t.dias;
+  }
+
+  /* Que hay dentro de la casilla en la que acabo de caer.
+   *
+   * Se sortea AQUI y se guarda, para que no cambie si la pantalla se vuelve a
+   * dibujar. Y una casilla de tarea sin ninguna tarea que hacer se convierte
+   * en un dia cualquiera: mas vale un dia vacio que un boton que no hace nada. */
+  function sortearContenido(casilla) {
+    if (!casilla || casilla.sorteado !== undefined) return casilla;
+    casilla.sorteado = null;
+
+    if (casilla.tipo === 'tarea') {
+      var sinHacer = tareasSinHacer();
+      if (!sinHacer.length) { casilla.tipo = 'libre'; casilla.id = 'dia_libre'; return casilla; }
+      casilla.sorteado = { tareaId: sinHacer[azarEntero(0, sinHacer.length - 1)] };
+      return casilla;
+    }
+
+    if (casilla.tipo === 'dificultad' && typeof TABLERO_DIFICULTADES !== 'undefined') {
+      casilla.sorteado = TABLERO_DIFICULTADES[azarEntero(0, TABLERO_DIFICULTADES.length - 1)];
+      return casilla;
+    }
+
+    if (casilla.tipo === 'comodin' && typeof TABLERO_COMODINES !== 'undefined') {
+      /* En la etapa de colegio se dejan fuera los comodines que dan dinero: la
+       * pantalla todavia no habla de quetzales y regalar uno que no se ve es
+       * peor que no darlo. */
+      var hayDinero = etapaTablero() !== 'colegio';
+      var posibles = TABLERO_COMODINES.filter(function (c) {
+        if (hayDinero) return true;
+        return !(c.a.efecto && c.a.efecto.dinero) && !(c.b.efecto && c.b.efecto.dinero);
+      });
+      if (!posibles.length) posibles = TABLERO_COMODINES;
+      casilla.sorteado = posibles[azarEntero(0, posibles.length - 1)];
+      return casilla;
+    }
+
+    return casilla;
+  }
+
+  /* Tirar el dado. Devuelve lo que paso, o null si el mes ya se acabo.
+   *
+   * El dado es un d6 y el mes son treinta dias, asi que un mes son ocho o
+   * nueve tiradas: suficientes para que pasen cosas y pocas para que ninguna
+   * se sienta de relleno. */
+  function tirarDado() {
+    var t = tablero();
+    if (!t || t.pos >= t.dias) return null;
+    var dado = azarEntero(1, 6);
+    var desde = t.pos;
+    t.pos = Math.min(t.dias, t.pos + dado);
+    var casilla = sortearContenido(t.casillas[t.pos - 1]);
+    guardar();
+    return { dado: dado, desde: desde, pos: t.pos, casilla: casilla,
+             fin: t.pos >= t.dias };
+  }
+
+  function casillaActual() {
+    var t = tablero();
+    if (!t || t.pos <= 0) return null;
+    return t.casillas[t.pos - 1];
+  }
+
+  /* Aplicar un efecto de casilla: cuerpo, dinero y lo que se aprendio.
+   * Es lo unico que las casillas pueden mover, y a proposito: un tablero que
+   * pudiera tocar cualquier cosa del estado seria imposible de balancear. */
+  function aplicarEfecto(ef) {
+    if (!ef) return;
+    if (ef.energia) {
+      estado.energia = limitar(estado.energia + ef.energia, 0, CONFIG.energia.maxima);
+    }
+    if (ef.experiencia) sumarExperiencia(ef.experiencia);
+    if (ef.dinero) {
+      if (estado.monetaria !== null) estado.monetaria = redondear(estado.monetaria + ef.dinero);
+      else estado.efectivo = redondear(estado.efectivo + ef.dinero);
+    }
+    guardar();
+  }
+
+  /* Aceptar la casilla en la que estoy: mete la jornada en la contabilidad del
+   * mes. Devuelve { ok } o el motivo, que casi siempre es que no le da el
+   * cuerpo o que el mes ya esta lleno. */
+  function aceptarCasilla(tipoJornada) {
+    var i = -1;
+    for (var k = 0; k < estado.espacios.length; k++) {
+      if (!estado.espacios[k] && !espacioBloqueado(k)) { i = k; break; }
+    }
+    if (i < 0) return { ok: false, motivo: 'lleno' };
+    var permiso = puedeAsignar(i, tipoJornada);
+    if (!permiso.ok) return permiso;
+    estado.espacios[i] = tipoJornada;
+    guardar();
+    return { ok: true, espacio: i };
+  }
 
   /* -------------------------------------------------------------------------
    * Las notas: en que rama se te da bien
@@ -1840,6 +2000,10 @@ var Motor = (function () {
       var tipo = tipoDeEspacio(estado.espacios[i]);
       // Una sola cuenta para el mes y para lo que la pantalla anuncia
       estado.energia += energiaDeEspacio(tipo);
+      // Y se llevan las tareas de toda la vida, que es lo que mira la ruta
+      if (tipo === 'tarea' || tipo === 'tarea-usada') {
+        estado.totales.tareasHechas = (estado.totales.tareasHechas || 0) + 1;
+      }
     }
     estado.energia = limitar(estado.energia, 0, CONFIG.energia.maxima);
 
@@ -2614,6 +2778,8 @@ var Motor = (function () {
       if (!estado.tareasDelMes) estado.tareasDelMes = [];
       if (!estado.tareasHechas) estado.tareasHechas = [];
       if (estado.tareasSorteadas === undefined) estado.tareasSorteadas = false;
+      // El tablero no existia: se le sortea uno para el mes en que iba
+      if (!estado.tablero) generarTablero();
       // Una partida guardada antes de que la ruta existiera no puede perder
       // de golpe la mitad del juego: se le abre todo lo que ya se ganó.
       revisarProgreso();
@@ -2690,8 +2856,11 @@ var Motor = (function () {
     tareasSinHacer: tareasSinHacer, marcarTareaHecha: marcarTareaHecha,
     tareasPosibles: tareasPosibles,
     asignarEspacio: asignarEspacio, limpiarEspacios: limpiarEspacios,
-    puedeAsignar: puedeAsignar, semanasAbiertas: semanasAbiertas,
-    espacioAbierto: espacioAbierto, espaciosDisponibles: espaciosDisponibles,
+    puedeAsignar: puedeAsignar, espaciosDisponibles: espaciosDisponibles,
+    tablero: tablero, generarTablero: generarTablero, tirarDado: tirarDado,
+    casillaActual: casillaActual, tableroTerminado: tableroTerminado,
+    etapaTablero: etapaTablero, aplicarEfecto: aplicarEfecto,
+    aceptarCasilla: aceptarCasilla, diasDelMes: diasDelMes,
     energiaDeEspacio: energiaDeEspacio, energiaProyectada: energiaProyectada,
     energiaProyectadaMes: energiaProyectadaMes,
     comprarSaber: comprarSaber, mejoraDeSaber: mejoraDeSaber,
