@@ -1385,6 +1385,45 @@ var Motor = (function () {
   }
 
   /* -------------------------------------------------------------------------
+   * El barrio donde vive
+   * -------------------------------------------------------------------------
+   * Lo que se ve en el centro del tablero. Sale de dos cosas y se queda con la
+   * mejor de las dos:
+   *
+   *   - el barrio de su ORIGEN, que es donde le toco nacer y es el del primer
+   *     dia. Elegir "dificil" al empezar es empezar en el asentamiento.
+   *   - el barrio que le corresponde por su PATRIMONIO, que es el que se gana.
+   *
+   * Se queda con el mayor a proposito: nadie baja de barrio por una mala racha
+   * —de eso ya se encarga el resto del juego— pero subir si se ve, y se ve sin
+   * una sola cifra. Ver datos/barrio.js.
+   */
+  function indiceDeBarrio(id) {
+    if (typeof BARRIO_NIVELES === 'undefined') return -1;
+    for (var i = 0; i < BARRIO_NIVELES.length; i++) {
+      if (BARRIO_NIVELES[i].id === id) return i;
+    }
+    return -1;
+  }
+
+  function nivelDeBarrio() {
+    if (typeof BARRIO_NIVELES === 'undefined' || !BARRIO_NIVELES.length) return null;
+    if (!estado) return BARRIO_NIVELES[0];
+
+    var deOrigen = (typeof BARRIO_POR_ORIGEN !== 'undefined')
+      ? indiceDeBarrio(BARRIO_POR_ORIGEN[estado.origen]) : -1;
+    if (deOrigen < 0) deOrigen = 0;
+
+    var pat = patrimonio();
+    var dePlata = 0;
+    for (var i = 0; i < BARRIO_NIVELES.length; i++) {
+      if (typeof BARRIO_NIVELES[i].patrimonio === 'number' &&
+          pat >= BARRIO_NIVELES[i].patrimonio) dePlata = i;
+    }
+    return BARRIO_NIVELES[Math.max(deOrigen, dePlata)];
+  }
+
+  /* -------------------------------------------------------------------------
    * Las notas: en que rama se te da bien
    * -------------------------------------------------------------------------
    * Cada tarea con `categoria` suma a la nota de esa rama del diversificado.
@@ -2861,6 +2900,7 @@ var Motor = (function () {
     casillaActual: casillaActual, tableroTerminado: tableroTerminado,
     etapaTablero: etapaTablero, aplicarEfecto: aplicarEfecto,
     aceptarCasilla: aceptarCasilla, diasDelMes: diasDelMes,
+    nivelDeBarrio: nivelDeBarrio,
     energiaDeEspacio: energiaDeEspacio, energiaProyectada: energiaProyectada,
     energiaProyectadaMes: energiaProyectadaMes,
     comprarSaber: comprarSaber, mejoraDeSaber: mejoraDeSaber,

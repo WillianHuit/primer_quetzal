@@ -466,12 +466,45 @@ ok(!puerta.experienciaRequerida,
      'con su casilla de salida, la de la que se sale');
   ok(w3.document.querySelectorAll('.tablero .casilla.esquina').length === 4,
      'y cuatro esquinas, que es lo que tiene un cuadrado');
+  /* El centro es el BARRIO donde vive, con el dado tirado en su placita. El
+   * botón está debajo y de frente: un botón inclinado 55 grados encima de las
+   * casas no se lee ni se atina. */
   const centro = w3.document.querySelector('.tablero-centro');
-  ok(!!centro && !!centro.querySelector('#tirar-dado'),
-     'el dado va en el centro del tablero, que es lo único que se toca');
-  ok(!!w3.document.querySelector('#tirar-dado'), 'con un dado para recorrerlos');
+  ok(!!centro && !!centro.querySelector('.barrio'),
+     'en el centro del tablero está el barrio donde vive');
+  ok(!!centro && !!centro.querySelector('.dado3d'),
+     'y el dado, tirado en su placita');
+  ok(!!w3.document.querySelector('.tablero-caja .consola #tirar-dado'),
+     'con el botón de tirarlo debajo del tablero y de frente');
   ok(!w3.document.querySelector('#cerrar-turno'),
      'y SIN botón de terminar el mes: primero hay que llegar al final');
+
+  /* Cada día es una tarjeta de tablero de mesa: franja de color mirando al
+   * centro y una cosa parada encima. Los bultos son lo que hace que el tablero
+   * se lea desde el otro lado; las letras solo se leen al acercarse. */
+  const conBanda = w3.document.querySelectorAll('.tablero .casilla[data-paso] .banda').length;
+  ok(conBanda === t3.dias,
+     `los ${conBanda} días llevan su franja de color, como una tarjeta de tablero`);
+  /* Todos menos los días cualquiera, que a propósito no llevan nada: un solar
+   * vacío también dice algo, y es que ese día no te va a pasar nada. */
+  const conAlgo = [...w3.document.querySelectorAll('.tablero .casilla[data-paso]')]
+    .filter(c => [...c.classList].some(x => x.indexOf('c-') === 0));
+  ok(conAlgo.length > 0 && conAlgo.every(c => !!c.querySelector('.caja3d')),
+     `los ${conAlgo.length} días con algo dentro lo llevan parado encima, con sus tres caras`);
+  ok([...w3.document.querySelectorAll('.tablero .casilla[data-paso]')]
+       .some(c => !c.querySelector('.caja3d')),
+     'y los días cualquiera se quedan como un solar vacío');
+  const lados = new Set([...w3.document.querySelectorAll('.tablero .casilla')]
+    .map(c => [...c.classList].find(x => x.indexOf('lado-') === 0)));
+  ok(lados.size === 4,
+     'y las franjas miran al centro por los cuatro lados del anillo');
+
+  /* El barrio del primer día sale de la dificultad que eligió. Esta partida
+   * empieza en 'apoyo', que es el nivel fácil: residencial. */
+  ok(w3.document.querySelector('.barrio').getAttribute('data-barrio') === 'residencial',
+     'y el barrio es el que le tocó por su origen: quien empieza fácil, empieza en la residencial');
+  ok(w3.document.querySelectorAll('.barrio .caja3d').length >= 8,
+     'con sus casas, sus árboles y su tienda de la esquina');
 
   /* Y el tablero se ve entero desde el principio: los tipos de día que vienen
    * están a la vista, que es lo que hace que un tablero sea un tablero. Lo que
@@ -522,6 +555,45 @@ ok(!puerta.experienciaRequerida,
    * el mismo, el jugador aprendería el mes de memoria y el azar dejaría de
    * significar nada. */
   ok(M3.tablero().pos === 0, 'el mes nuevo empieza en el día cero');
+})();
+
+/* ---------- la dificultad se VE, y se ve antes de tocar un botón ----------
+ *
+ * Los tres niveles de la pantalla de inicio salen cada uno de un origen
+ * distinto, y cada origen empieza en un barrio distinto. No es adorno: es de
+ * lo que va este juego. Dos personajes con la misma disciplina no arrancan en
+ * la misma calle, y el jugador lo ve en el centro del tablero antes de que
+ * nadie se lo cuente.
+ */
+(function elBarrioDiceDeDondeSales() {
+  const barrioDe = (origen) => {
+    const { w } = abrirJuego('es');
+    w.Motor.iniciar('normal', 1, origen);
+    w.Motor.get().vistos.guiaSaltada = true;
+    w.Motor.guardar();
+    w.UI.iniciar();
+    clic(w, w.document.querySelector('[data-seguir="1"]'));
+    clic(w, w.document.querySelector('[data-pestana="casa"]'));
+    const b = w.document.querySelector('.barrio');
+    return b ? b.getAttribute('data-barrio') : null;
+  };
+
+  ok(barrioDe('sosten') === 'asentamiento',
+     'quien sostiene a su familia empieza en el asentamiento');
+  ok(barrioDe('remesas') === 'colonia',
+     'a quien le mandan remesas empieza en la colonia');
+  ok(barrioDe('apoyo') === 'residencial',
+     'y a quien lo pueden apoyar empieza en la residencial');
+
+  /* Y el barrio SUBE con lo que junta, nunca baja: de las malas rachas ya se
+   * encarga el resto del juego. */
+  const { w: w2 } = abrirJuego('es');
+  w2.Motor.iniciar('normal', 1, 'sosten');
+  const e2 = w2.Motor.get();
+  ok(w2.Motor.nivelDeBarrio().id === 'asentamiento', 'empieza en el asentamiento');
+  e2.monetaria = 900000;
+  ok(w2.Motor.nivelDeBarrio().id === 'zona',
+     'y con novecientos mil en el banco, el mismo personaje vive en la zona');
 })();
 
 // ---------- el juego no habla de dinero mientras el chico está en clases ----------

@@ -22,7 +22,11 @@
     ?perfil=1       la pantalla de "Yo", con el personaje en grande
     ?decision=feria una tarjeta de decisión, por su id de datos/decisiones.js
     ?nino=1         el juego tal como lo ve un chico de 13 recién empezado
+    ?nino=1&origen=sosten  el mismo chico, pero empezando en el asentamiento
     ?p=casa&mj=1    además abre un minijuego
+    ?tirada=1       tira el dado una vez y deja abierta la tarjeta del día
+    ?tirada=zoom    igual, pero sin la ventana: la cámara acercada a la casilla
+    ?tirada=carta   tira hasta caer en un día que pregunte algo, y deja su escritura
     ?fin=1          cierra el mes y muestra el resumen con sus gráficas
     ?nueva=1        partida recién empezada, con la ruta cerrada y el tutorial
     ?nueva=1&paso=1 el primer desbloqueo de la ruta, recién anunciado
@@ -42,7 +46,7 @@
 
   // Los mismos archivos que index.html, en el mismo orden.
   var ARCHIVOS = [
-    'datos/config.js', 'datos/trabajos.js', 'datos/carreras.js', 'datos/tablero.js',
+    'datos/config.js', 'datos/trabajos.js', 'datos/carreras.js', 'datos/tablero.js', 'datos/barrio.js',
     'datos/creditos.js',
     'datos/eventos.js', 'datos/largoplazo.js', 'datos/origenes.js', 'datos/migracion.js',
     'datos/glosario.js', 'datos/decisiones.js', 'datos/mejoras.js', 'datos/negocios.js',
@@ -120,7 +124,9 @@
     /* El juego tal como lo ve un chico de 13 que ya paso el tutorial:
      * inscrito en basicos, con un trabajito y sin nada del banco todavia. */
     if (par.get('nino')) {
-      Motor.iniciar('normal', 1, 'apoyo');
+      /* El origen decide en que barrio empieza (ver datos/barrio.js), asi que
+       * se puede elegir para mirar los tres: sosten, remesas o apoyo. */
+      Motor.iniciar('normal', 1, par.get('origen') || 'apoyo');
       var n = Motor.get();
       n.vistos.guiaSaltada = true;
       n.vistos.bienvenida = true;
@@ -149,6 +155,12 @@
       if (par.get('sub')) {
         var sn = document.querySelector('[data-sub="' + par.get('sub') + '"]');
         if (sn) sn.click();
+      }
+      if (par.get('tirada')) tirarHasta(par.get('tirada') === '1' ? 1 : par.get('tirada'));
+      if (par.get('fin')) {
+        tirarHasta(40);
+        var cn2 = document.querySelector('#cerrar-turno');
+        if (cn2) cn2.click();
       }
       return;
     }
@@ -224,23 +236,84 @@
     }
     if (par.get('decision')) UI.verDecision(par.get('decision'));
     if (par.get('mj')) {
-      // Un minijuego solo se puede jugar si el mes tiene una semana en Extra
-      document.querySelector('[data-pestana="casa"]').click();
-      document.querySelector('.jornada:not(.bloqueado)').click();
-      document.querySelector('[data-poner="minijuego"]').click();
+      // Un minijuego necesita una jornada libre en el mes
+      Motor.limpiarEspacios();
       document.querySelector('[data-pestana="extra"]').click();
       var j = document.querySelector('[data-jugar="' + par.get('mj') + '"]')
            || document.querySelector('[data-jugar]');
       if (j) j.click();
     }
+    if (par.get('tirada')) tirarHasta(par.get('tirada') === '1' ? 1 : par.get('tirada'));
     if (par.get('fin')) {
-      document.querySelectorAll('.jornada:not(.bloqueado)').forEach(function (jor, n) {
-        jor.click();
-        var act = document.querySelector('[data-poner="' + (n < 5 ? 'trabajo' : 'descanso') + '"]');
-        if (act) act.click();
-      });
+      tirarHasta(40);
       var cierre = document.querySelector('#cerrar-turno');
       if (cierre) cierre.click();
+    }
+  }
+
+  /* Tira el dado unas cuantas veces y contesta lo que salga.
+   *
+   * El paseo de la ficha y el acercamiento de la camara tardan, asi que esto
+   * apaga los dos con el mismo interruptor que usa el banco de pruebas: sin
+   * el, la captura saldria con la ficha a medio camino. */
+  function tirarHasta(veces) {
+    /* Con 'zoom' se tira una vez y se quita la ventana de encima, para poder
+     * mirar el acercamiento de la camara sin nada tapandolo. */
+    /* Con 'carta' se tira hasta que salga un dia que PREGUNTE algo, para
+     * poder mirar la escritura de la casilla sin depender de la suerte. */
+    if (veces === 'carta') {
+      window.SIN_PASEO = true;
+      document.querySelector('[data-pestana="casa"]').click();
+      for (var n = 0; n < 12; n++) {
+        var b = document.querySelector('#tirar-dado');
+        if (!b) break;
+        b.click();
+        for (var q = 0; q < 3; q++) {
+          var velos = document.querySelectorAll('.velo');
+          var ult = velos[velos.length - 1];
+          if (!ult) break;
+          if (ult.querySelector('[data-acepto],[data-lado]')) return;
+          var x = ult.querySelector('[data-cerrar]');
+          if (!x) break;
+          x.click();
+        }
+      }
+      return;
+    }
+    if (veces === 'zoom') {
+      tirarHasta(1);
+      setTimeout(function () {
+        document.querySelectorAll('.velo').forEach(function (v) { v.remove(); });
+      }, 900);
+      return;
+    }
+    window.SIN_PASEO = (veces > 1);
+    document.querySelector('[data-pestana="casa"]').click();
+    for (var i = 0; i < veces; i++) {
+      var d = document.querySelector('#tirar-dado');
+      if (!d) break;
+      d.click();
+      if (veces === 1) {
+        /* Se deja abierta la tarjeta de la CASILLA. Si encima cayo una del
+         * tutorial —la ruta se revisa al tirar— se quita, que para eso estan
+         * ?guia y ?paso. */
+        for (var q = 0; q < 3; q++) {
+          var arriba = document.querySelectorAll('.velo');
+          var ult = arriba[arriba.length - 1];
+          if (!ult || ult.querySelector('[data-acepto],[data-lado]')) break;
+          var x = ult.querySelector('[data-cerrar]');
+          if (!x) break;
+          x.click();
+        }
+        return;
+      }
+      for (var c = 0; c < 8; c++) {
+        var b = document.querySelector('.velo [data-dejo]') ||
+                document.querySelector('.velo [data-lado="a"]') ||
+                document.querySelector('.velo [data-cerrar]');
+        if (!b) break;
+        b.click();
+      }
     }
   }
 </script>

@@ -10,7 +10,7 @@ const path = require('path');
 const RAIZ = path.resolve(__dirname, '..') + '/';
 
 const ARCHIVOS = [
-  'datos/config.js', 'datos/trabajos.js', 'datos/carreras.js', 'datos/tablero.js',
+  'datos/config.js', 'datos/trabajos.js', 'datos/carreras.js', 'datos/tablero.js', 'datos/barrio.js',
   'datos/creditos.js',
   'datos/eventos.js', 'datos/largoplazo.js', 'datos/origenes.js', 'datos/migracion.js',
   'datos/glosario.js', 'datos/decisiones.js', 'datos/mejoras.js', 'datos/negocios.js',

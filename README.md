@@ -83,11 +83,21 @@ informal). De ahí en adelante:
   recorrerlos. Cada casilla ofrece algo —una tarea, un día de trabajo, un descanso, un día
   que se te atraviesa, un comodín con dos puertas— y lo tomas o lo dejas pasar. El mes se
   cierra cuando el dado llega al último día, no cuando aprietas un botón.
-- **Un anillo cuadrado, como el de mesa**: el camino por el borde, la casilla de SALIDA y el
-  dado en el centro. Y la ficha **camina casilla por casilla**, con su brinco y su sonido.
-- **En 3D, y sin descargar nada**: el tablero va en perspectiva, las casillas tienen grosor,
-  la ficha se pone de pie sobre el día de hoy y el dado es un cubo de seis caras que rueda y
-  se detiene en lo que salió. Todo con transformaciones 3D del navegador: cero librerías.
+- **Un anillo cuadrado, como el de mesa**: el camino por el borde, la casilla de SALIDA y
+  la ficha que **camina casilla por casilla**, con su brinco y su sonido.
+- **Visto desde la silla**: la cámara va baja y cerca —52 grados—, así que los días que
+  tienes enfrente son grandes y los del otro lado se ven pequeños y al fondo. Cada día es
+  una **tarjeta** con su franja de color mirando al centro, su precio en la esquina y una
+  **casita parada encima**. Y al caer en uno, la cámara **se acerca** a la tarjeta antes de
+  abrirla.
+- **El barrio, en el centro**: en un tablero de mesa el centro son las cartas; aquí son las
+  casas donde vive el personaje, en tres dimensiones. Se empieza en el barrio que le tocó
+  —la dificultad que elegiste— y sube con lo que junta: del asentamiento de lámina a la
+  colonia, a la residencial y a la zona de edificios. Es la única pantalla que dice cuánto
+  tienes sin escribir un número.
+- **En 3D, y sin descargar nada**: perspectiva, cajas con techo, frente y costado, y un dado
+  que es un cubo de seis caras y rueda hasta la que salió. Todo con transformaciones 3D del
+  navegador: cero librerías.
 - **Energía que se acaba**: una tarea cuesta seis veces lo que cuesta trabajar, y un mes no
   puede dejarte por debajo de cero. Lo que no cabe no se puede aceptar, y se dice por qué.
 - **Ocho jornadas de contabilidad**: cuatro semanas de mañana y tarde. Los colegios de Guatemala

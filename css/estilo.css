@@ -202,35 +202,66 @@ p  { margin: 0 0 10px; }
 
 /* ---------- espacios de la semana ---------- */
 
-/* ---------- el mes: un tablero de treinta dias ----------
-   Aqui vivia la rejilla de ocho casillas. Ahora el mes es un camino de dias y
-   se recorre con un dado.
+/* =========================================================================
+   EL MES ES UN TABLERO, Y SE MIRA COMO SE MIRA UN TABLERO DE MESA
+   =========================================================================
+   Aqui vivia una rejilla de ocho casillas, despues un camino en serpiente y
+   despues un anillo casi de frente, inclinado 18 grados. Los 18 grados eran
+   por miedo a que no se leyeran los numeros, y salio caro: con el plano casi
+   de frente NADA se puede parar encima, porque una pared perpendicular a ese
+   plano se ve de canto. El tablero era un dibujo con relieve, no un sitio.
 
-   El camino va en SERPIENTE, como un tablero de mesa: la fila de arriba de
-   izquierda a derecha, la siguiente al reves. Eso no lo hace el CSS, lo pone
-   la interfaz con grid-column y grid-row casilla por casilla, porque hacerlo
-   con selectores por posicion se rompe en cuanto el mes tiene 30 dias en vez
-   de 31. Con seis columnas un mes cabe en un telefono sin scroll. */
+   Ahora la camara va BAJA y CERCA, como quien esta sentado a la mesa: 55
+   grados de inclinacion y el punto de fuga abajo. Con eso los dias que tienes
+   enfrente son grandes y los del otro lado se ven pequenios y al fondo, las
+   casitas de las casillas se paran de verdad y el centro deja de ser un hueco
+   para ser el barrio donde vive el personaje.
 
-/* ---------- y va en 3D ----------
-   Perspectiva de verdad: el plano del mes se inclina hacia atras, las casillas
-   tienen grosor y la de hoy se levanta del tablero. No hay ninguna libreria
-   detras, y es a proposito: lo que hay que dibujar aqui —un plano inclinado
-   con relieve y un cubo que rueda— es exactamente lo que las transformaciones
-   3D del navegador hacen bien, y traer un motor de escena costaria mas que
-   todo el arte del juego junto y dejaria el tablero fuera del alcance de las
-   pruebas, que tocan nodos.
+   El precio es que las letras de la fila del fondo no se leen. No es un
+   descuido: en un tablero de mesa tampoco, y por eso al caer en una casilla la
+   camara se ACERCA (ver .tablero-lente). El tablero se lee de lejos por los
+   bultos y de cerca por las letras.
 
-   La inclinacion es corta (18 grados) porque este tablero hay que poder LEERLO:
-   con mas, los numeros de los dias de la fila de arriba se cierran y no se ven.
-   Y `--alto-casilla` es el grosor: la misma medida la usan la cara de arriba y
-   el canto, asi que cambiar el relieve es cambiar un numero. */
-.tablero-3d {
-  perspective: 900px;
-  perspective-origin: 50% 30%;
-  margin: 12px 0 16px;
-  padding-bottom: 6px;
+   Y sigue sin haber libreria de 3D detras. Lo que hay que dibujar aqui —un
+   plano inclinado, cajas con tres caras y un cubo que rueda— es exactamente lo
+   que las transformaciones del navegador hacen bien; un motor de escena
+   costaria mas que todo el arte del juego junto y dejaria el tablero fuera del
+   alcance de las pruebas, que tocan nodos.
+   ========================================================================= */
+
+/* La ventana por la que se ve el tablero. Recorta: el tablero es mas ancho que
+   la tarjeta a proposito —asi la fila de enfrente se ve grande— y al acercarse
+   crece mas todavia. */
+.tablero-vista {
+  position: relative;
+  aspect-ratio: 1 / .68;
+  overflow: hidden;
+  margin: 10px 0 12px;
 }
+/* La distancia de la camara. Corta, se dispara: la fila de enfrente se sale de
+   la tarjeta y la del fondo se cierra hasta no verse. Larga, se aplana y deja
+   de parecer un tablero mirado desde la silla. Mil pixeles con 52 grados deja
+   la fila de enfrente asomando un poco por los lados —como una foto de un
+   tablero de verdad— y la del fondo todavia legible. */
+.tablero-3d {
+  position: absolute; inset: 0;
+  perspective: 1000px;
+  perspective-origin: 50% 58%;
+}
+/* La lente: lo unico que se mueve al acercarse. Va aparte del tablero para que
+   el acercamiento no toque la inclinacion, que es de la escena y no de la
+   camara. Cuanto hay que correrla lo MIDE la interfaz del navegador: un plano
+   con perspectiva no proyecta las casillas donde dice la cuadricula. */
+.tablero-lente {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  transition: transform .42s cubic-bezier(.25, .8, .3, 1);
+}
+.tablero-lente.acercado {
+  transform: translate(var(--zx, 0px), var(--zy, 0px)) scale(var(--zs, 1));
+}
+
 /* OJO: las filas y columnas las escribe la interfaz en el `style` del
    elemento, no aqui. `repeat(var(--cols), 1fr)` NO es CSS valido —la cuenta de
    `repeat()` no acepta variables— y el navegador se lo come sin decir nada: el
@@ -239,18 +270,29 @@ p  { margin: 0 0 10px; }
    Y las pistas van en `minmax(0, 1fr)` y no en `1fr`, porque la ficha mide mas
    que su casilla a proposito y con `1fr` estiraba su columna. */
 .tablero {
+  --giro: 52deg;
+  position: absolute; top: 50%; left: 50%;
+  width: 92%; aspect-ratio: 1;
   display: grid;
-  aspect-ratio: 1;
-  gap: 3px;
-  transform: rotateX(18deg);
+  gap: 2px;
+  /* -54% y no -50%: con perspectiva la mitad de enfrente se proyecta mas alta
+     que la del fondo, asi que el centro de lo que se VE cae por debajo del
+     centro de la cuadricula. Sin esta correccion la fila de enfrente —la que
+     se lee— es justo la que se sale por abajo. */
+  transform: translate(-50%, -54%) rotateX(var(--giro));
   transform-style: preserve-3d;
 }
+
+/* ---------- la casilla, con forma de tarjeta de tablero de mesa ----------
+   Franja de color mirando al centro, el numero del dia en la esquina de
+   afuera, lo que cuesta o da en la otra esquina, y el objeto parado en medio.
+   Las cuatro franjas apuntan hacia dentro, que es lo que hace que el anillo se
+   lea como un anillo y no como cuatro filas de tarjetas sueltas. */
 .casilla {
   position: relative;
   min-width: 0; min-height: 0;
-  border: 2px solid var(--borde); border-radius: 11px;
+  border: 1.5px solid var(--borde); border-radius: 5px;
   background: var(--tarjeta);
-  display: flex; align-items: center; justify-content: center;
   color: var(--gris);
   box-shadow: inset 0 1px 0 var(--brillo);
   transform-style: preserve-3d;
@@ -259,50 +301,205 @@ p  { margin: 0 0 10px; }
 /* El canto de la casilla: una copia detras, empujada hacia abajo en Z. Con eso
    cada dia tiene grosor y el tablero deja de ser un dibujo plano. */
 .casilla::after {
-  content: ''; position: absolute; inset: -2px;
-  border-radius: 11px; background: var(--linea-honda);
-  transform: translateZ(-7px);
+  content: ''; position: absolute; inset: -1.5px;
+  border-radius: 5px; background: var(--linea-honda);
+  transform: translateZ(-6px);
   z-index: -1;
 }
+.casilla .banda {
+  position: absolute; display: block;
+  background: var(--tinte, var(--linea));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3);
+}
 .casilla .dia {
-  position: absolute; top: 1px; left: 3px;
-  font-size: 7.5px; font-weight: 800; opacity: .55;
+  position: absolute;
+  font-size: 8px; font-weight: 800; opacity: .5;
   font-variant-numeric: tabular-nums; line-height: 1;
 }
-.casilla svg { width: 14px; height: 14px; }
+.casilla .precio {
+  position: absolute;
+  display: inline-flex; align-items: center; gap: 1px;
+  font-size: 7.5px; font-weight: 800; line-height: 1;
+  color: var(--tinte, var(--gris));
+  font-variant-numeric: tabular-nums;
+}
+.casilla .precio svg { width: 7px; height: 7px; }
+.casilla .rotulo {
+  position: absolute; left: 0; right: 0; bottom: 14%;
+  text-align: center; font-size: 7px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .3px;
+  color: var(--verde);
+}
 
-/* Las cuatro esquinas van redondeadas por fuera, como en un tablero de mesa */
-.casilla.esquina { border-radius: 14px; }
+/* Los cuatro lados. El centro del tablero queda al otro lado de la franja. */
+.lado-arriba    .banda  { left: 8%; right: 8%; bottom: 0; height: 22%; border-radius: 0 0 4px 4px; }
+.lado-arriba    .dia    { top: 2px; left: 3px; }
+.lado-arriba    .precio { top: 2px; right: 3px; }
+.lado-abajo     .banda  { left: 8%; right: 8%; top: 0; height: 22%; border-radius: 4px 4px 0 0; }
+.lado-abajo     .dia    { bottom: 2px; left: 3px; }
+.lado-abajo     .precio { bottom: 2px; right: 3px; }
+.lado-izquierda .banda  { top: 8%; bottom: 8%; right: 0; width: 22%; border-radius: 0 4px 4px 0; }
+.lado-izquierda .dia    { top: 2px; left: 3px; }
+.lado-izquierda .precio { bottom: 2px; left: 3px; }
+.lado-derecha   .banda  { top: 8%; bottom: 8%; left: 0; width: 22%; border-radius: 4px 0 0 4px; }
+.lado-derecha   .dia    { top: 2px; right: 3px; }
+.lado-derecha   .precio { bottom: 2px; right: 3px; }
+
+/* Las cuatro esquinas van redondeadas por fuera y sin franja, como en el
+   tablero de mesa: no son propiedades, son sitios. */
+.casilla.esquina { border-radius: 10px; }
+.casilla.esquina .banda { display: none; }
 /* La SALIDA: la casilla de la que se sale y a la que no se vuelve este mes */
 .casilla.salida {
-  background: var(--verde-claro); border-color: var(--verde); color: var(--verde);
+  background: var(--verde-claro); border-color: var(--verde);
 }
-.casilla.salida .dia {
-  position: static; font-size: 7px; text-transform: uppercase; letter-spacing: .3px;
-  opacity: .9;
-}
-.casilla.salida svg { display: none; }
 /* Camino sin dia: los meses cortos dejan una casilla de sobra en el anillo */
 .casilla.camino { background: var(--fondo); border-style: dashed; opacity: .5; }
-
-/* El centro del tablero. En un tablero de mesa son las cartas; aqui es lo
-   unico que se toca: el dado y su boton. */
-.tablero-centro {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 10px; padding: 6px;
-  transform: translateZ(2px);
-}
-.tablero-centro .btn-primario.chico { width: 100%; }
-/* Los dias por los que ya pasaste se apagan: el tablero se lee de un vistazo
-   como "por aqui voy". */
 /* Los dias por los que ya pasaste se apagan, pero no desaparecen: a .42 los
    numeros dejaban de leerse y el tablero perdia la mitad de su informacion. */
-.casilla.pasada { opacity: .58; }
+.casilla.pasada { opacity: .6; }
 /* Y el de hoy manda: se LEVANTA del tablero, no solo crece */
 .casilla.aqui {
   border-color: var(--verde); z-index: 3;
-  transform: translateZ(16px) scale(1.08);
-  box-shadow: inset 0 1px 0 #fff, 0 8px 14px rgba(10,25,20,.28);
+  transform: translateZ(14px) scale(1.06);
+  box-shadow: inset 0 1px 0 #fff, 0 8px 14px rgba(10, 25, 20, .28);
+}
+
+/* Un color por tipo de dia, y son los mismos que tenian las actividades
+   cuando el mes era una rejilla: el jugador que venia de alli no reaprende
+   nada. Van en clases sueltas porque los usan dos sitios: la franja de la
+   casilla y la banda de la tarjeta que se abre al caer en ella. */
+.c-tarea      { --tinte: #cf9d2e; }
+.c-trabajo    { --tinte: var(--verde); }
+.c-extra      { --tinte: #b5541f; }
+.c-descanso   { --tinte: #2b6a99; }
+.c-dificultad { --tinte: var(--rojo); }
+.c-comodin    { --tinte: #6b4fa8; }
+.c-fin        { --tinte: var(--verde); }
+
+/* ---------- una caja de verdad ----------
+   Tres caras y una sombra. Con esto estan hechos los objetos que se paran en
+   las casillas y los edificios del barrio del centro: una sola pieza, dos
+   usos.
+
+   El frente cuelga del borde delantero de la base y gira -90 grados sobre el:
+   asi se para hacia arriba y su cara mira a la camara. El costado hace lo
+   mismo y ademas gira 90 sobre Y, para quedar en el plano de la derecha. Las
+   medidas vienen en pixeles desde la interfaz porque translateZ no acepta
+   porcentajes. */
+.caja3d {
+  position: absolute;
+  transform-style: preserve-3d;
+  transform: translateZ(var(--sube, 0px));
+  pointer-events: none;
+}
+.caja3d .cara {
+  position: absolute; display: block;
+  background: var(--cara);
+}
+.caja3d .techo {
+  left: 0; top: 0; width: 100%; height: 100%;
+  background: var(--techo); border-radius: 2px;
+  transform: translateZ(var(--alto));
+}
+.caja3d .frente {
+  left: 0; bottom: 0; width: 100%; height: var(--alto);
+  transform-origin: 50% 100%; transform: rotateX(-90deg);
+  border-radius: 2px 2px 0 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22);
+}
+.caja3d .costado {
+  left: 100%; bottom: 0; width: var(--d, 100%); height: var(--alto);
+  transform-origin: 0% 100%; transform: rotateX(-90deg) rotateY(90deg);
+  filter: brightness(.84);
+}
+/* La sombra en el suelo. Solo la llevan las piezas que se paran en el: una
+   copa de arbol flotando a nueve pixeles no proyecta la suya donde esta. */
+.caja3d.consombra::before {
+  content: ''; position: absolute; inset: 1px -2px -1px 1px;
+  background: rgba(18, 32, 26, .22);
+  border-radius: 3px;
+  filter: blur(1.5px);
+}
+.caja3d .frente svg {
+  width: 62%; height: 62%;
+  opacity: .55; color: rgba(12, 24, 20, .8);
+}
+/* Ventanas: las columnas y las filas las escribe la interfaz en el style. */
+.ventanas {
+  position: absolute; inset: 16% 14%;
+  display: grid; gap: 1.5px;
+}
+.ventanas i { background: rgba(46, 72, 92, .38); border-radius: 1px; }
+.ventanas i:nth-child(3n) { background: rgba(240, 198, 110, .8); }
+/* La lamina, acanalada: rayas finas en el techo y en las paredes. Es lo que
+   la distingue del block a este tamanio, donde no cabe ningun otro detalle. */
+.pieza-lamina .cara {
+  background-image: repeating-linear-gradient(90deg,
+    rgba(30, 40, 45, .16) 0 1px, transparent 1px 4px);
+}
+.pieza-lamina .techo {
+  background-image: repeating-linear-gradient(0deg,
+    rgba(30, 40, 45, .16) 0 1px, transparent 1px 4px);
+}
+.puerta {
+  position: absolute; left: 50%; bottom: 0;
+  width: 28%; height: 62%; margin-left: -14%;
+  background: rgba(52, 44, 38, .58);
+  border-radius: 2px 2px 0 0;
+}
+.toldo {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 38%;
+  background: repeating-linear-gradient(90deg, #d8503f 0 4px, #f7f0e3 4px 8px);
+}
+
+/* ---------- el barrio, en el centro ----------
+   Lo que en un tablero de mesa son las cartas. El barrio sale de datos/barrio.js
+   y depende de dos cosas: de donde arranco el personaje —la dificultad que
+   eligio— y de lo que ha juntado. Es la unica pantalla del juego que dice
+   cuanto tienes sin escribir un numero. */
+.tablero-centro {
+  position: relative;
+  transform-style: preserve-3d;
+}
+.barrio {
+  position: absolute; inset: 0;
+  border-radius: 8px;
+  transform-style: preserve-3d;
+  box-shadow: inset 0 0 0 1px rgba(20, 40, 30, .08);
+}
+.barrio.suelo-tierra {
+  background:
+    radial-gradient(closest-side at 30% 82%, #b9cba8 0 42%, transparent 44%),
+    #d8ccb6;
+}
+.barrio.suelo-asfalto {
+  background:
+    radial-gradient(closest-side at 30% 82%, #a9c69c 0 42%, transparent 44%),
+    #d3d8d2;
+}
+.barrio-calle {
+  position: absolute; left: 0; right: 0; top: 54%; height: 15%;
+  background: #b6ada0;
+}
+.suelo-asfalto .barrio-calle { background: #8f9a98; }
+.suelo-asfalto .barrio-calle::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px;
+  background: repeating-linear-gradient(90deg, #f1e9c9 0 8px, transparent 8px 16px);
+}
+/* El rotulo del barrio se pone DE PIE mirando a la camara: es la unica cosa
+   del centro que hay que poder leer. */
+.barrio-rotulo {
+  position: absolute; left: 6%; bottom: 6%;
+  font-size: 8.5px; font-weight: 800; letter-spacing: .2px;
+  color: var(--tinta);
+  background: var(--tarjeta); border: 1px solid var(--borde);
+  border-radius: 5px; padding: 2px 6px;
+  transform-origin: 50% 100%;
+  transform: rotateX(calc(-1 * var(--giro))) translateZ(2px);
+  box-shadow: 0 3px 5px rgba(10, 25, 20, .25);
 }
 
 /* ---------- la ficha, de pie y caminando ----------
@@ -315,11 +512,14 @@ p  { margin: 0 0 10px; }
 .tablero .ficha {
   z-index: 5; pointer-events: none;
   align-self: end; justify-self: center;
-  width: 132%; height: 158%;
-  transform: rotateX(-18deg) translateZ(16px);
+  width: 104%; height: 124%;
+  /* Corrida a la izquierda: la ficha se para AL LADO de lo que hay en la
+     casilla y no encima. Sin esto, al acercarse la camara la ficha tapaba
+     justo la tarjeta que se acababa de acercar. */
+  transform: translateX(-24%) rotateX(calc(-1 * var(--giro))) translateZ(12px);
   transform-origin: 50% 100%;
   display: flex; align-items: flex-end; justify-content: center;
-  filter: drop-shadow(0 5px 4px rgba(10,25,20,.4));
+  filter: drop-shadow(0 5px 4px rgba(10, 25, 20, .4));
   transition: grid-column .14s linear, grid-row .14s linear;
 }
 .tablero .ficha svg, .tablero .ficha img {
@@ -329,21 +529,10 @@ p  { margin: 0 0 10px; }
    pasos, que es justo lo que hay que poder contar. */
 .tablero .ficha.salta { animation: ficha-brinca .165s ease-out; }
 @keyframes ficha-brinca {
-  0%   { transform: rotateX(-18deg) translateZ(16px) translateY(0) scale(1); }
-  45%  { transform: rotateX(-18deg) translateZ(30px) translateY(-9px) scale(1.06); }
-  100% { transform: rotateX(-18deg) translateZ(16px) translateY(0) scale(1); }
+  0%   { transform: translateX(-24%) rotateX(calc(-1 * var(--giro))) translateZ(12px) translateY(0) scale(1); }
+  45%  { transform: translateX(-24%) rotateX(calc(-1 * var(--giro))) translateZ(28px) translateY(-9px) scale(1.06); }
+  100% { transform: translateX(-24%) rotateX(calc(-1 * var(--giro))) translateZ(12px) translateY(0) scale(1); }
 }
-
-/* Un color por tipo de dia, y son los mismos que tenian las actividades
-   cuando el mes era una rejilla: el jugador que venia de alli no reaprende
-   nada. */
-.casilla.c-tarea      { background: #fbf0d8; border-color: color-mix(in srgb, var(--ambar) 55%, var(--linea)); color: var(--ambar-hondo); }
-.casilla.c-trabajo    { background: #e2f0e9; border-color: var(--verde-borde); color: var(--verde); }
-.casilla.c-extra      { background: #fde8de; border-color: #f0bfa4; color: #b5541f; }
-.casilla.c-descanso   { background: #e0edf7; border-color: #b3d1e8; color: #2b6a99; }
-.casilla.c-dificultad { background: #fdf0ec; border-color: color-mix(in srgb, var(--rojo) 30%, var(--linea)); color: var(--rojo); }
-.casilla.c-comodin    { background: #ece7f7; border-color: #c3b6e4; color: #6b4fa8; }
-.casilla.c-fin        { background: var(--verde-claro); border-color: var(--verde); color: var(--verde); }
 
 /* ---------- el dado, un cubo de seis caras ----------
    Cada cara va girada y empujada media arista hacia fuera; el cubo entero gira
@@ -351,12 +540,20 @@ p  { margin: 0 0 10px; }
    rotacion inversa exacta de la que coloco esa cara.
 
    La animacion arranca de un giro largo y termina en `--fin`, asi que el cubo
-   RUEDA y se para en lo que salio: el resultado no se anuncia, se ve caer. */
-.dado-fila { display: flex; align-items: center; gap: 12px; }
+   RUEDA y se para en lo que salio: el resultado no se anuncia, se ve caer.
+
+   Y vive en la placita del barrio, no en una barra aparte: es un dado tirado
+   sobre el tablero. Se contragira treinta grados —no los 55 enteros— para que
+   la cara que salio se lea sin que el cubo parezca pegado a la pantalla. */
 .dado3d {
-  flex: 0 0 auto;
-  width: 52px; height: 52px;
-  perspective: 260px;
+  width: 44px; height: 44px;
+  perspective: 240px;
+}
+.tablero-centro .dado3d {
+  position: absolute; left: 50%; bottom: 5%;
+  margin-left: -22px;
+  transform: rotateX(-28deg) translateZ(14px);
+  filter: drop-shadow(0 6px 5px rgba(10, 25, 20, .35));
 }
 .dado-inclina {
   width: 100%; height: 100%;
@@ -384,29 +581,60 @@ p  { margin: 0 0 10px; }
 }
 .dado3d .cara i { display: block; }
 .dado3d .cara i.pip {
-  width: 7px; height: 7px; border-radius: 99px;
+  width: 6px; height: 6px; border-radius: 99px;
   background: var(--tinta);
   align-self: center; justify-self: center;
   box-shadow: inset 0 -1px 0 rgba(255,255,255,.35);
 }
-/* Media arista son 26px: el cubo mide 52 */
-.dado3d .c1 { transform: translateZ(26px); }
-.dado3d .c6 { transform: rotateY(180deg) translateZ(26px); }
-.dado3d .c3 { transform: rotateY(90deg) translateZ(26px); }
-.dado3d .c4 { transform: rotateY(-90deg) translateZ(26px); }
-.dado3d .c2 { transform: rotateX(90deg) translateZ(26px); }
-.dado3d .c5 { transform: rotateX(-90deg) translateZ(26px); }
+/* Media arista son 22px: el cubo mide 44 */
+.dado3d .c1 { transform: translateZ(22px); }
+.dado3d .c6 { transform: rotateY(180deg) translateZ(22px); }
+.dado3d .c3 { transform: rotateY(90deg) translateZ(22px); }
+.dado3d .c4 { transform: rotateY(-90deg) translateZ(22px); }
+.dado3d .c2 { transform: rotateX(90deg) translateZ(22px); }
+.dado3d .c5 { transform: rotateX(-90deg) translateZ(22px); }
 
-.dado-fila .btn-primario.chico { flex: 1 1 auto; margin: 0; }
+/* ---------- la consola, debajo del tablero y de frente ----------
+   El boton vivia en el centro del tablero, que era lo unico que habia ahi.
+   Ahora ahi vive el barrio, y un boton inclinado 55 grados encima de las casas
+   no se lee ni se atina. */
+.consola {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 2px;
+}
+.consola-barrio {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700; color: var(--gris);
+}
+.consola-barrio svg { width: 14px; height: 14px; }
+.consola .btn-primario.chico {
+  margin: 0 0 0 auto; flex: 0 1 auto; min-width: 150px;
+}
 
-/* Quien pidio menos movimiento se queda con el tablero plano y el dado quieto.
-   El 3D es como se ve mejor, no como se juega: la informacion es la misma. */
+/* Quien pidio menos movimiento se queda con el tablero plano, el dado quieto y
+   la camara sin acercarse. El 3D es como se ve mejor, no como se juega: la
+   informacion es la misma. Con el tablero plano las cajas se quedan sin
+   perspectiva en la que pararse, asi que se les deja solo el frente, que es el
+   que lleva el icono. */
 @media (prefers-reduced-motion: reduce) {
-  .tablero { transform: none; }
+  /* Sin inclinacion el tablero es un cuadrado de verdad, asi que la ventana
+     tiene que ser cuadrada tambien: con la de la vista inclinada —mas ancha
+     que alta— se salian la fila de arriba y la de abajo. */
+  .tablero-vista { aspect-ratio: 1; }
+  .tablero {
+    --giro: 0deg;
+    width: 100%;
+    transform: translate(-50%, -50%);
+  }
   .casilla.aqui { transform: scale(1.06); }
   .tablero .ficha { transform: none; }
   .tablero .ficha.salta { animation: none; }
+  .tablero-lente { transition: none; }
   .dado-cubo.rueda { animation: none; }
+  .tablero-centro .dado3d { transform: none; }
+  .barrio-rotulo { transform: none; }
+  .caja3d .techo, .caja3d .costado, .caja3d.consombra::before { display: none; }
+  .caja3d .frente { top: 0; bottom: auto; height: 100%; transform: none; border-radius: 3px; }
 }
 
 /* Lo que paso en la ultima tirada, en una linea. Es el registro del mes: sin
@@ -417,6 +645,51 @@ p  { margin: 0 0 10px; }
 }
 
 .tablero-caja .titulo { font-variant-numeric: tabular-nums; }
+
+/* ---------- la escritura: la tarjeta de la casilla ----------
+   La ventana que se abre al caer en un dia tiene la forma de la escritura de
+   una propiedad de tablero de mesa: franja de color arriba con el nombre, el
+   objeto en grande sobre su tarima y debajo lo que da y lo que quita.
+
+   Que sea la misma forma que la casilla no es coqueteria: el jugador acaba de
+   ver la camara acercarse a un cuadro con una franja amarilla y un bulto
+   encima, y lo que se le abre es ese mismo cuadro en grande. */
+.escritura {
+  border: 2px solid var(--borde); border-radius: 12px;
+  background: var(--tarjeta);
+  overflow: hidden;
+  margin: -4px 0 14px;
+  box-shadow: 0 6px 16px rgba(10, 25, 20, .12);
+}
+.escritura-banda {
+  background: var(--tinte, var(--verde)); color: #fff;
+  font-weight: 800; font-size: 13px; letter-spacing: .4px;
+  text-transform: uppercase; text-align: center;
+  padding: 8px 12px;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .12);
+}
+/* La tarima: una caja necesita un suelo inclinado debajo. Sus caras se colocan
+   girando -90 grados respecto al plano en el que esta, asi que sobre un plano
+   de pantalla el frente queda de canto y no se ve nada. */
+.tarima-3d {
+  perspective: 340px;
+  height: 104px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, var(--fondo), var(--tarjeta));
+  border-bottom: 1px solid var(--linea);
+}
+.tarima {
+  position: relative;
+  width: 132px; height: 64px;
+  transform: rotateX(55deg);
+  transform-style: preserve-3d;
+  border-radius: 50% / 34%;
+  background: radial-gradient(closest-side, rgba(20, 40, 30, .12), transparent);
+}
+.escritura-cuerpo { padding: 10px 14px 2px; }
+.escritura-cuerpo p { margin: 0 0 8px; }
+.escritura-filas { padding: 0 14px 10px; }
+.escritura-filas .pastillas { margin: 0; }
 
 .semanas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 4px; }
 .semana {

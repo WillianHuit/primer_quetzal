@@ -362,6 +362,11 @@ var UI = (function () {
    * tiene que enseñar saliendo del viejo: si no, la ficha aparecería de golpe
    * al otro lado del tablero y el dado no se entendería. null = donde toca. */
   var fichaEn = null;
+  /* A qué casilla está acercada la cámara, y cuánto la tuvo que mover para
+   * centrarla: { k, x, y, s }. Se guarda porque la pantalla se redibuja con la
+   * ventana de la casilla abierta y el acercamiento tiene que sobrevivir a
+   * eso; si no, la tarjeta se abriría sobre un tablero que ya se alejó. */
+  var zoomEn = null;
 
   /* Las medidas del anillo para un camino de `total` casillas.
    *
@@ -391,6 +396,222 @@ var UI = (function () {
     return sitio;
   }
 
+  /* =======================================================================
+   * UNA CAJA DE VERDAD
+   * =======================================================================
+   * La pieza con la que esta hecho todo lo que sobresale del tablero: tres
+   * caras —techo, frente y costado— y su sombra en el suelo. Con esta misma
+   * funcion se dibujan los objetos que se paran en las casillas y los
+   * edificios del barrio del centro. Una pieza, dos usos: si manana hay que
+   * cambiar como se ve el relieve, se cambia aqui y cambia el tablero entero.
+   *
+   * Las caras se colocan asi, y el orden importa:
+   *
+   *   techo    el mismo rectangulo de la base, empujado `alto` en Z
+   *   frente   pegado al borde delantero, girado -90 grados sobre su base
+   *   costado  pegado al borde derecho, girado -90 y luego 90 sobre Y
+   *
+   * Las medidas van en PIXELES y no en porcentajes porque `translateZ` no
+   * acepta porcentajes: la altura de una caja no se puede escribir en
+   * proporcion a nada. Si el ancho fuera relativo y el alto no, las cajas se
+   * deformarian con el ancho de la pantalla.
+   */
+  function caja3d(o) {
+    var est = 'width:' + o.ancho + 'px;height:' + o.largo + 'px;' +
+              '--alto:' + o.alto + 'px;--d:' + o.largo + 'px;' +
+              '--cara:' + (o.color || 'var(--linea)') + ';' +
+              '--techo:' + (o.techo || o.color || 'var(--linea)') + ';';
+    if (o.x !== undefined) est += 'left:' + o.x + '%;';
+    if (o.z !== undefined) est += 'top:' + o.z + '%;';
+    if (o.sube) est += '--sube:' + o.sube + 'px;';
+    /* La pieza se planta por su borde DELANTERO y centrada de lado: asi la
+     * `z` de los datos es donde se para en el suelo y no donde empieza su
+     * caja, que es lo que uno espera al mover un edificio dos pasos. */
+    est += 'margin-left:' + (-o.ancho / 2) + 'px;margin-top:' + (-o.largo) + 'px;';
+
+    /* La sombra solo la llevan las piezas que se paran EN el suelo: una copa
+     * de arbol flotando a nueve pixeles no proyecta la suya donde esta. */
+    var clase = 'caja3d' + (o.sube ? '' : ' consombra') + (o.clase ? ' ' + o.clase : '');
+    var h = '<span class="' + clase + '" style="' + est + '">';
+    h += '<span class="cara techo"></span>';
+    h += '<span class="cara costado"></span>';
+    h += '<span class="cara frente">' + (o.dentro || '') + '</span>';
+    return h + '</span>';
+  }
+
+  /* Ventanas para el frente de una casa o un edificio. Las columnas se
+   * escriben aqui y no en el CSS porque `repeat(var(--n), 1fr)` no es CSS
+   * valido: la cuenta de `repeat()` no acepta variables. */
+  function ventanas(cols, filas) {
+    var h = '<span class="ventanas" style="grid-template-columns:repeat(' +
+            cols + ',1fr);grid-template-rows:repeat(' + filas + ',1fr)">';
+    for (var i = 0; i < cols * filas; i++) h += '<i></i>';
+    return h + '</span>';
+  }
+
+  /* =======================================================================
+   * EL BARRIO DEL CENTRO
+   * =======================================================================
+   * En un tablero de mesa el centro son las cartas. Aqui es el barrio donde
+   * vive el personaje, y cambia con la partida: se empieza en el que le toco
+   * por su origen —la dificultad que eligio— y sube con el patrimonio.
+   *
+   * Es la unica pantalla del juego que dice cuanto tienes sin escribir un
+   * numero. Ver datos/barrio.js para mover una casa o agregar un arbol.
+   */
+  var COLOR_BARRIO = {
+    lamina:   { pared: '#b7ada0', techo: '#8d9aa1' },
+    casa:     { pared: '#f4eee2', techo: '#c2603d' },
+    edificio: { pared: '#e2e9ee', techo: '#93a6b3' },
+    tienda:   { pared: '#f7f0e3', techo: '#2f8a6a' },
+    arbol:    { pared: '#3f7d52', techo: '#54a069' },
+    tronco:   { pared: '#8a6a4a', techo: '#8a6a4a' },
+    poste:    { pared: '#9aa3a6', techo: '#7c8588' },
+    cancha:   { pared: '#c8d3ca', techo: '#cdd9cf' }
+  };
+
+  var PIEZA_BARRIO = {
+    lamina:   { ancho: 26, largo: 19, alto: 12 },
+    casa:     { ancho: 28, largo: 20, alto: 14, ventanas: 2 },
+    edificio: { ancho: 26, largo: 20, alto: 14, ventanas: 2 },
+    tienda:   { ancho: 28, largo: 18, alto: 13, toldo: true },
+    arbol:    { ancho: 16, largo: 14, alto: 12 },
+    poste:    { ancho: 3,  largo: 3,  alto: 26 },
+    cancha:   { ancho: 54, largo: 34, alto: 1 }
+  };
+
+  function piezaDelBarrio(p) {
+    var d = PIEZA_BARRIO[p.tipo];
+    if (!d) return '';
+    var col = COLOR_BARRIO[p.tipo] || COLOR_BARRIO.casa;
+
+    // El arbol son dos cajas: el tronco y la copa encima
+    if (p.tipo === 'arbol') {
+      return caja3d({ x: p.x, z: p.z, ancho: 4, largo: 4, alto: 10,
+                      color: COLOR_BARRIO.tronco.pared,
+                      techo: COLOR_BARRIO.tronco.techo, clase: 'tronco' }) +
+             caja3d({ x: p.x, z: p.z, ancho: d.ancho, largo: d.largo, alto: d.alto,
+                      sube: 9, color: col.pared, techo: col.techo, clase: 'copa' });
+    }
+
+    var pisos = Math.max(1, p.alto || 1);
+    var alto = (p.tipo === 'casa' || p.tipo === 'edificio') ? d.alto * pisos : d.alto;
+    var dentro = '';
+    if (d.ventanas) dentro = ventanas(d.ventanas, pisos);
+    if (d.toldo) dentro = '<span class="toldo"></span>';
+    /* La champa de lamina lleva su puerta y nada mas. Sin ella era una caja
+     * gris, y una caja gris no es una casa: es un bulto. */
+    if (p.tipo === 'lamina') dentro = '<span class="puerta"></span>';
+
+    return caja3d({ x: p.x, z: p.z, ancho: d.ancho, largo: d.largo, alto: alto,
+                    color: col.pared, techo: col.techo,
+                    clase: 'pieza-' + p.tipo, dentro: dentro });
+  }
+
+  function barrio3d() {
+    var n = Motor.nivelDeBarrio && Motor.nivelDeBarrio();
+    if (!n) return '';
+    /* Se dibuja de atras hacia adelante. Con `preserve-3d` el navegador ya
+     * ordena por profundidad, pero las caras que caen en el mismo plano se
+     * pelean, y ordenar la lista lo evita sin costar nada. */
+    var piezas = (n.piezas || []).slice().sort(function (a, b) {
+      return (a.z || 0) - (b.z || 0);
+    });
+    var h = '<div class="barrio suelo-' + (n.suelo || 'tierra') + '" data-barrio="' + n.id +
+            '" title="' + esc(K('barrio', n.id + ':d', n.descripcion || '')) + '">';
+    h += '<span class="barrio-calle"></span>';
+    for (var i = 0; i < piezas.length; i++) h += piezaDelBarrio(piezas[i]);
+    /* El rotulo del barrio se PONE DE PIE mirando a la camara: es la unica
+     * cosa del centro que hay que poder leer. */
+    h += '<span class="barrio-rotulo">' + esc(K('barrio', n.id, n.nombre)) + '</span>';
+    return h + '</div>';
+  }
+
+  /* =======================================================================
+   * LOS OBJETOS DE LAS CASILLAS
+   * =======================================================================
+   * Cada dia tiene una cosa PARADA encima, como las casitas de un tablero de
+   * mesa. No es adorno: a esta escala el icono plano de un dia se pierde entre
+   * los demas, y un bulto con sombra se ve desde el otro lado del tablero. El
+   * jugador lee el tablero por los bultos y solo lee las letras cuando se
+   * acerca.
+   */
+  var OBJETO_CASILLA = {
+    tarea:      { alto: 9,  color: '#e9c974', techo: '#f4dfa4' },
+    trabajo:    { alto: 11, color: '#79bb9e', techo: '#a6d8c1' },
+    extra:      { alto: 10, color: '#efa87d', techo: '#f8c7a7' },
+    descanso:   { alto: 7,  color: '#8dbbd8', techo: '#b6d6ed' },
+    dificultad: { alto: 10, color: '#dd8f7c', techo: '#f0b6a6' },
+    comodin:    { alto: 12, color: '#a992d8', techo: '#c6b6ec' },
+    fin:        { alto: 13, color: '#4fae8c', techo: '#8fd0b4' },
+    salida:     { alto: 13, color: '#4fae8c', techo: '#8fd0b4' }
+  };
+
+  function objetoDeCasilla(tipo, grande) {
+    var o = OBJETO_CASILLA[tipo];
+    if (!o) return '';
+    /* En la casilla la pieza se corre a la derecha, para dejarle sitio a la
+     * ficha del jugador; en la tarima de la ventana va centrada, que ahi es
+     * lo unico que hay. */
+    var f = grande ? 3.6 : 1;
+    return caja3d({
+      x: grande ? 50 : 64, z: grande ? 72 : 80,
+      ancho: Math.round(13 * f), largo: Math.round(9 * f),
+      alto: Math.round(o.alto * f),
+      color: o.color, techo: o.techo, clase: 'obj',
+      dentro: Ico(ICONO_CASILLA[tipo] || 'calendario')
+    });
+  }
+
+  /* El objeto solo, en su tarima, para meterlo en una ventana.
+   *
+   * Una caja necesita un suelo inclinado debajo: sus caras se colocan girando
+   * -90 grados respecto al plano en que esta, asi que sobre un plano de
+   * pantalla el frente queda de canto y no se ve nada. La tarima es ese suelo,
+   * con la misma inclinacion del tablero, y de paso hace que la ventana se
+   * sienta la continuacion del acercamiento y no otra pantalla. */
+  function tarima(html) {
+    return '<div class="tarima-3d"><div class="tarima">' + html + '</div></div>';
+  }
+
+  /* Lo que la casilla da o quita, en la esquina de la tarjeta y con el icono
+   * de lo que se mueve: cuerpo, dinero o una eleccion. Es el "precio" del
+   * tablero de mesa, y esta a la vista ANTES de caer ahi. */
+  function precioDeCasilla(c) {
+    var e = Motor.get();
+    var p = null;
+    if (c.tipo === 'tarea') {
+      p = { i: 'rayo', t: String(Math.round(Motor.energiaDeEspacio('tarea'))) };
+    } else if (c.tipo === 'descanso') {
+      p = { i: 'rayo', t: '+' + Math.round(Motor.energiaDeEspacio('descanso')) };
+    } else if (c.tipo === 'trabajo') {
+      var t = Motor.trabajoActual();
+      p = t
+        ? { i: 'moneda', t: Q0(Motor.salarioEsperado(t, e.empleo && e.empleo.formal) /
+                              CONFIG.jornadasPorMes) }
+        : { i: 'maletin', t: '?' };
+    } else if (c.tipo === 'extra') {
+      p = { i: 'moneda', t: '?' };
+    } else if (c.tipo === 'dificultad') {
+      p = { i: 'alerta', t: '?' };
+    } else if (c.tipo === 'comodin') {
+      p = { i: 'mundo', t: 'A / B' };
+    }
+    if (!p) return '';
+    return '<span class="precio">' + Ico(p.i) + '<b>' + p.t + '</b></span>';
+  }
+
+  /* En que lado del anillo cae una casilla. Sirve para poner la franja de
+   * color mirando al centro, como en el tablero de mesa: las cuatro franjas
+   * apuntan hacia dentro y el anillo se lee como un anillo y no como cuatro
+   * filas de tarjetas sueltas. */
+  function ladoDelAnillo(sitio, f, c) {
+    if (sitio.fila === 0) return 'arriba';
+    if (sitio.fila === f - 1) return 'abajo';
+    if (sitio.col === 0) return 'izquierda';
+    return 'derecha';
+  }
+
   /* La ficha del jugador, de pie sobre su casilla.
    *
    * Va FUERA de las casillas y colocada con grid, no dentro de una de ellas.
@@ -410,6 +631,24 @@ var UI = (function () {
            '</div>';
   }
 
+  /* Dos formas de no animar nada, y las dos son legítimas.
+   *
+   * `prefers-reduced-motion` es del jugador: quien pidió menos movimiento ve
+   * la ficha aparecer en su día y no pierde nada, porque ni el paseo ni el
+   * acercamiento llevan información que no esté en el tablero.
+   *
+   * `SIN_PASEO` es del banco de pruebas, igual que `RUTA_ASSETS`: sin él,
+   * `pruebas/dom-real.js` tendría que esperar cronómetros de verdad para
+   * comprobar qué preguntó la casilla, y una prueba que espera relojes es una
+   * prueba que un día falla sola. */
+  function sinMovimiento() {
+    if (typeof SIN_PASEO !== 'undefined' && SIN_PASEO) return true;
+    try {
+      return !!(window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (err) { return false; }
+  }
+
   /* La ficha camina, casilla por casilla.
    *
    * Es la diferencia entre un tablero y una barra de progreso: el jugador tiene
@@ -420,24 +659,7 @@ var UI = (function () {
   function caminarFicha(desde, hasta, alLlegar) {
     var tab = document.querySelector('.tablero');
     var ficha = document.getElementById('ficha-tablero');
-    /* Dos formas de no caminar, y las dos son legítimas.
-     *
-     * `prefers-reduced-motion` es del jugador: quien pidió menos movimiento ve
-     * la ficha aparecer en su día y no pierde nada, porque el paseo no lleva
-     * información que no esté en el tablero.
-     *
-     * `SIN_PASEO` es del banco de pruebas, igual que `RUTA_ASSETS`: sin él,
-     * `pruebas/dom-real.js` tendría que esperar cronómetros de verdad para
-     * comprobar qué preguntó la casilla, y una prueba que espera relojes es
-     * una prueba que un día falla sola. */
-    var quieto = (typeof SIN_PASEO !== 'undefined' && SIN_PASEO);
-    try {
-      if (!quieto) {
-        quieto = !!(window.matchMedia &&
-                    window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-      }
-    } catch (err) { /* sin matchMedia se camina, que es lo normal */ }
-    if (!tab || !ficha || quieto || hasta <= desde) {
+    if (!tab || !ficha || sinMovimiento() || hasta <= desde) {
       fichaEn = null;
       return alLlegar();
     }
@@ -468,88 +690,167 @@ var UI = (function () {
     }, 165);
   }
 
+  /* =======================================================================
+   * LA CAMARA SE ACERCA A LA CASILLA
+   * =======================================================================
+   * Al llegar, el tablero se acerca a la tarjeta antes de abrirla. Es lo que
+   * hace que el tablero se sienta un sitio y no un dibujo: el dia al que
+   * llegaste crece, se ve lo que hay parado encima y de ahi sale la ventana.
+   *
+   * El desplazamiento se MIDE del navegador, no se calcula. Un tablero
+   * inclinado con perspectiva no proyecta las casillas donde dice la
+   * cuadricula —las de atras se juntan y las de adelante se abren— asi que
+   * cualquier cuenta a mano queda mal justo en las esquinas. `rect` ya trae la
+   * casilla donde de verdad se esta viendo.
+   */
+  var LENTE = 2;
+
+  function acercarCasilla(k, luego) {
+    var lente = document.querySelector('.tablero-lente');
+    var vista = document.querySelector('.tablero-vista');
+    var cel = document.querySelector('.tablero .casilla[data-paso="' + k + '"]');
+    if (!lente || !vista || !cel || sinMovimiento()) return luego();
+
+    var rc, rv;
+    try {
+      rc = cel.getBoundingClientRect();
+      rv = vista.getBoundingClientRect();
+    } catch (err) { return luego(); }
+    if (!rc || !rv || !rv.width) return luego();
+
+    /* Con `translate(t) scale(s)` y el origen en el centro, un punto que esta
+     * a `d` del centro acaba en `d*s + t`. Para que la casilla quede en el
+     * centro: t = -d*s. */
+    var dx = (rc.left + rc.width / 2) - (rv.left + rv.width / 2);
+    var dy = (rc.top + rc.height / 2) - (rv.top + rv.height / 2);
+    zoomEn = { k: k, x: -dx * LENTE, y: -dy * LENTE, s: LENTE };
+    aplicarLente(lente);
+    return setTimeout(luego, 430);
+  }
+
+  function aplicarLente(lente) {
+    if (!lente || !zoomEn) return;
+    lente.style.setProperty('--zx', zoomEn.x + 'px');
+    lente.style.setProperty('--zy', zoomEn.y + 'px');
+    lente.style.setProperty('--zs', String(zoomEn.s));
+    lente.classList.add('acercado');
+  }
+
+  /* Y se aleja al cerrar la ventana de la casilla. Todo lo que cierra una
+   * tarjeta pasa por aqui: si alguna salida se saltara este paso, el tablero
+   * se quedaria acercado y la tirada siguiente se veria a ciegas. */
+  function alejar() {
+    zoomEn = null;
+    render();
+  }
+
+  /* =======================================================================
+   * EL TABLERO
+   * =======================================================================
+   * Un anillo cuadrado con el camino por el borde y el barrio en el centro,
+   * visto desde la silla del jugador: la camara va baja y cerca, asi que los
+   * dias que tienes enfrente son grandes y los del otro lado se ven pequenios
+   * y al fondo. Eso es un tablero de mesa mirado de verdad, y es lo que hace
+   * que las casas del centro se puedan parar: sobre un plano casi de frente
+   * —los 18 grados de la primera version— una pared se ve de canto.
+   *
+   * A cambio, las letras de la fila del fondo no se leen. No es un descuido:
+   * en un tablero de mesa tampoco, y por eso al llegar a una casilla la camara
+   * se acerca. El tablero se lee de lejos por los bultos y de cerca por las
+   * letras.
+   *
+   * El perimetro de una cuadricula de R por C son 2R+2C-4 casillas, y eso
+   * siempre es par. Un mes de 31 dias no cabe en un numero par, asi que el
+   * camino lleva SIEMPRE una casilla de SALIDA —la de "GO"— y las que sobren
+   * quedan como camino sin dia:
+   *
+   *   28 dias -> anillo 9x8 = 30: salida + 28 + 1 de camino
+   *   30 dias -> anillo 9x9 = 32: salida + 30 + 1
+   *   31 dias -> anillo 9x9 = 32: salida + 31, justo
+   */
   function tarjetaTablero(e) {
     var t = Motor.tablero();
     if (!t) return '';
     var fin = Motor.tableroTerminado();
-
-    var h = '<div class="tarjeta tablero-caja">';
-    h += '<div class="titulo">' + Ico('calendario') + ' ' +
-         T('{0}: día {1} de {2}', nombreMes(e.mes), t.pos, t.dias) + '</div>';
-
-    /* El camino va en serpiente, como un tablero de mesa: la primera fila de
-     * izquierda a derecha, la siguiente al revés. Con seis columnas, un mes
-     * son cinco filas y media y cabe en un teléfono sin scroll.
-     *
-     * Se ve el tipo de TODAS las casillas, incluidas las que faltan, porque
-     * eso es lo que hace que un tablero sea un tablero: se mira lo que viene.
-     * Lo que no se ve es lo que traen dentro —qué tarea, qué comodín—, que se
-     * sortea al caer. */
-    /* EL TABLERO ES UN ANILLO CUADRADO, como el de mesa.
-     *
-     * La primera versión iba en serpiente —filas de seis, la siguiente al
-     * revés— y se leía como un calendario, no como un tablero. Un tablero de
-     * mesa es un cuadrado con el camino por el borde y el centro libre, y esa
-     * forma no es decoración: dice de un vistazo que el mes es una vuelta que
-     * empieza y termina en el mismo sitio, y deja el centro para lo único que
-     * se toca, que es el dado.
-     *
-     * El perímetro de una cuadrícula de R por C son 2R+2C-4 casillas, y eso
-     * siempre es un número par. Un mes de 31 días no encaja en un número par,
-     * así que el camino lleva SIEMPRE una casilla de SALIDA —la de "GO" del
-     * tablero de mesa— y las que sobren quedan como camino sin día. Con eso
-     * los tres largos de mes que existen caben:
-     *
-     *   28 días -> 9x8 = 30 casillas: salida + 28 + 1 de camino
-     *   30 días -> 9x9 = 32 casillas: salida + 30 + 1
-     *   31 días -> 9x9 = 32 casillas: salida + 31, justo
-     */
-    var t = Motor.tablero();
-    if (!t) return '';
-    var fin = Motor.tableroTerminado();
     var anillo = medidasDelAnillo(t.dias + 1);
+    var donde = fichaEn === null ? t.pos : fichaEn;
+    var barrio = Motor.nivelDeBarrio && Motor.nivelDeBarrio();
 
     var h = '<div class="tarjeta tablero-caja">';
     h += '<div class="titulo">' + Ico('calendario') + ' ' +
          T('{0}: día {1} de {2}', nombreMes(e.mes), t.pos, t.dias) + '</div>';
+
+    h += '<div class="tablero-vista"><div class="tablero-3d">';
+    h += '<div class="tablero-lente' + (zoomEn ? ' acercado' : '') + '"' +
+         (zoomEn ? ' style="--zx:' + zoomEn.x + 'px;--zy:' + zoomEn.y +
+                   'px;--zs:' + zoomEn.s + '"' : '') + '>';
 
     /* Se ve el tipo de TODAS las casillas, incluidas las que faltan, porque
      * eso es lo que hace que un tablero sea un tablero: se mira lo que viene.
      * Lo que no se ve es lo que traen dentro —qué tarea, qué comodín—, que se
-     * sortea al caer. */
-    var donde = fichaEn === null ? t.pos : fichaEn;
-    h += '<div class="tablero-3d"><div class="tablero" style="' +
+     * sortea al caer.
+     *
+     * OJO: las filas y las columnas se escriben aquí, en el `style`. La primera
+     * versión las puso en el CSS con `repeat(var(--cols), 1fr)`, que NO es CSS
+     * válido —la cuenta de `repeat()` no acepta variables— y el navegador se lo
+     * come sin decir nada: el tablero salía con las columnas por omisión y se
+     * iba de la pantalla. */
+    h += '<div class="tablero" style="' +
          'grid-template-columns:repeat(' + anillo.c + ',minmax(0,1fr));' +
          'grid-template-rows:repeat(' + anillo.f + ',minmax(0,1fr))">';
+
     for (var k = 0; k < anillo.total; k++) {
       var sitio = casillaDelAnillo(k, anillo.f, anillo.c);
+      var lado = ' lado-' + ladoDelAnillo(sitio, anillo.f, anillo.c);
       var esquina = sitio.esquina ? ' esquina' : '';
       var estilo = 'grid-column:' + (sitio.col + 1) + ';grid-row:' + (sitio.fila + 1);
 
       if (k === 0) {           // la salida
-        h += '<div class="casilla salida' + esquina + '" style="' + estilo + '">' +
-             '<span class="dia">' + T('Salida') + '</span>' + Ico('bandera') + '</div>';
+        h += '<div class="casilla salida' + esquina + lado + '" style="' + estilo + '">' +
+             '<span class="banda"></span>' +
+             '<span class="rotulo">' + T('Salida') + '</span>' +
+             objetoDeCasilla('salida') + '</div>';
         continue;
       }
       if (k > t.dias) {        // camino sin día: el mes ya se acabó antes
-        h += '<div class="casilla camino' + esquina + '" style="' + estilo + '"></div>';
+        h += '<div class="casilla camino' + esquina + lado + '" style="' + estilo + '"></div>';
         continue;
       }
       var c = t.casillas[k - 1];
       var pasada = k < donde;
       var aqui = k === donde;
-      h += '<div class="casilla ' + (CLASE_CASILLA[c.tipo] || '') + esquina +
+      h += '<div class="casilla ' + (CLASE_CASILLA[c.tipo] || '') + esquina + lado +
            (pasada ? ' pasada' : '') + (aqui ? ' aqui' : '') +
            '" style="' + estilo + '" data-paso="' + k + '"' +
            ' title="' + T('Día {0}', k) + '">' +
+           '<span class="banda"></span>' +
            '<span class="dia">' + k + '</span>' +
-           Ico(ICONO_CASILLA[c.tipo] || 'calendario') + '</div>';
+           objetoDeCasilla(c.tipo) +
+           precioDeCasilla(c) + '</div>';
     }
 
-    /* El centro del tablero, que es donde va el dado. En un tablero de mesa el
-     * centro son las cartas; aquí es la única cosa que se toca. */
+    /* El centro: el barrio donde vive, y el dado en la placita de enfrente. */
     h += '<div class="tablero-centro" style="grid-area:2/2/' + anillo.f + '/' + anillo.c + '">';
+    h += barrio3d();
     h += dadoCubo(ultimoDado);
+    h += '</div>';
+
+    // Y la ficha, que es un elemento suelto: se mueve de casilla en casilla
+    h += fichaDelTablero(e, donde);
+    h += '</div>';          // .tablero
+    h += '</div></div></div>';   // lente, 3d, vista
+
+    /* La consola, debajo del tablero y de frente.
+     *
+     * El botón vivía en el centro del tablero, que era lo único que había ahí.
+     * Ahora ahí vive el barrio, y un botón inclinado 56 grados encima de las
+     * casas no se lee ni se atina. Abajo y de frente se lee, y de paso queda
+     * al lado de lo que pasó en la última tirada. */
+    h += '<div class="consola">';
+    if (barrio) {
+      h += '<span class="consola-barrio">' + Ico('casa') + ' ' +
+           esc(K('barrio', barrio.id, barrio.nombre)) + '</span>';
+    }
     if (fin) {
       h += '<button class="btn-primario chico" id="cerrar-turno">' +
            T('Terminar el {0}', turnoNombre()) + ' ▸</button>';
@@ -558,10 +859,6 @@ var UI = (function () {
            T('Tirar el dado') + '</button>';
     }
     h += '</div>';
-
-    // Y la ficha, que es un elemento suelto: se mueve de casilla en casilla
-    h += fichaDelTablero(e, donde);
-    h += '</div></div>';
 
     if (notaTablero) h += '<p class="tablero-nota">' + notaTablero + '</p>';
     else if (fin) {
@@ -617,6 +914,27 @@ var UI = (function () {
     return h;
   }
 
+  /* La tarjeta de la casilla, con la forma de la escritura de una propiedad
+   * de tablero de mesa: la franja de color arriba con el nombre del dia, el
+   * objeto en grande sobre su tarima y debajo, en filas, lo que da y lo que
+   * quita.
+   *
+   * Que sea la misma forma que la casilla no es coqueteria: el jugador acaba
+   * de ver el tablero acercarse a un cuadro con una franja amarilla y un bulto
+   * encima, y lo que se le abre es ese mismo cuadro en grande. No hay que
+   * explicarle de donde salio la ventana.
+   */
+  function escritura(tipo, titulo, cuerpo, filas) {
+    var h = '<div class="escritura ' + (CLASE_CASILLA[tipo] || '') + '">';
+    /* El titulo llega ya escapado por quien lo arma —una tarea trae el nombre
+     * del minijuego dentro—, asi que aqui NO se vuelve a escapar. */
+    h += '<div class="escritura-banda">' + titulo + '</div>';
+    h += tarima(objetoDeCasilla(tipo, true));
+    h += '<div class="escritura-cuerpo">' + (cuerpo || '') + '</div>';
+    if (filas) h += '<div class="escritura-filas">' + filas + '</div>';
+    return h + '</div>';
+  }
+
   /* La ventana de la casilla en la que caí.
    *
    * Cada tipo pregunta lo suyo, y la regla es que si hay algo que decidir se
@@ -629,12 +947,12 @@ var UI = (function () {
 
     if (res.fin) {
       notaTablero = T('Llegaste al final del mes.');
-      return render();
+      return alejar();
     }
 
     if (c.tipo === 'libre') {
       notaTablero = T('Día {0}: un día cualquiera.', res.pos);
-      return render();
+      return alejar();
     }
 
     if (c.tipo === 'dificultad') {
@@ -642,25 +960,25 @@ var UI = (function () {
       Motor.aplicarEfecto({ energia: d.energia });
       notaTablero = esc(K('tablero_dificultad', d.id, d.texto));
       render();
-      return modal('<span class="icono alerta">' + Ico('alerta') + '</span>' +
-        '<h2>' + T('Se te atravesó el día') + '</h2>' +
-        '<p>' + esc(K('tablero_dificultad', d.id, d.texto)) + '</p>' +
-        fila(T('Energía'), String(Math.round(d.energia)), 'neg') +
-        '<button class="btn-primario" data-cerrar>' + T('Ni modo') + '</button>');
+      return modal(escritura('dificultad', T('Se te atravesó el día'),
+          '<p>' + esc(K('tablero_dificultad', d.id, d.texto)) + '</p>',
+          fila(T('Energía'), String(Math.round(d.energia)), 'neg')) +
+        '<button class="btn-primario" data-cerrar>' + T('Ni modo') + '</button>',
+        alejar);
     }
 
     if (c.tipo === 'comodin') {
       var k = c.sorteado;
-      if (!k) { notaTablero = ''; return render(); }
-      var dm = modal('<span class="icono">' + Ico('mundo') + '</span>' +
-        '<h2>' + T('Te toca elegir') + '</h2>' +
-        '<p>' + esc(K('tablero_comodin', k.id, k.pregunta)) + '</p>' +
+      if (!k) { notaTablero = ''; return alejar(); }
+      var dm = modal(escritura('comodin', T('Te toca elegir'),
+          '<p>' + esc(K('tablero_comodin', k.id, k.pregunta)) + '</p>', '') +
         '<button class="btn-primario claro" data-lado="a">A · ' +
           esc(K('tablero_comodin', k.id + ':a', k.a.texto)) + '</button>' +
         '<button class="btn-primario claro" data-lado="b" style="margin-top:8px">B · ' +
           esc(K('tablero_comodin', k.id + ':b', k.b.texto)) + '</button>' +
         '<p class="sutil centrado" style="margin-top:10px">' +
-          T('Ninguna de las dos dice lo que va a pasar. Así es.') + '</p>');
+          T('Ninguna de las dos dice lo que va a pasar. Así es.') + '</p>',
+        alejar);
       dm.querySelectorAll('[data-lado]').forEach(function (b) {
         b.addEventListener('click', function () {
           var lado = k[b.getAttribute('data-lado')];
@@ -669,12 +987,12 @@ var UI = (function () {
           notaTablero = esc(K('tablero_comodin', k.id + ':' + b.getAttribute('data-lado') + ':r',
                               lado.resultado));
           render();
-          modal('<span class="icono">' + Ico('mundo') + '</span>' +
-            '<h2>' + T('Elegiste') + '</h2>' +
-            '<p>' + esc(K('tablero_comodin', k.id + ':' + b.getAttribute('data-lado') + ':r',
-                          lado.resultado)) + '</p>' +
-            filasDeEfecto(lado.efecto) +
-            '<button class="btn-primario" data-cerrar>' + T('Listo') + '</button>');
+          modal(escritura('comodin', T('Elegiste'),
+              '<p>' + esc(K('tablero_comodin', k.id + ':' + b.getAttribute('data-lado') + ':r',
+                            lado.resultado)) + '</p>',
+              filasDeEfecto(lado.efecto)) +
+            '<button class="btn-primario" data-cerrar>' + T('Listo') + '</button>',
+            alejar);
         });
       });
       return null;
@@ -725,28 +1043,28 @@ var UI = (function () {
       si = T('Descansar');
     }
 
-    var permiso = Motor.aceptarCasilla ? null : null;
-    var h = '<span class="icono">' + Ico(ICONO_CASILLA[c.tipo]) + '</span>' +
-            '<h2>' + titulo + '</h2><p>' + cuerpo + '</p>';
-    h += '<div class="pastillas">' +
+    var pastis = '<div class="pastillas">' +
          pastilla('rayo', (cuesta > 0 ? '+' : '') + cuesta, cuesta > 0 ? 'ok' : 'mal');
-    if (def) h += pastilla('birrete', T('hasta +{0} de experiencia',
-                                       def.experienciaMaxima || 0), 'ok');
-    h += '</div>';
+    if (def) pastis += pastilla('birrete', T('hasta +{0} de experiencia',
+                                             def.experienciaMaxima || 0), 'ok');
+    pastis += '</div>';
+
+    var h = escritura(c.tipo, titulo, '<p>' + cuerpo + '</p>', pastis);
     h += '<button class="btn-primario" data-acepto="1">' + si + '</button>';
     h += '<div class="btn-fila" style="margin-top:8px">' +
          '<button class="btn-chico" data-dejo="1">' + T('Dejarlo pasar') + '</button></div>';
 
-    var dm = modal(h, null);
+    var dm = modal(h, alejar);
     dm.querySelector('[data-dejo]').addEventListener('click', function () {
       dm.remove();
       notaTablero = T('Día {0}: lo dejaste pasar.', res.pos);
-      render();
+      alejar();
     });
     dm.querySelector('[data-acepto]').addEventListener('click', function () {
       var r = Motor.aceptarCasilla(jornada);
       if (!r.ok) {
         dm.remove();
+        zoomEn = null;
         Sonido.tono('error');
         if (r.motivo === 'energia') {
           return aviso(T('No te da el cuerpo'),
@@ -759,6 +1077,7 @@ var UI = (function () {
       dm.remove();
       Sonido.tono('toque');
       notaTablero = T('Día {0}: {1}', res.pos, titulo);
+      zoomEn = null;
       /* Y si lo que se acepta se JUEGA —una tarea, un extra— se abre ahí
        * mismo. Aceptar y tener que ir a buscarla a otra pestaña sería partir
        * en dos una decisión que el jugador acaba de tomar. */
@@ -4356,10 +4675,16 @@ var UI = (function () {
          * aparecía de golpe al otro lado del tablero y el dado no se entendía:
          * el jugador veía un número y una ficha teletransportada. */
         fichaEn = tirada.desde;
+        zoomEn = null;
         render();
         return caminarFicha(tirada.desde, tirada.pos, function () {
           render();
-          abrirCasilla(tirada);
+          /* Al llegar, la cámara se acerca al día y de ahí sale la tarjeta.
+           * Solo si el día trae algo: acercarse a un día cualquiera para no
+           * decir nada sería un viaje de ida y vuelta por gusto. */
+          var c = tirada.casilla;
+          if (tirada.fin || !c || c.tipo === 'libre') return abrirCasilla(tirada);
+          return acercarCasilla(tirada.pos, function () { abrirCasilla(tirada); });
         });
       }
 

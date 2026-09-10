@@ -9,6 +9,20 @@
   if (typeof X === 'undefined') return;
   var ui = X.ui, datos = X.datos;
 
+  /* ---------- el barrio del centro del tablero ----------
+   * El nombre de cada barrio y lo que se ve en el. La clave ':d' es la
+   * descripcion, la que va en el title. Ver datos/barrio.js. */
+  X.barrio = {
+    asentamiento: 'The settlement',
+    'asentamiento:d': 'Sheet metal, timber and a dirt street. This is where a lot of people start.',
+    colonia: 'The colonia',
+    'colonia:d': 'Block houses, the corner store and a courtyard.',
+    residencial: 'The gated colony',
+    'residencial:d': 'Two floors, a sidewalk and trees on the street.',
+    zona: 'The city zone',
+    'zona:d': 'Office towers and a bank on the corner.'
+  };
+
   // ---------- pensión ----------
   ui['Plan de pensiones'] = 'Pension plan';
   ui['Acumulado'] = 'Accumulated';

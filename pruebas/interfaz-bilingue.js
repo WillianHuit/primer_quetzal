@@ -261,6 +261,15 @@ ok(!!X.nivel_resumen && !!X.nivel_resumen.facil && !!X.nivel_resumen.dificil,
 ok(X.ui['Manejo de cuenta'] === 'Account maintenance fee',
    'el manejo de cuenta está traducido');
 
+/* El barrio del centro del tablero: el nombre se ve en la consola y en el
+ * rotulo, y la descripcion en el title. Los cuatro tienen que estar. */
+const sinBarrio = sbEn.BARRIO_NIVELES
+  .filter(b => !X.barrio || !X.barrio[b.id] || !X.barrio[b.id + ':d'])
+  .map(b => b.id);
+ok(sinBarrio.length === 0,
+   `los ${sbEn.BARRIO_NIVELES.length} barrios del tablero están traducidos` +
+   (sinBarrio.length ? ': ' + sinBarrio.join(', ') : ''));
+
 // Una partida completa con la capa de idioma cargada
 const { Motor } = sbEn;
 Motor.iniciar('normal', 3, 'apoyo');

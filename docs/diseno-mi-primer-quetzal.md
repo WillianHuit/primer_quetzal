@@ -173,13 +173,78 @@ esperar cronómetros de verdad para comprobar qué preguntó. Para eso está `SI
 mismo patrón que `RUTA_ASSETS`: un interruptor que el banco de pruebas enciende, documentado
 donde se lee. Una prueba que espera relojes es una prueba que un día falla sola.
 
-#### Y va en 3D, sin una sola librería
+#### La cámara: sentado a la mesa, no mirando un plano
 
-El tablero se dibuja **en perspectiva**: el plano del mes inclinado 18 grados, cada casilla
-con grosor —una copia detrás empujada en Z—, el día de hoy levantado del tablero y la ficha
-**de pie** sobre él, contragirada para que mire a la cámara. El dado es un **cubo de seis
-caras** con puntos de verdad: cada cara girada y empujada media arista hacia fuera, y el cubo
-entero rueda hasta poner delante la que salió. El resultado no se anuncia, se ve caer.
+El tablero estuvo inclinado **18 grados**, y los 18 grados eran por miedo a que no se
+leyeran los números de los días. Salió caro: con el plano casi de frente **nada se puede
+parar encima**, porque una pared perpendicular a ese plano se ve de canto. El tablero era un
+dibujo con relieve, no un sitio.
+
+Ahora la cámara va **baja y cerca**: 52 grados de inclinación, mil píxeles de distancia y el
+punto de fuga por debajo del centro. Con eso los días que el jugador tiene enfrente son
+grandes y los del otro lado se ven pequeños y al fondo —un tablero de mesa mirado de
+verdad—, y las casitas de las casillas y los edificios del centro se paran de verdad.
+
+El precio es que **las letras de la fila del fondo no se leen**. No es un descuido: en un
+tablero de mesa tampoco. Por eso hay dos formas de leer el tablero, y las dos hacen falta:
+
+- **de lejos, por los bultos.** Cada día tiene una cosa parada encima, con su color y su
+  sombra, y eso se ve desde el otro lado del tablero.
+- **de cerca, por las letras.** Al llegar a una casilla la cámara **se acerca** a ella
+  —`.tablero-lente`, dos aumentos— y de ahí sale la ventana.
+
+Cuánto hay que correr la lente para centrar una casilla **se mide del navegador**, no se
+calcula: un plano con perspectiva no proyecta las casillas donde dice la cuadrícula —las de
+atrás se juntan y las de adelante se abren—, así que cualquier cuenta a mano queda mal justo
+en las esquinas. `getBoundingClientRect()` ya trae la casilla donde de verdad se está
+viendo, y con el origen en el centro basta con `t = -d·s`.
+
+#### Cada día es una tarjeta, y lleva algo encima
+
+La casilla tiene la forma de una tarjeta de tablero de mesa: **franja de color** mirando al
+centro, el **número del día** en la esquina de afuera, **lo que cuesta o da** en la otra
+esquina y con el icono de lo que se mueve, y el **objeto parado** en medio. Las cuatro
+franjas apuntan hacia dentro, que es lo que hace que el anillo se lea como un anillo y no
+como cuatro filas de tarjetas sueltas.
+
+Y la ventana que se abre al caer tiene **la misma forma**: `escritura()` dibuja la franja del
+color del día, el objeto en grande sobre su tarima y debajo lo que da y lo que quita. No es
+coquetería: el jugador acaba de ver la cámara acercarse a un cuadro con una franja amarilla y
+un bulto encima, y lo que se le abre es ese mismo cuadro en grande. No hay que explicarle de
+dónde salió la ventana.
+
+Los objetos y los edificios están hechos con **la misma pieza**: `caja3d()`, tres caras
+—techo, frente y costado— y una sombra en el suelo. Una función, dos usos; si mañana cambia
+cómo se ve el relieve, cambia el tablero entero. Las medidas van en píxeles y no en
+porcentajes porque `translateZ` **no acepta porcentajes**: si el ancho fuera relativo y el
+alto no, las cajas se deformarían con el ancho de la pantalla.
+
+#### El barrio del centro dice de dónde sales
+
+En un tablero de mesa el centro son las cartas. Aquí es **el barrio donde vive el
+personaje**, y sale de dos cosas (ver `datos/barrio.js` y `Motor.nivelDeBarrio()`):
+
+| Barrio | Se empieza aquí si… | Y se llega por patrimonio |
+|---|---|---|
+| El asentamiento | tu familia depende de ti (difícil) | — |
+| La colonia | te mandan remesas (medio) | — |
+| La residencial | tu familia te puede apoyar (fácil) | Q90,000 |
+| La zona | — | Q700,000 |
+
+Se queda con **el mayor de los dos**: nadie baja de barrio por una mala racha —de eso ya se
+encarga el resto del juego— pero subir sí se ve. Y se ve **antes de tocar un botón**: la
+dificultad que se eligió en la pantalla de inicio deja de ser una palabra y es una calle de
+tierra con casas de lámina, o una con banqueta y árboles.
+
+El dado vive en la **placita de enfrente** del barrio, tirado sobre el tablero. El botón, en
+cambio, se fue **debajo del tablero y de frente**: antes vivía en el centro, que era lo único
+que había ahí, y un botón inclinado 52 grados encima de las casas no se lee ni se atina.
+
+#### Y todo esto en 3D, sin una sola librería
+
+El dado es un **cubo de seis caras** con puntos de verdad: cada cara girada y empujada media
+arista hacia fuera, y el cubo entero rueda hasta poner delante la que salió. El resultado no
+se anuncia, se ve caer.
 
 Todo eso son `perspective`, `transform-style: preserve-3d` y rotaciones en X e Y. **Cero
 librerías**, y no por tacañería:
@@ -188,12 +253,17 @@ librerías**, y no por tacañería:
   motor de escena son unos 600 KB, casi tres veces todo lo que hay hoy en `vendor/` y la
   mitad del presupuesto de arte, para dibujar un plano inclinado y un cubo.
 - Y sobre todo: un `<canvas>` de WebGL **no se puede probar**. `pruebas/dom-real.js` juega el
-  juego tocando nodos —172 comprobaciones— y el tablero es justo la pantalla donde más hay
+  juego tocando nodos —187 comprobaciones— y el tablero es justo la pantalla donde más hay
   que romper. Con transformaciones CSS cada día del mes sigue siendo un `<div>` que la suite
   puede mirar y tocar.
 
-Quien pidió menos movimiento (`prefers-reduced-motion`) se queda con el tablero plano y el
-dado quieto. El 3D es cómo se ve mejor, no cómo se juega: la información es la misma.
+Quien pidió menos movimiento (`prefers-reduced-motion`) se queda con el **tablero plano**, el
+dado quieto y la cámara sin acercarse. El 3D es cómo se ve mejor, no cómo se juega: la
+información es la misma, y plano se lee incluso mejor —los 31 días con su precio, todos a la
+vez—. Dos cosas hay que ajustar ahí y las dos están en el mismo bloque: la ventana del
+tablero se vuelve **cuadrada** (con la inclinada se salían la fila de arriba y la de abajo) y
+a las cajas se les deja **solo el frente**, que es el que lleva el icono, porque sin plano
+inclinado una pared se ve de canto.
 
 El sueldo se paga **según cuántas jornadas trabajaste**, y no de forma proporcional:
 
