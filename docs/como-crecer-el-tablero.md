@@ -238,6 +238,57 @@ problema es el minijuego.
 
 ---
 
+## La FIGURA que se para en la casilla
+
+Cada tipo de día lleva algo encima: unos libros, una cama, un despertador, una
+valla de obra. Están en `OBJETO_CASILLA` (`js/ui.js`) y son lo que hace que el
+tablero se lea **desde lejos**, donde las letras de la tarjeta todavía no se
+distinguen. El icono del techo es la confirmación, no la única pista.
+
+```js
+descanso: { emblemaEn: 2, piezas: [
+  { a: 17, l: 12, h: 2, y: 0, c: 'madera' },              // el armazón
+  { a: 17, l: 2,  h: 7, y: 0, dz: 10, c: 'madera' },      // la cabecera, al fondo
+  { a: 15, l: 9,  h: 3, y: 2, c: 'colchon' },             // el colchón
+  { a: 6,  l: 3,  h: 2, y: 5, dx: -4, dz: 4, c: 'tela' }, // una almohada
+  { a: 6,  l: 3,  h: 2, y: 5, dx: 4,  dz: 4, c: 'tela' }  // y la otra
+] }
+```
+
+| | |
+|---|---|
+| `a` | ancho, de lado a lado |
+| `l` | largo, del frente al fondo |
+| `h` | alto |
+| `y` | cuánto flota sobre el suelo, para apilar |
+| `dx` | cuánto se corre a la derecha del centro (negativo, a la izquierda) |
+| `dz` | cuánto se corre hacia el fondo |
+| `c` | su color, de `PALETA_OBJ` |
+
+`emblemaEn` dice qué pieza lleva el icono; si no se pone, lo lleva la última.
+
+**Tres reglas, y las tres salieron de figuras que no funcionaron:**
+
+1. **Se leen en planta.** Con el tablero echado 52 grados, lo que se ve de una
+   figura es su vista desde arriba. Por eso la cama funciona —en planta es un
+   rectángulo rojo con dos cuadritos blancos en una punta, y eso no se parece a
+   nada más— y por eso un letrero de carretera no funcionaría: de canto no es
+   nada. Piensa la figura en planta antes de apilar una sola caja.
+2. **Un color por pieza.** La primera versión las hacía de un solo color y por
+   eso parecían cajas sin sentido: una cama de un azul plano es un ladrillo.
+   `pruebas/dom-real.js` cuenta los colores de cada figura y falla si una usa
+   menos de dos.
+3. **El emblema va en una pieza de techo claro y ancho.** El icono es oscuro y
+   semitransparente: sobre una pieza negra desaparece, y sobre una pieza de dos
+   píxeles de fondo sale aplastado.
+
+**Míralas**: `pruebas/objetos.html` las dibuja todas a la vez, grandes como en
+la ventana que se abre al caer y chiquitas como en el tablero, en las cuatro
+vueltas del anillo. Llama a la misma función que dibuja el juego, así que lo
+que ves ahí es lo que hay. `?tipo=descanso` deja una sola.
+
+---
+
 ## Agregar una CONDICIÓN DEL MES
 
 Las condiciones son *cómo viene el mes*: llueve, hay feria, se fue la luz, hay

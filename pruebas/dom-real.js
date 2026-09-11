@@ -516,6 +516,38 @@ ok(!puerta.experienciaRequerida,
    * una fila de días iguales— y un mes puede no traer ninguno. */
   ok(!w3.UI.objetoDeCasilla || !w3.UI.objetoDeCasilla('libre'),
      'y un día cualquiera no lleva nada parado encima: es un solar vacío');
+
+  /* ---------- y las figuras son OBJETOS, no cajas de colores ----------
+   *
+   * Las primeras estaban hechas de una sola pieza de un solo color, y eso es
+   * lo que se veía: una cama azul plana es un ladrillo, y a la ventana del
+   * descanso llegaba un rectángulo. Lo que las volvió objetos reconocibles
+   * fue darle su color a cada pieza —armazón de madera, colchón rojo,
+   * almohadas blancas— y por eso esta comprobación cuenta COLORES y no
+   * piezas: se puede apilar tres cajas iguales y seguir teniendo un ladrillo.
+   *
+   * Se miran en pruebas/objetos.html, que las dibuja todas con esta misma
+   * función, grandes y del tamaño que tienen en el tablero. */
+  const FIGURAS = ['tarea', 'trabajo', 'extra', 'descanso', 'dificultad', 'comodin',
+                   'trampa', 'viaje', 'fin', 'salida', 'reto', 'respiro', 'atraso'];
+  const planas = FIGURAS.filter(t => {
+    const html = w3.UI.objetoDeCasilla(t, true) || '';
+    const colores = new Set([...html.matchAll(/--cara:([^;]+)/g)].map(m => m[1]));
+    return colores.size < 2;
+  });
+  ok(planas.length === 0,
+     `las ${FIGURAS.length} figuras de las casillas llevan más de un color` +
+     (planas.length ? ': ' + planas.join(', ') : ''));
+  const deUnaPieza = FIGURAS.filter(t =>
+    ((w3.UI.objetoDeCasilla(t, true) || '').match(/class="caja3d/g) || []).length < 2);
+  ok(deUnaPieza.length === 0,
+     'y más de una pieza cada una' + (deUnaPieza.length ? ': ' + deUnaPieza.join(', ') : ''));
+  /* Un icono, y uno solo: es la confirmación de lo que la figura ya dice. Dos
+   * iconos en la misma figura son dos techos peleando por explicarla. */
+  const malEmblema = FIGURAS.filter(t =>
+    ((w3.UI.objetoDeCasilla(t, true) || '').match(/<svg/g) || []).length !== 1);
+  ok(malEmblema.length === 0,
+     'y exactamente un icono en el techo' + (malEmblema.length ? ': ' + malEmblema.join(', ') : ''));
   const lados = new Set([...w3.document.querySelectorAll('.tablero .casilla')]
     .map(c => [...c.classList].find(x => x.indexOf('lado-') === 0)));
   ok(lados.size === 4,

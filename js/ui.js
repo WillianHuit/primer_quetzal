@@ -481,7 +481,13 @@ var UI = (function () {
     /* La pieza se planta por su borde DELANTERO y centrada de lado: asi la
      * `z` de los datos es donde se para en el suelo y no donde empieza su
      * caja, que es lo que uno espera al mover un edificio dos pasos. */
-    est += 'margin-left:' + (-o.ancho / 2) + 'px;margin-top:' + (-o.largo) + 'px;';
+    /* `lado` y `atras` mueven la pieza en PIXELES desde ese punto: a la
+     * derecha y hacia el fondo. Van en pixeles y no en porcentaje como `x`
+     * e `y` porque son medidas DE LA FIGURA —la almohada va cuatro pixeles a
+     * la izquierda del centro de la cama, no al cuatro por ciento de la
+     * casilla— y asi crecen con ella cuando la figura se dibuja en grande. */
+    est += 'margin-left:' + (-o.ancho / 2 + (o.lado || 0)) + 'px;' +
+           'margin-top:' + (-o.largo - (o.atras || 0)) + 'px;';
 
     /* La sombra solo la llevan las piezas que se paran EN el suelo: una copa
      * de arbol flotando a nueve pixeles no proyecta la suya donde esta. */
@@ -643,44 +649,177 @@ var UI = (function () {
    *
    * Cada pieza es [ancho, largo, alto, cuanto sube]. La ultima lleva el
    * emblema en su techo, que es la que queda mas arriba. */
+  /* LA PALETA, compartida por todas las figuras.
+   *
+   * Que el colchon de la cama y el techo del cono salgan de la misma lista es
+   * lo que hace que las doce figuras parezcan del mismo mundo. Cada entrada
+   * trae el color de las paredes y el del techo: el techo va mas claro porque
+   * es la cara que recibe la luz, y esa diferencia es lo unico que hace que
+   * una caja se lea como un volumen y no como un rectangulo de color.
+   *
+   * El emblema del techo es un icono OSCURO y semitransparente, asi que la
+   * pieza que lo lleve tiene que tener el techo claro. Por eso cada figura
+   * dice en `emblemaEn` cual de sus piezas lo carga. */
+  var PALETA_OBJ = {
+    madera:        { cara: '#a9793f', techo: '#c99a5e' },
+    maderaClara:   { cara: '#c49a63', techo: '#dfb782' },
+    tela:          { cara: '#e6eaee', techo: '#ffffff' },
+    colchon:       { cara: '#d9644f', techo: '#ee8873' },
+    hamaca:        { cara: '#4f96b8', techo: '#7bbcd8' },
+    carton:        { cara: '#c09059', techo: '#ddb47d' },
+    cuero:         { cara: '#7a5b3c', techo: '#a37e55' },
+    metal:         { cara: '#98a1a5', techo: '#bcc5c9' },
+    metalOscuro:   { cara: '#4b5457', techo: '#687276' },
+    dorado:        { cara: '#c79b2c', techo: '#ecc65f' },
+    oscuro:        { cara: '#39403f', techo: '#515958' },
+    blanco:        { cara: '#e8ecef', techo: '#ffffff' },
+    rojo:          { cara: '#c2412f', techo: '#e0654f' },
+    naranja:       { cara: '#e07a30', techo: '#f7a561' },
+    amarillo:      { cara: '#dcae2a', techo: '#f5d263' },
+    verde:         { cara: '#2f8a63', techo: '#4fae86' },
+    morado:        { cara: '#8b74c4', techo: '#b2a0e0' },
+    moradoHondo:   { cara: '#5f4d91', techo: '#7a66ad' },
+    libroRojo:     { cara: '#b8452f', techo: '#d4664c' },
+    libroAzul:     { cara: '#33628c', techo: '#5289b6' },
+    libroAmarillo: { cara: '#d9a52c', techo: '#f2c65e' }
+  };
+
+  /* ======================================================================
+   * LO QUE SE PARA EN CADA CASILLA
+   * ======================================================================
+   * Una cama, unos libros, un despertador, una valla de obra. No son adornos:
+   * son lo que hace que el tablero se lea DESDE LEJOS, donde las letras de la
+   * tarjeta todavia no se distinguen. El icono del techo es la confirmacion,
+   * no la unica pista.
+   *
+   * Y se leen DESDE ARRIBA, que es lo unico que se ve con el tablero echado
+   * 52 grados. Por eso la cama funciona —vista en planta es un rectangulo
+   * rojo con dos almohadas blancas en una punta, y eso es inconfundible— y
+   * por eso un letrero de carretera no funcionaria: de canto no es nada. Cada
+   * figura esta pensada en planta primero.
+   *
+   * La primera version las hacia de UN SOLO COLOR y por eso parecian cajas
+   * sin sentido: una cama de un azul plano es un ladrillo. Lo que las volvio
+   * objetos fue darle su color a cada pieza.
+   *
+   * Cada pieza es un objeto y todas sus medidas son opcionales menos las tres
+   * primeras:
+   *
+   *   a    ancho, de lado a lado
+   *   l    largo, del frente al fondo
+   *   h    alto
+   *   y    cuanto flota sobre el suelo (para apilar)
+   *   dx   cuanto se corre a la derecha del centro (negativo, a la izquierda)
+   *   dz   cuanto se corre hacia el fondo
+   *   c    su color, de PALETA_OBJ
+   *
+   * Todo en las mismas unidades, que se multiplican por `f` segun se dibuje
+   * chiquita en la casilla o grande en la ventana. `emblemaEn` dice que pieza
+   * lleva el icono; si no se pone, lo lleva la ultima.
+   */
   var OBJETO_CASILLA = {
-    // tres libros apilados, cada uno un poco mas chico
-    tarea:      { color: '#e9c974', techo: '#f3dc9d',
-                  piezas: [[14, 10, 3, 0], [12, 9, 3, 3], [10, 8, 3, 6]] },
-    // un portafolio: la caja y su asa
-    trabajo:    { color: '#79bb9e', techo: '#a6d8c1',
-                  piezas: [[14, 6, 9, 0], [5, 2, 3, 9]] },
-    // una carreta con su caja encima
-    extra:      { color: '#efa87d', techo: '#f8c7a7',
-                  piezas: [[14, 9, 5, 0], [8, 7, 6, 5]] },
-    // una cama con su almohada
-    descanso:   { color: '#8dbbd8', techo: '#b6d6ed',
-                  piezas: [[15, 10, 3, 0], [6, 8, 3, 3]] },
-    // un cono de los que ponen cuando hay un hoyo
-    dificultad: { color: '#dd8f7c', techo: '#f0b6a6',
-                  piezas: [[13, 10, 2, 0], [8, 6, 5, 2], [4, 3, 5, 7]] },
-    // un bloque parado, que es lo mas cerca de una carta boca abajo
-    comodin:    { color: '#a992d8', techo: '#c6b6ec',
-                  piezas: [[12, 9, 3, 0], [8, 6, 12, 3]] },
-    // un anzuelo: el palo y lo que cuelga
-    trampa:     { color: '#c97f7f', techo: '#e6a9a9',
-                  piezas: [[3, 3, 14, 0], [9, 4, 3, 11], [4, 4, 4, 4]] },
-    // un reloj de torre
-    viaje:      { color: '#6fb7c9', techo: '#a5dbe6',
-                  piezas: [[8, 7, 13, 0], [11, 9, 4, 13]] },
-    // un asta con su bandera
-    fin:        { color: '#4fae8c', techo: '#8fd0b4',
-                  piezas: [[3, 3, 15, 0], [11, 3, 5, 10]] },
-    salida:     { color: '#4fae8c', techo: '#8fd0b4',
-                  piezas: [[3, 3, 15, 0], [11, 3, 5, 10]] },
-    // y las esquinas, que son sitios y no dias
-    // una copa: base, pie y boca
-    reto:       { color: '#c98f4a', techo: '#e8b877',
-                  piezas: [[10, 8, 3, 0], [4, 4, 5, 3], [11, 8, 5, 8]] },
-    respiro:    { color: '#7fa9cf', techo: '#aacae6',
-                  piezas: [[16, 11, 3, 0], [7, 9, 4, 3]] },
-    atraso:     { color: '#a58fb5', techo: '#cbb9d8',
-                  piezas: [[9, 8, 12, 0], [12, 10, 4, 12]] }
+    /* Tres libros apilados, cada uno de su color y un poco torcido. Apilados
+     * y del mismo color eran una escalera; de tres colores son libros. */
+    tarea: { emblemaEn: 2, piezas: [
+      { a: 14, l: 10, h: 3, y: 0, c: 'libroRojo' },
+      { a: 12, l: 9,  h: 3, y: 3, dx: 1, dz: 1, c: 'libroAzul' },
+      { a: 10, l: 8,  h: 3, y: 6, dx: -1, c: 'libroAmarillo' }
+    ] },
+
+    // Un portafolio de cuero con su asa y los dos cierres dorados
+    trabajo: { emblemaEn: 0, piezas: [
+      { a: 15, l: 9, h: 6, y: 0, c: 'cuero' },
+      { a: 6,  l: 2, h: 2, y: 6, dz: 4, c: 'metalOscuro' },
+      { a: 2,  l: 2, h: 1, y: 6, dx: -5, dz: 1, c: 'dorado' },
+      { a: 2,  l: 2, h: 1, y: 6, dx: 5,  dz: 1, c: 'dorado' }
+    ] },
+
+    // Una carretilla de mano: la plataforma, la caja y las dos ruedas
+    extra: { emblemaEn: 1, piezas: [
+      { a: 13, l: 9, h: 3, y: 0, dz: 1, c: 'maderaClara' },
+      { a: 9,  l: 6, h: 5, y: 3, dz: 3, c: 'carton' },
+      { a: 4,  l: 4, h: 4, y: 0, dx: -7, c: 'oscuro' },
+      { a: 4,  l: 4, h: 4, y: 0, dx: 7,  c: 'oscuro' }
+    ] },
+
+    /* Una cama: armazon de madera, cabecera al fondo, colchon rojo y dos
+     * almohadas. Es la figura que mejor sale en planta, y no por suerte: una
+     * cama vista desde arriba ES un rectangulo de color con dos cuadritos
+     * blancos en una punta. */
+    descanso: { emblemaEn: 2, piezas: [
+      { a: 17, l: 12, h: 2, y: 0, c: 'madera' },
+      { a: 17, l: 2,  h: 7, y: 0, dz: 10, c: 'madera' },
+      { a: 15, l: 9,  h: 3, y: 2, c: 'colchon' },
+      { a: 7,  l: 4,  h: 3, y: 5, dx: -4, dz: 4, c: 'tela' },
+      { a: 7,  l: 4,  h: 3, y: 5, dx: 4,  dz: 4, c: 'tela' }
+    ] },
+
+    // Un cono de los de la calle, con su banda blanca y su base negra
+    dificultad: { emblemaEn: 2, piezas: [
+      { a: 13, l: 10, h: 2, y: 0, c: 'oscuro' },
+      { a: 9,  l: 7,  h: 4, y: 2, c: 'naranja' },
+      { a: 7,  l: 5,  h: 2, y: 6, c: 'blanco' },
+      { a: 5,  l: 4,  h: 4, y: 8, c: 'naranja' }
+    ] },
+
+    // Una carta boca abajo, con su reverso mas claro
+    comodin: { emblemaEn: 1, piezas: [
+      { a: 13, l: 10, h: 2, y: 0, c: 'moradoHondo' },
+      { a: 9,  l: 7,  h: 1, y: 2, c: 'morado' }
+    ] },
+
+    // Un hoyo en la calle, con el marco rojo de los que avisan
+    trampa: { emblemaEn: 0, piezas: [
+      { a: 14, l: 10, h: 2, y: 0, c: 'rojo' },
+      { a: 9,  l: 6,  h: 1, y: 2, c: 'oscuro' }
+    ] },
+
+    // Un despertador: cuerpo rojo, esfera blanca y las dos campanas
+    viaje: { emblemaEn: 1, piezas: [
+      { a: 12, l: 9, h: 9, y: 0, c: 'rojo' },
+      { a: 8,  l: 6, h: 1, y: 9, dz: 1, c: 'blanco' },
+      { a: 4,  l: 4, h: 3, y: 9, dx: -5, dz: 5, c: 'amarillo' },
+      { a: 4,  l: 4, h: 3, y: 9, dx: 5,  dz: 5, c: 'amarillo' }
+    ] },
+
+    // La meta: el suelo, el asta y la bandera
+    fin: { emblemaEn: 0, piezas: [
+      { a: 12, l: 9, h: 2,  y: 0, c: 'verde' },
+      { a: 2,  l: 2, h: 13, y: 2, dx: -4, dz: 3, c: 'metal' },
+      { a: 8,  l: 2, h: 5,  y: 10, dx: 1, dz: 3, c: 'blanco' }
+    ] },
+    salida: { emblemaEn: 0, piezas: [
+      { a: 12, l: 9, h: 2,  y: 0, c: 'verde' },
+      { a: 2,  l: 2, h: 13, y: 2, dx: -4, dz: 3, c: 'metal' },
+      { a: 8,  l: 2, h: 5,  y: 10, dx: 1, dz: 3, c: 'blanco' }
+    ] },
+
+    // --- y las tres esquinas que son sitios y no dias ---
+
+    // Una copa: base oscura, pie y boca dorada
+    reto: { emblemaEn: 2, piezas: [
+      { a: 10, l: 8, h: 2, y: 0, c: 'oscuro' },
+      { a: 3,  l: 3, h: 4, y: 2, c: 'dorado' },
+      { a: 10, l: 7, h: 5, y: 6, c: 'dorado' },
+      { a: 2,  l: 2, h: 4, y: 7, dx: -6, dz: 2, c: 'dorado' },
+      { a: 2,  l: 2, h: 4, y: 7, dx: 6,  dz: 2, c: 'dorado' }
+    ] },
+
+    // Una hamaca colgada entre dos postes
+    respiro: { emblemaEn: 2, piezas: [
+      { a: 2,  l: 2, h: 10, y: 0, dx: -8, c: 'madera' },
+      { a: 2,  l: 2, h: 10, y: 0, dx: 8,  c: 'madera' },
+      { a: 14, l: 7, h: 2,  y: 7, c: 'hamaca' }
+    ] },
+
+    // Una valla de obra: dos postes y el travesano a rayas
+    atraso: { emblemaEn: 2, piezas: [
+      { a: 2, l: 2, h: 8, y: 0, dx: -7, c: 'metal' },
+      { a: 2, l: 2, h: 8, y: 0, dx: 7,  c: 'metal' },
+      { a: 6, l: 3, h: 3, y: 7, c: 'blanco' },
+      { a: 6, l: 3, h: 3, y: 7, dx: -6, c: 'rojo' },
+      { a: 6, l: 3, h: 3, y: 7, dx: 6,  c: 'rojo' }
+    ] }
   };
 
   function objetoDeCasilla(tipo, grande) {
@@ -690,15 +829,18 @@ var UI = (function () {
      * pista— así que lo que se para encima tiene que ser chico o se sale a la
      * casilla de al lado. En la ventana, en cambio, hay sitio de sobra. */
     var f = grande ? 3.4 : 0.62;
+    var conEmblema = (o.emblemaEn === undefined) ? o.piezas.length - 1 : o.emblemaEn;
     var h = '';
     for (var i = 0; i < o.piezas.length; i++) {
       var pz = o.piezas[i];
+      var col = PALETA_OBJ[pz.c] || { cara: 'var(--linea)', techo: 'var(--linea)' };
       h += caja3d({
         x: 50, z: grande ? 74 : 72,
-        ancho: Math.max(2, Math.round(pz[0] * f)), largo: Math.max(2, Math.round(pz[1] * f)),
-        alto: Math.max(2, Math.round(pz[2] * f)), sube: Math.round(pz[3] * f),
-        color: o.color, techo: o.techo, clase: 'obj',
-        emblema: i === o.piezas.length - 1 ? (ICONO_CASILLA[tipo] || 'calendario') : ''
+        ancho: Math.max(2, Math.round(pz.a * f)), largo: Math.max(2, Math.round(pz.l * f)),
+        alto: Math.max(2, Math.round(pz.h * f)), sube: Math.round((pz.y || 0) * f),
+        lado: Math.round((pz.dx || 0) * f), atras: Math.round((pz.dz || 0) * f),
+        color: col.cara, techo: col.techo, clase: 'obj',
+        emblema: i === conEmblema ? (ICONO_CASILLA[tipo] || 'calendario') : ''
       });
     }
     return h;

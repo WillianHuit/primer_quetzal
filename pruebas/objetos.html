@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Banco de figuras — Mi Primer Quetzal</title>
+<link rel="stylesheet" href="../css/estilo.css">
+<style>
+  body { background: #eef1ef; font: 13px/1.4 system-ui, sans-serif; padding: 14px; margin: 0; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  p.nota { color: #6b7a75; margin: 0 0 16px; max-width: 620px; }
+  .rejilla { display: flex; flex-wrap: wrap; gap: 14px; }
+  .celda { background: #fff; border: 1.5px solid #dbe4e0; border-radius: 10px; padding: 8px; }
+  .celda h2 { font-size: 12px; margin: 0 0 6px; text-align: center; color: #16211d; }
+  .celda .sub { font-size: 10px; color: #6b7a75; text-align: center; margin: 4px 0 0; }
+  /* La misma tarima de la ventana del juego, para verlas como se ven ahi */
+  .banco-grande .tarima-3d { width: 190px; height: 150px; }
+  /* Y la casilla de verdad, del tamano que tiene en el tablero */
+  .banco-chico { display: flex; gap: 10px; justify-content: center; }
+  .mini {
+    width: 54px; height: 72px; position: relative;
+    perspective: 420px;
+  }
+  .mini .plano {
+    position: absolute; inset: 0;
+    transform-style: preserve-3d;
+    transform: rotateX(52deg) rotateZ(var(--v, 0deg));
+  }
+  .mini .casilla { position: absolute; inset: 0; }
+</style>
+</head>
+<body>
+<!--
+  BANCO DE FIGURAS. Lo que se para en cada casilla, grande y chico.
+
+  Existe porque estas figuras no se pueden revisar dentro del juego: para ver
+  la del viaje en el tiempo hay que caer en un viaje en el tiempo. Aqui salen
+  las doce a la vez.
+
+  Y NO copia el markup de js/ui.js: carga el juego de verdad y llama a
+  UI.objetoDeCasilla(), que es la misma funcion que dibuja el tablero. El
+  banco viejo (piezas.html) si lo copiaba, y una copia de un dibujo es una
+  copia que se queda atras.
+
+  Se abre con doble clic. ?tipo=descanso deja una sola figura, para mirarla de
+  cerca.
+-->
+<h1>Las figuras de las casillas</h1>
+<p class="nota">Arriba, como se ven en la ventana que se abre al caer. Abajo, del
+tamaño que tienen en el tablero y en las cuatro vueltas del anillo. Si una no se
+reconoce en la fila de abajo, no sirve: ahí es donde el jugador la ve primero.</p>
+<div id="salida" class="rejilla"></div>
+
+<script>
+  var RUTA_ASSETS = '../assets/juego/';
+  var MOVIMIENTO = 'completo';
+  var ARCHIVOS = [
+    'datos/config.js', 'datos/trabajos.js', 'datos/carreras.js', 'datos/tablero.js',
+    'datos/barrio.js', 'datos/condiciones.js', 'datos/creditos.js',
+    'datos/eventos.js', 'datos/largoplazo.js', 'datos/origenes.js', 'datos/migracion.js',
+    'datos/glosario.js', 'datos/decisiones.js', 'datos/mejoras.js', 'datos/negocios.js',
+    'datos/progreso.js', 'datos/textos.en.js', 'datos/textos.en.v2.js',
+    'vendor/lucide.js', 'vendor/chart.js',
+    'js/idioma.js', 'js/iconos.js', 'js/arte.js', 'js/personaje.js', 'js/escena.js',
+    'js/sonido.js', 'js/motor.js',
+    'js/minijuegos/marco.js', 'js/minijuegos/reparto.js', 'js/minijuegos/tienda.js',
+    'js/minijuegos/sumas.js', 'js/minijuegos/mayor.js', 'js/minijuegos/figuras.js',
+    'js/minijuegos/contar.js', 'js/minijuegos/cambio.js', 'js/minijuegos/precios.js',
+    'js/minijuegos/estafas.js', 'js/minijuegos/presupuesto.js', 'js/minijuegos/logica.js',
+    'js/minijuegos/primeros.js', 'js/minijuegos/margen.js', 'js/minijuegos/centrado.js',
+    'js/minijuegos/encaja.js', 'js/minijuegos/siembra.js', 'js/minijuegos/explicar.js',
+    'js/minijuegos/caja.js', 'js/minijuegos/conciliacion.js', 'js/minijuegos/obra.js',
+    'js/minijuegos/inversion.js', 'js/ui.js'
+  ];
+  (function cargar(i) {
+    if (i >= ARCHIVOS.length) return pintar();
+    var s = document.createElement('script');
+    s.src = '../' + ARCHIVOS[i];
+    s.onload = function () { cargar(i + 1); };
+    document.body.appendChild(s);
+  })(0);
+
+  var NOMBRES = {
+    tarea: 'Tarea · libros', trabajo: 'Trabajo · portafolio', extra: 'Extra · carretilla',
+    descanso: 'Descanso · cama', dificultad: 'Imprevisto · cono', comodin: 'Comodín · carta',
+    trampa: 'Trampa · hoyo', viaje: 'Viaje · despertador', fin: 'Fin de mes · meta',
+    salida: 'Salida · meta', reto: 'Reto · copa', respiro: 'Respiro · hamaca',
+    atraso: 'Atraso · valla'
+  };
+  var CLASE = {
+    tarea: 'c-tarea', trabajo: 'c-trabajo', extra: 'c-extra', descanso: 'c-descanso',
+    dificultad: 'c-dificultad', comodin: 'c-comodin', trampa: 'c-trampa', viaje: 'c-viaje',
+    fin: 'c-fin', salida: 'c-fin', reto: 'c-reto', respiro: 'c-respiro', atraso: 'c-atraso'
+  };
+
+  function pintar() {
+    var salida = document.getElementById('salida');
+    var h = '';
+    var solo = new URLSearchParams(location.search).get('tipo');
+    Object.keys(NOMBRES).filter(function (t) { return !solo || t === solo; })
+      .forEach(function (tipo) {
+      var grande = UI.objetoDeCasilla(tipo, true);
+      if (!grande) return;
+      h += '<div class="celda"><h2>' + NOMBRES[tipo] + '</h2>';
+      h += '<div class="banco-grande"><div class="tarima-3d"><div class="tarima">' +
+           grande + '</div></div></div>';
+      h += '<div class="banco-chico">';
+      [0, 90, 180, 270].forEach(function (v) {
+        h += '<div class="mini"><div class="plano" style="--v:' + v + 'deg">' +
+             '<div class="casilla ' + (CLASE[tipo] || '') + '">' +
+             UI.objetoDeCasilla(tipo) + '</div></div></div>';
+      });
+      h += '</div><p class="sub">las cuatro vueltas del tablero</p></div>';
+    });
+    salida.innerHTML = h;
+  }
+</script>
+</body>
+</html>
