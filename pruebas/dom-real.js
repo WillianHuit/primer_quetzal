@@ -460,12 +460,19 @@ ok(!puerta.experienciaRequerida,
    * borde y el centro queda libre para el dado. El perímetro de una cuadrícula
    * siempre es par, así que además de los días lleva la casilla de SALIDA y,
    * en los meses cortos, una de camino sin día. */
-  ok(w3.document.querySelectorAll('.tablero .casilla[data-paso]').length === t3.dias,
+  ok(w3.document.querySelectorAll('.tablero .casilla[data-dia]').length === t3.dias,
      'y el tablero dibuja los días, uno por casilla');
-  ok(!!w3.document.querySelector('.tablero .casilla.salida'),
-     'con su casilla de salida, la de la que se sale');
+  ok(!!w3.document.querySelector('.tablero .casilla.salida.esquina'),
+     'con su casilla de salida, la de la que se sale, en una esquina');
   ok(w3.document.querySelectorAll('.tablero .casilla.esquina').length === 4,
      'y cuatro esquinas, que es lo que tiene un cuadrado');
+  /* Las esquinas NO son días: caer en una no gasta calendario, así que el
+   * camino es más largo que el mes. */
+  ok(t3.pasos > t3.dias,
+     `el camino son ${t3.pasos} pasos para ${t3.dias} días: las esquinas van aparte`);
+  ok([...w3.document.querySelectorAll('.tablero .casilla.esquina')]
+       .every(c => !c.hasAttribute('data-dia')),
+     'y ninguna esquina lleva número de día');
   /* El centro es el BARRIO donde vive, con el dado tirado en su placita. El
    * botón está debajo y de frente: un botón inclinado 55 grados encima de las
    * casas no se lee ni se atina. */
@@ -493,18 +500,20 @@ ok(!puerta.experienciaRequerida,
   /* Cada día es una tarjeta de tablero de mesa: franja de color mirando al
    * centro y una cosa parada encima. Los bultos son lo que hace que el tablero
    * se lea desde el otro lado; las letras solo se leen al acercarse. */
-  const conBanda = w3.document.querySelectorAll('.tablero .casilla[data-paso] .banda').length;
+  const conBanda = w3.document.querySelectorAll('.tablero .casilla[data-dia] .banda').length;
   ok(conBanda === t3.dias,
      `los ${conBanda} días llevan su franja de color, como una tarjeta de tablero`);
   /* Todos menos los días cualquiera, que a propósito no llevan nada: un solar
    * vacío también dice algo, y es que ese día no te va a pasar nada. */
-  const conAlgo = [...w3.document.querySelectorAll('.tablero .casilla[data-paso]')]
+  const conAlgo = [...w3.document.querySelectorAll('.tablero .casilla[data-dia]')]
     .filter(c => [...c.classList].some(x => x.indexOf('c-') === 0));
   ok(conAlgo.length > 0 && conAlgo.every(c => !!c.querySelector('.caja3d')),
      `los ${conAlgo.length} días con algo dentro lo llevan parado encima, con sus tres caras`);
-  ok([...w3.document.querySelectorAll('.tablero .casilla[data-paso]')]
-       .some(c => !c.querySelector('.caja3d')),
-     'y los días cualquiera se quedan como un solar vacío');
+  /* Y un día cualquiera se queda como un solar vacío. Se comprueba la regla y
+   * no el tablero: los días cualquiera son raros a propósito —el mes se sentía
+   * una fila de días iguales— y un mes puede no traer ninguno. */
+  ok(!w3.UI.objetoDeCasilla || !w3.UI.objetoDeCasilla('libre'),
+     'y un día cualquiera no lleva nada parado encima: es un solar vacío');
   const lados = new Set([...w3.document.querySelectorAll('.tablero .casilla')]
     .map(c => [...c.classList].find(x => x.indexOf('lado-') === 0)));
   ok(lados.size === 4,
@@ -514,8 +523,8 @@ ok(!puerta.experienciaRequerida,
    * número con su precio en el pie. La cara es una capa aparte porque es la
    * única que gira con el lado —como en el tablero de mesa, donde las
    * tarjetas de cada lado están impresas mirando a quien se sienta ahí—. */
-  ok(w3.document.querySelectorAll('.tablero .casilla .cara-dia').length ===
-     w3.document.querySelectorAll('.tablero .casilla').length,
+  ok(w3.document.querySelectorAll('.tablero .casilla:not(.camino) .cara-dia').length ===
+     w3.document.querySelectorAll('.tablero .casilla:not(.camino)').length,
      'las tarjetas llevan su cara impresa, la que gira con el lado del tablero');
   const conNombre = [...w3.document.querySelectorAll('.tablero .casilla.c-tarea .banda')]
     .filter(b => b.textContent.trim() === 'Tarea');
@@ -527,8 +536,8 @@ ok(!puerta.experienciaRequerida,
   /* Y el anillo es un CUADRADO exacto, no lo más cuadrado que salga: la cara
    * de la tarjeta gira noventa grados en dos de los cuatro lados, y en una
    * casilla que no fuera cuadrada se desbordaría. */
-  ok(w3.document.querySelectorAll('.tablero .casilla').length === 32,
-     `los ${t3.dias} días caben en un anillo de 9x9, que es cuadrado exacto`);
+  ok(w3.document.querySelectorAll('.tablero .casilla').length === 4 * t3.lado - 4,
+     `los ${t3.dias} días y sus cuatro esquinas caben en un anillo de ${t3.lado}x${t3.lado}`);
 
   /* Cada casilla dice en qué sitio de la cuadrícula está. De esto vive la
    * cámara: para saber dónde va a quedar una casilla DESPUÉS de que el tablero
@@ -536,12 +545,13 @@ ok(!puerta.experienciaRequerida,
    * que girar el tablero para medirlo, y medir moviendo cosas es justo lo que
    * le rompía la animación —la cámara saltaba en vez de seguir a la ficha—. */
   const conSitio = [...w3.document.querySelectorAll('.tablero .casilla[data-f][data-c]')];
-  ok(conSitio.length === 32,
-     'las 32 casillas dicen en qué fila y columna están, que es de lo que vive la cámara');
+  ok(conSitio.length === 4 * t3.lado - 4,
+     `las ${conSitio.length} casillas dicen en qué fila y columna están, que es de lo que vive la cámara`);
   const sitios = new Set(conSitio.map(c => c.dataset.f + ',' + c.dataset.c));
-  ok(sitios.size === 32, 'y no hay dos en el mismo sitio');
-  const enBorde = conSitio.every(c => ['0', '8'].indexOf(c.dataset.f) >= 0 ||
-                                      ['0', '8'].indexOf(c.dataset.c) >= 0);
+  ok(sitios.size === conSitio.length, 'y no hay dos en el mismo sitio');
+  const borde = ['0', String(t3.lado - 1)];
+  const enBorde = conSitio.every(c => borde.indexOf(c.dataset.f) >= 0 ||
+                                      borde.indexOf(c.dataset.c) >= 0);
   ok(enBorde, 'todas caen en el borde del cuadrado, que es donde va el camino');
 
   /* El barrio del primer día sale de la dificultad que eligió. Esta partida
@@ -572,8 +582,12 @@ ok(!puerta.experienciaRequerida,
   const ahora = M3.tablero().pos;
   ok(sonados.indexOf('dado') >= 0, 'el dado suena al tirarlo');
   const tipoCaido = (M3.casillaActual() || {}).tipo;
+  /* La misma tabla que ANIMO_CASILLA en js/ui.js. Si se agrega un tipo allá y
+   * no aquí, esta comprobación falla el día que el dado caiga en él: le pasó
+   * al viaje en el tiempo y a las esquinas. */
   const ANIMO = { trabajo: 'alegre', extra: 'alegre', descanso: 'alegre',
-                  dificultad: 'triste' };
+                  viaje: 'alegre', respiro: 'alegre', reto: 'alegre',
+                  dificultad: 'triste', atraso: 'triste' };
   if (ANIMO[tipoCaido]) {
     ok(sonados.indexOf(ANIMO[tipoCaido]) >= 0,
        `y cayó en ${tipoCaido}, que suena ${ANIMO[tipoCaido]}`);
@@ -582,8 +596,8 @@ ok(!puerta.experienciaRequerida,
        `y cayó en ${tipoCaido}, que no suena ni a bueno ni a malo: es una decisión`);
   }
   w3.Sonido.tono = tonoReal;
-  ok(ahora > antes && ahora - antes <= 6,
-     `el dado movió ${ahora - antes} días, que es lo que puede mover un dado`);
+  ok(ahora - antes >= 2 && ahora - antes <= 12,
+     `los dos dados movieron ${ahora - antes} pasos, que es lo que pueden mover dos dados`);
   ok(w3.document.querySelectorAll('.tablero .casilla.aqui').length === 1,
      'y la ficha está en un solo día');
   ok(!!w3.document.getElementById('ficha-tablero'),
@@ -605,8 +619,8 @@ ok(!puerta.experienciaRequerida,
   // Se recorre el resto del mes y ahí sí aparece el botón de cerrarlo
   const tiradas = recorrerMes(w3, true);
   ok(M3.tableroTerminado(), `el mes se recorrió en ${tiradas + 1} tiradas`);
-  ok(tiradas + 1 >= 5 && tiradas + 1 <= 20,
-     'que son las que caben en treinta días con un dado de seis caras');
+  ok(tiradas + 1 >= 3 && tiradas + 1 <= 18,
+     'que son las que caben en un mes con dos dados de seis caras');
   ok(!!w3.document.querySelector('#cerrar-turno'),
      'y al llegar al final aparece el botón de terminar el mes');
 
@@ -1218,8 +1232,14 @@ w.Motor.get().energia = w.CONFIG.energia.maxima;
    * sola. */
   const t = w.Motor.tablero();
   t.pos = 0;
-  for (let k = 0; k < 6; k++) {
-    t.casillas[k] = { id: 'dia_tarea', tipo: 'tarea', sorteado: { tareaId: 'sumas' } };
+  /* TODOS los pasos que dos dados pueden alcanzar —del 2 al 12— se ponen de
+   * tarea, esquinas incluidas. Antes se saltaban las esquinas y el 8 caía
+   * justo en una: la prueba fallaba una de cada siete corridas, que son las
+   * veces que dos dados suman ocho. Una prueba que depende de un dado es una
+   * prueba que un día falla sola. */
+  for (let k = 1; k <= 12 && k < t.casillas.length; k++) {
+    t.casillas[k] = { id: 'dia_tarea', tipo: 'tarea', dia: k,
+                      sorteado: { tareaId: 'sumas' } };
   }
   w.Motor.guardar();
 })();
@@ -1272,9 +1292,19 @@ function esperar(ms) { return new Promise(r => setTimeout(r, ms)); }
   const puntosTrasUna = w.document.querySelector('#mj-puntos').textContent;
   ok(puntosTrasUna !== '0' || true, `el marcador se actualiza (${puntosTrasUna} puntos)`);
 
-  await esperar(900);   // la tarea encadena a los 650 ms
-  const segundoMensaje = w.document.querySelector('.mj-mensaje');
-  ok(!!segundoMensaje && segundoMensaje.textContent !== primerMensaje,
+  /* La tarea encadena a los 650 ms. Se espera y se comprueba que la pregunta
+   * cambió... y si salió la misma, se contesta otra vez y se vuelve a mirar:
+   * las operaciones se sortean, y dos iguales seguidas pasan de vez en cuando.
+   * Fallaba una de cada tantas corridas por eso, no por el encadenado. */
+  let segundoMensaje = null, cambio = false;
+  for (let intento = 0; intento < 3 && !cambio; intento++) {
+    await esperar(900);
+    segundoMensaje = w.document.querySelector('.mj-mensaje');
+    if (!segundoMensaje) break;
+    cambio = segundoMensaje.textContent !== primerMensaje;
+    if (!cambio) clic(w, resolverSuma(w) || w.document.querySelector('.velo [data-v]'));
+  }
+  ok(!!segundoMensaje && cambio,
      'la cadena de temporizadores avanza a la siguiente pregunta');
 
   // Responder unas cuantas más y dejar que se acabe el tiempo

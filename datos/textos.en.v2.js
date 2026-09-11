@@ -61,6 +61,31 @@
     via_lluvia: 'It rained without stopping and the calendar skipped a few days.'
   };
 
+  /* ---------- las esquinas y las trampas del tablero ---------- */
+  ui['Reto'] = 'Challenge';
+  ui['Trampa'] = 'Trap';
+  ui['Descanso libre'] = 'Free rest';
+  ui['Se te fue el mes'] = 'The month got away';
+  ui['Pasaste por la salida.'] = 'You passed Start.';
+  ui['Descansaste sin gastar jornada.'] = 'You rested without spending a shift.';
+  ui['Se te fueron {0} días.'] = 'You lost {0} days.';
+  ui['Te salió un reto.'] = 'A challenge came up.';
+  ui['Te quieren ver la cara'] = 'Somebody is trying to fool you';
+  ui['Aquí sí hay una buena. Piénsalo.'] = 'One of these is the right one. Think it through.';
+  ui['se paga aparte'] = 'paid separately';
+  ui['no gasta jornada'] = 'costs no shift';
+  ui['Días'] = 'Days';
+
+  /* Los textos de las cuatro esquinas, por id. Ver datos/tablero.js. */
+  X.tablero_esquina = {
+    esq_salida: 'This is where the month begins.',
+    esq_reto: 'A side job with a prize comes up. It costs you no day of the ' +
+              'month: it is time you found where there was none.',
+    esq_libre: 'A day you owe nobody. You rest without spending a shift.',
+    esq_atraso: 'Between one thing and another a few days got away from you ' +
+                'and you cannot say how.'
+  };
+
   /* ---------- el barrio del centro del tablero ----------
    * El nombre de cada barrio y lo que se ve en el. La clave ':d' es la
    * descripcion, la que va en el title. Ver datos/barrio.js. */

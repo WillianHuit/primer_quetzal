@@ -26,19 +26,23 @@ Estado al escribir esto:
 
 | Cosa | Cuántas hay | Dónde |
 |---|---|---|
-| Tipos de día (casillas) | 8 | `TABLERO_CASILLAS` |
+| Tipos de día (casillas) | 9 | `TABLERO_CASILLAS` |
 | Dificultades | 21 | `TABLERO_DIFICULTADES` |
-| Comodines (A/B) | 8 | `TABLERO_COMODINES` |
+| Comodines (A/B) | 30 | `TABLERO_COMODINES` |
+| Trampas (A/B con respuesta buena) | 7 | `TABLERO_TRAMPAS` |
+| Esquinas | 4 | `TABLERO_ESQUINAS` |
 | Viajes en el tiempo | 6 | `TABLERO_VIAJES` |
 | Tareas (minijuegos) | 15 | `js/minijuegos/` |
 
 Lo que más falta, por orden de lo que más se nota jugando:
 
-1. **Comodines.** Son los que el jugador recuerda y solo hay ocho. Deberían
-   ser treinta.
-2. **Dificultades de trabajo y de familia.** Las 21 de ahora son de estudiante
+1. **Dificultades de trabajo y de familia.** Las 21 de ahora son de estudiante
    y de casa; falta lo que le pasa a alguien de 30 con un negocio y dos hijos.
+2. **Trampas.** Siete. Las estafas cambian con la edad: al de trece le llaman
+   por una rifa, al de cuarenta le ofrecen una inversión.
 3. **Viajes en el tiempo.** Seis textos. Cuestan una línea cada uno.
+4. **Traducir.** Los 30 comodines y las 7 trampas están sin traducir al inglés.
+   Las dificultades, los viajes y las esquinas sí lo están.
 
 ---
 
@@ -162,6 +166,46 @@ jugador se acuerda. Agregar uno es escribir una línea:
 
 Si algún día hace falta un viaje que **quite** en vez de dar, el sitio es
 `sortearViaje()`, no los datos.
+
+---
+
+## Agregar una TRAMPA
+
+Misma forma que un comodín y la lección contraria: aquí **sí hay una respuesta
+buena**. Van en `TABLERO_TRAMPAS` y aceptan el mismo `si`.
+
+```js
+{
+  id: 'tra_deposito',
+  si: 'dinero',
+  pregunta: 'Para apartarte el puesto te piden un depósito por adelantado.',
+  a: { texto: 'Depositar',
+       resultado: 'El número dejó de existir al día siguiente.',
+       efecto: { dinero: -200 } },
+  b: { texto: 'Pedir ir a la oficina',
+       resultado: 'No había oficina. Ni puesto.',
+       efecto: { experiencia: 6 } }
+}
+```
+
+**La regla:** que la opción mala suene **razonable**. Una estafa que se ve venir
+no enseña nada, y las de verdad nunca se ven venir. El castigo no tiene que ser
+enorme: lo que se lleva el jugador es haber visto la forma.
+
+---
+
+## Las cuatro ESQUINAS
+
+No son días: caer en una no gasta calendario. Son cuatro y tienen que ser
+cuatro —la quinta no tendría dónde ponerse— y viven en `TABLERO_ESQUINAS`. Para
+cambiar lo que hace una, hay que tocar `abrirEsquina()` en `js/ui.js`.
+
+| Esquina | Qué hace |
+|---|---|
+| Salida | nada. Es el sitio del que se sale |
+| Reto | un trabajito con premio, y no gasta jornada |
+| Descanso libre | el único descanso del juego que no cuesta jornada |
+| Se te fue el mes | te devuelve cuatro pasos |
 
 ---
 

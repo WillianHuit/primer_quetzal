@@ -1267,6 +1267,14 @@ var Motor = (function () {
    * que tiene. Una dificultad no puede dejar a nadie en numeros rojos: para
    * eso ya estan los prestamos, que son una decision y no un accidente.
    */
+  /* Lo peor que puede costar una cosa de dos lados, para no ofrecerle a nadie
+   * una trampa que no podria pagar ni aunque quisiera caer en ella. */
+  function peorEfecto(c) {
+    var a = (c.a && c.a.efecto && c.a.efecto.dinero) || 0;
+    var b = (c.b && c.b.efecto && c.b.efecto.dinero) || 0;
+    return Math.min(a, b);
+  }
+
   function cumpleCondicion(si, costo) {
     if (!si) return true;
     if (!estado) return false;
@@ -1296,24 +1304,60 @@ var Motor = (function () {
     return { id: e.id, tipo: e.tipo };
   }
 
+  /* EL ANILLO, CON SUS CUATRO ESQUINAS.
+   *
+   * El camino ya no son los dias y ya esta: es un cuadrado con una esquina en
+   * cada vertice, como el de mesa. Las esquinas NO son dias —caer en una no
+   * gasta calendario— y por eso el tablero tiene dos cuentas distintas:
+   *
+   *   dias   los del mes, 28 a 31. Es lo que dice el titulo.
+   *   pasos  las casillas del camino, dias + 4 esquinas + el relleno que haga
+   *          falta para cerrar el cuadrado. Es lo que recorre la ficha.
+   *
+   * El lado del cuadrado sale de ahi: con `lado` casillas por lado el anillo
+   * tiene 4*lado-4, de las que 4 son esquinas, asi que hacen falta al menos
+   * (dias+8)/4. Febrero cabe en 9 justo; los meses de 30 y 31 piden 10 y les
+   * sobran una o dos casillas de camino sin dia.
+   */
+  function ladoDelMes(dias) { return Math.ceil((dias + 8) / 4); }
+
   function generarTablero() {
     if (!estado || !hayTablero()) return null;
     var dias = diasDelMes();
     var etapa = etapaTablero();
+    var lado = ladoDelMes(dias);
+    var pasos = 4 * lado - 4;
+    var esquinas = [0, lado - 1, 2 * lado - 2, 3 * lado - 3];
+    var hayEsquinas = typeof TABLERO_ESQUINAS !== 'undefined';
+
     var casillas = [];
-    for (var d = 0; d < dias; d++) {
+    var dia = 0;
+    for (var k = 0; k < pasos; k++) {
+      var cual = esquinas.indexOf(k);
+      if (cual >= 0) {
+        var e = hayEsquinas ? TABLERO_ESQUINAS[cual] : null;
+        casillas.push(e ? { id: e.id, tipo: e.tipo, esquina: cual, dia: null }
+                        : { id: 'esq', tipo: 'salida', esquina: cual, dia: null });
+        continue;
+      }
+      dia++;
+      if (dia > dias) { casillas.push({ id: 'camino', tipo: 'camino', dia: null }); continue; }
       // El ultimo dia es el final del mes y no trae nada: es la meta
-      if (d === dias - 1) { casillas.push({ id: 'fin', tipo: 'fin' }); continue; }
-      casillas.push(sortearTipoDeDia(etapa));
+      if (dia === dias) { casillas.push({ id: 'fin', tipo: 'fin', dia: dia }); continue; }
+      var c = sortearTipoDeDia(etapa);
+      c.dia = dia;
+      casillas.push(c);
     }
-    estado.tablero = { dias: dias, pos: 0, casillas: casillas };
+
+    estado.tablero = { dias: dias, pasos: pasos, lado: lado, pos: 0, casillas: casillas };
     return estado.tablero;
   }
 
   function tablero() {
     if (!estado) return null;
-    if (!estado.tablero || !estado.tablero.casillas ||
-        estado.tablero.casillas.length !== diasDelMes()) {
+    var t = estado.tablero;
+    if (!t || !t.casillas || !t.pasos ||
+        t.casillas.length !== t.pasos || t.dias !== diasDelMes()) {
       generarTablero();
     }
     return estado.tablero;
@@ -1321,7 +1365,17 @@ var Motor = (function () {
 
   function tableroTerminado() {
     var t = tablero();
-    return !t || t.pos >= t.dias;
+    return !t || t.pos >= t.pasos;
+  }
+
+  /* Que dia del mes es hoy: las esquinas no cuentan, asi que no es `pos`. */
+  function diaActual() {
+    var t = tablero();
+    if (!t || t.pos <= 0) return 0;
+    for (var k = t.pos - 1; k >= 0; k--) {
+      if (t.casillas[k] && t.casillas[k].dia) return t.casillas[k].dia;
+    }
+    return 0;
   }
 
   /* Que hay dentro de la casilla en la que acabo de caer.
@@ -1348,6 +1402,17 @@ var Motor = (function () {
       });
       if (!males.length) males = TABLERO_DIFICULTADES.filter(function (d) { return !d.si; });
       casilla.sorteado = males[azarEntero(0, males.length - 1)];
+      return casilla;
+    }
+
+    /* La trampa se sortea igual que el comodin: misma forma, otra leccion. */
+    if (casilla.tipo === 'trampa' && typeof TABLERO_TRAMPAS !== 'undefined') {
+      var trampas = TABLERO_TRAMPAS.filter(function (c) {
+        return cumpleCondicion(c.si, peorEfecto(c));
+      });
+      if (!trampas.length) trampas = TABLERO_TRAMPAS.filter(function (c) { return !c.si; });
+      if (!trampas.length) { casilla.tipo = 'libre'; casilla.id = 'dia_libre'; return casilla; }
+      casilla.sorteado = trampas[azarEntero(0, trampas.length - 1)];
       return casilla;
     }
 
@@ -1413,16 +1478,37 @@ var Motor = (function () {
    * El dado es un d6 y el mes son treinta dias, asi que un mes son ocho o
    * nueve tiradas: suficientes para que pasen cosas y pocas para que ninguna
    * se sienta de relleno. */
+  /* DOS DADOS, como en el de mesa.
+   *
+   * Con uno solo el mes eran ocho o nueve tiradas y todas se parecian; con dos
+   * son cinco o seis y cada una pesa. Y sobre todo: con dos dados el reparto
+   * deja de ser plano —el siete sale seis veces mas que el dos— asi que el
+   * jugador empieza a tener una idea de cuanto va a avanzar sin saber que la
+   * tiene. Eso es lo que hace que una tirada se sienta buena o mala.
+   */
   function tirarDado() {
     var t = tablero();
-    if (!t || t.pos >= t.dias) return null;
-    var dado = azarEntero(1, 6);
+    if (!t || t.pos >= t.pasos) return null;
+    var a = azarEntero(1, 6), b = azarEntero(1, 6);
     var desde = t.pos;
-    t.pos = Math.min(t.dias, t.pos + dado);
+    t.pos = Math.min(t.pasos, t.pos + a + b);
     var casilla = sortearContenido(t.casillas[t.pos - 1]);
     guardar();
-    return { dado: dado, desde: desde, pos: t.pos, casilla: casilla,
-             fin: t.pos >= t.dias };
+    return { dados: [a, b], dado: a + b, desde: desde, pos: t.pos,
+             casilla: casilla, fin: t.pos >= t.pasos };
+  }
+
+  /* Y hay una casilla que te devuelve pasos. Nunca antes de la salida, y
+   * nunca a otra esquina: dos atrasos seguidos serian una trampa. */
+  function retroceder(pasos) {
+    var t = tablero();
+    if (!t) return null;
+    var desde = t.pos;
+    t.pos = Math.max(1, t.pos - Math.max(1, pasos || 1));
+    while (t.pos > 1 && t.casillas[t.pos - 1] &&
+           t.casillas[t.pos - 1].esquina !== undefined) t.pos--;
+    guardar();
+    return { desde: desde, pos: t.pos, casilla: sortearContenido(t.casillas[t.pos - 1]) };
   }
 
   function casillaActual() {
@@ -3034,6 +3120,7 @@ var Motor = (function () {
     casillaActual: casillaActual, tableroTerminado: tableroTerminado,
     etapaTablero: etapaTablero, aplicarEfecto: aplicarEfecto,
     aceptarCasilla: aceptarCasilla, diasDelMes: diasDelMes,
+    diaActual: diaActual, retroceder: retroceder,
     nivelDeBarrio: nivelDeBarrio, cumpleCondicion: cumpleCondicion,
     sortearViaje: sortearViaje,
     energiaDeEspacio: energiaDeEspacio, energiaProyectada: energiaProyectada,

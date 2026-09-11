@@ -25,14 +25,14 @@ const { cargar, Marcador } = require('./comun');
 
 const sb = cargar('es');
 const { Motor, CONFIG, TABLERO_CASILLAS, TABLERO_DIFICULTADES,
-        TABLERO_COMODINES, TABLERO_VIAJES } = sb;
+        TABLERO_COMODINES, TABLERO_TRAMPAS, TABLERO_VIAJES, TABLERO_ESQUINAS } = sb;
 const M = new Marcador();
 const ok = M.ok.bind(M);
 
 // ---------- 1. los datos están bien escritos ----------
 
 const TIPOS = ['libre', 'tarea', 'trabajo', 'extra', 'descanso', 'dificultad',
-               'comodin', 'viaje'];
+               'comodin', 'trampa', 'viaje'];
 const CONDICIONES = ['estudia', 'trabaja', 'dinero'];
 
 const tiposMalos = TABLERO_CASILLAS.filter(c => TIPOS.indexOf(c.tipo) < 0).map(c => c.id);
@@ -40,7 +40,8 @@ ok(tiposMalos.length === 0,
    `las ${TABLERO_CASILLAS.length} casillas usan tipos que el motor conoce` +
    (tiposMalos.length ? ': ' + tiposMalos.join(', ') : ''));
 
-const siMalos = TABLERO_CASILLAS.concat(TABLERO_DIFICULTADES, TABLERO_COMODINES)
+const siMalos = TABLERO_CASILLAS.concat(TABLERO_DIFICULTADES, TABLERO_COMODINES,
+                                        TABLERO_TRAMPAS)
   .filter(x => x.si && CONDICIONES.indexOf(x.si) < 0).map(x => x.id);
 ok(siMalos.length === 0,
    'todas las condiciones son estudia, trabaja o dinero' +
@@ -69,6 +70,32 @@ ok(sinCondicion.length === 0,
 const sinTexto = TABLERO_VIAJES.filter(v => !v.id || !v.texto).map(v => v.id);
 ok(TABLERO_VIAJES.length >= 4 && sinTexto.length === 0,
    `hay ${TABLERO_VIAJES.length} viajes en el tiempo distintos, todos con texto`);
+
+/* Las cuatro esquinas, que son sitios y no dias. */
+ok(TABLERO_ESQUINAS.length === 4,
+   'el anillo tiene sus cuatro esquinas, ni una mas ni una menos');
+ok(TABLERO_ESQUINAS[0].tipo === 'salida',
+   'y la primera es la salida, que es por donde se empieza');
+
+/* LA VARIEDAD, que es lo que hace que un mes no se sienta el anterior.
+ *
+ * Los dias que no piden nada —libre y descanso— no pueden ser la mitad del
+ * mes. Lo eran: con el jugador sin estudiar, entre los dos se llevaban el 44%
+ * de las casillas y el mes se sentia una fila de dias iguales. */
+const pesoDe = (id, etapa) => {
+  const c = TABLERO_CASILLAS.find(x => x.id === id);
+  return (c && c.peso && c.peso[etapa]) || 0;
+};
+['colegio', 'trabajo'].forEach(function (etapa) {
+  const total = TABLERO_CASILLAS.reduce((n, c) => n + ((c.peso && c.peso[etapa]) || 0), 0);
+  const vacios = pesoDe('dia_libre', etapa) + pesoDe('dia_descanso', etapa);
+  ok(vacios / total <= 0.22,
+     `en ${etapa}, los días que no piden nada son el ${Math.round(100 * vacios / total)}% del mes`);
+});
+ok(TABLERO_COMODINES.length >= 25,
+   `hay ${TABLERO_COMODINES.length} comodines, que son los que el jugador recuerda`);
+ok(TABLERO_TRAMPAS.length >= 5,
+   `y ${TABLERO_TRAMPAS.length} trampas, donde SÍ hay una respuesta buena`);
 
 // ---------- 2. no le sale a quien no le toca ----------
 

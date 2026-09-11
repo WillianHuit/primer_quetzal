@@ -346,12 +346,15 @@ var UI = (function () {
   var ICONO_CASILLA = {
     libre: 'calendario', tarea: 'libro', trabajo: 'maletin', extra: 'mando',
     descanso: 'luna', dificultad: 'alerta', comodin: 'mundo', fin: 'bandera',
-    viaje: 'reloj'
+    viaje: 'reloj', salida: 'bandera', trampa: 'anzuelo',
+    reto: 'mando', respiro: 'luna', atraso: 'reloj', camino: 'calendario'
   };
   var CLASE_CASILLA = {
     libre: '', tarea: 'c-tarea', trabajo: 'c-trabajo', extra: 'c-extra',
     descanso: 'c-descanso', dificultad: 'c-dificultad', comodin: 'c-comodin',
-    fin: 'c-fin', viaje: 'c-viaje'
+    fin: 'c-fin', viaje: 'c-viaje',
+    reto: 'c-reto', respiro: 'c-respiro', atraso: 'c-atraso', salida: 'c-fin',
+    trampa: 'c-trampa'
   };
 
   // Lo que dijo el dado la última vez, para poder dibujarlo
@@ -407,23 +410,15 @@ var UI = (function () {
    * no cosas que te pasan, y el juego no va a decirle cuál es la buena. */
   var ANIMO_CASILLA = {
     trabajo: 'alegre', extra: 'alegre', descanso: 'alegre', dificultad: 'triste',
-    viaje: 'alegre'
+    viaje: 'alegre', respiro: 'alegre', reto: 'alegre', atraso: 'triste'
   };
 
-  /* Las medidas del anillo para un camino de `total` casillas.
-   *
-   * El perímetro de una cuadrícula de R por C son 2R+2C-4, siempre par. Se
-   * busca el par más chico que quepa y se reparte en un CUADRADO exacto: los
-   * tres largos de mes que existen caben en 9x9, y las casillas que sobran
-   * quedan como camino sin día.
-   *
-   * Cuadrado exacto y no lo más cuadrado posible, que es lo que hacía antes:
-   * febrero salía 9x8 y sus casillas eran más altas que anchas. Con las
-   * tarjetas giradas —las de los lados se leen de canto, como en el tablero de
-   * mesa— una casilla que no es cuadrada se desborda al girarle el contenido. */
-  function medidasDelAnillo(total) {
-    var p = total % 2 === 0 ? total : total + 1;
-    var f = Math.ceil((p / 2 + 2) / 2);    // el lado del cuadrado
+  /* Las medidas del anillo. El lado lo decide el MOTOR, que es quien sabe
+   * cuántos días trae el mes y cuántas esquinas lleva el camino (ver
+   * `ladoDelMes` en js/motor.js). Aquí solo se dibuja. */
+  function medidasDelAnillo() {
+    var t = Motor.tablero();
+    var f = (t && t.lado) || 9;
     return { f: f, c: f, total: 4 * f - 4 };
   }
 
@@ -638,32 +633,75 @@ var UI = (function () {
    * jugador lee el tablero por los bultos y solo lee las letras cuando se
    * acerca.
    */
+  /* LO QUE SE PARA EN CADA DIA, y cada uno con su silueta.
+   *
+   * Eran todos el mismo cubo con un icono encima y a esa escala el icono no se
+   * lee: el tablero se veia como una fila de cubos de colores. Ahora cada tipo
+   * son dos o tres cajas apiladas que dibujan una forma reconocible desde el
+   * otro lado del tablero —libros, una cama, un cono, un asta con bandera— y
+   * el icono se queda como confirmacion, no como unica pista.
+   *
+   * Cada pieza es [ancho, largo, alto, cuanto sube]. La ultima lleva el
+   * emblema en su techo, que es la que queda mas arriba. */
   var OBJETO_CASILLA = {
-    tarea:      { alto: 9,  color: '#e9c974', techo: '#f4dfa4' },
-    trabajo:    { alto: 11, color: '#79bb9e', techo: '#a6d8c1' },
-    extra:      { alto: 10, color: '#efa87d', techo: '#f8c7a7' },
-    descanso:   { alto: 7,  color: '#8dbbd8', techo: '#b6d6ed' },
-    dificultad: { alto: 10, color: '#dd8f7c', techo: '#f0b6a6' },
-    comodin:    { alto: 12, color: '#a992d8', techo: '#c6b6ec' },
-    viaje:      { alto: 14, color: '#6fb7c9', techo: '#a5dbe6' },
-    fin:        { alto: 13, color: '#4fae8c', techo: '#8fd0b4' },
-    salida:     { alto: 13, color: '#4fae8c', techo: '#8fd0b4' }
+    // tres libros apilados, cada uno un poco mas chico
+    tarea:      { color: '#e9c974', techo: '#f3dc9d',
+                  piezas: [[14, 10, 3, 0], [12, 9, 3, 3], [10, 8, 3, 6]] },
+    // un portafolio: la caja y su asa
+    trabajo:    { color: '#79bb9e', techo: '#a6d8c1',
+                  piezas: [[14, 6, 9, 0], [5, 2, 3, 9]] },
+    // una carreta con su caja encima
+    extra:      { color: '#efa87d', techo: '#f8c7a7',
+                  piezas: [[14, 9, 5, 0], [8, 7, 6, 5]] },
+    // una cama con su almohada
+    descanso:   { color: '#8dbbd8', techo: '#b6d6ed',
+                  piezas: [[15, 10, 3, 0], [6, 8, 3, 3]] },
+    // un cono de los que ponen cuando hay un hoyo
+    dificultad: { color: '#dd8f7c', techo: '#f0b6a6',
+                  piezas: [[13, 10, 2, 0], [8, 6, 5, 2], [4, 3, 5, 7]] },
+    // un bloque parado, que es lo mas cerca de una carta boca abajo
+    comodin:    { color: '#a992d8', techo: '#c6b6ec',
+                  piezas: [[12, 9, 3, 0], [8, 6, 12, 3]] },
+    // un anzuelo: el palo y lo que cuelga
+    trampa:     { color: '#c97f7f', techo: '#e6a9a9',
+                  piezas: [[3, 3, 14, 0], [9, 4, 3, 11], [4, 4, 4, 4]] },
+    // un reloj de torre
+    viaje:      { color: '#6fb7c9', techo: '#a5dbe6',
+                  piezas: [[8, 7, 13, 0], [11, 9, 4, 13]] },
+    // un asta con su bandera
+    fin:        { color: '#4fae8c', techo: '#8fd0b4',
+                  piezas: [[3, 3, 15, 0], [11, 3, 5, 10]] },
+    salida:     { color: '#4fae8c', techo: '#8fd0b4',
+                  piezas: [[3, 3, 15, 0], [11, 3, 5, 10]] },
+    // y las esquinas, que son sitios y no dias
+    // una copa: base, pie y boca
+    reto:       { color: '#c98f4a', techo: '#e8b877',
+                  piezas: [[10, 8, 3, 0], [4, 4, 5, 3], [11, 8, 5, 8]] },
+    respiro:    { color: '#7fa9cf', techo: '#aacae6',
+                  piezas: [[16, 11, 3, 0], [7, 9, 4, 3]] },
+    atraso:     { color: '#a58fb5', techo: '#cbb9d8',
+                  piezas: [[9, 8, 12, 0], [12, 10, 4, 12]] }
   };
 
   function objetoDeCasilla(tipo, grande) {
     var o = OBJETO_CASILLA[tipo];
-    if (!o) return '';
-    /* En la casilla la pieza se corre a la derecha, para dejarle sitio a la
-     * ficha del jugador; en la tarima de la ventana va centrada, que ahi es
-     * lo unico que hay. */
-    var f = grande ? 3.6 : 1;
-    return caja3d({
-      x: 50, z: grande ? 72 : 70,
-      ancho: Math.round(13 * f), largo: Math.round(9 * f),
-      alto: Math.round(o.alto * f),
-      color: o.color, techo: o.techo, clase: 'obj',
-      emblema: ICONO_CASILLA[tipo] || 'calendario'
-    });
+    if (!o || !o.piezas) return '';
+    /* Los días son tarjetas ANGOSTAS —las esquinas se llevan vez y media de
+     * pista— así que lo que se para encima tiene que ser chico o se sale a la
+     * casilla de al lado. En la ventana, en cambio, hay sitio de sobra. */
+    var f = grande ? 3.4 : 0.62;
+    var h = '';
+    for (var i = 0; i < o.piezas.length; i++) {
+      var pz = o.piezas[i];
+      h += caja3d({
+        x: 50, z: grande ? 74 : 72,
+        ancho: Math.max(2, Math.round(pz[0] * f)), largo: Math.max(2, Math.round(pz[1] * f)),
+        alto: Math.max(2, Math.round(pz[2] * f)), sube: Math.round(pz[3] * f),
+        color: o.color, techo: o.techo, clase: 'obj',
+        emblema: i === o.piezas.length - 1 ? (ICONO_CASILLA[tipo] || 'calendario') : ''
+      });
+    }
+    return h;
   }
 
   /* El objeto solo, en su tarima, para meterlo en una ventana.
@@ -701,6 +739,8 @@ var UI = (function () {
       p = { i: 'mundo', t: 'A / B' };
     } else if (c.tipo === 'viaje') {
       p = { i: 'reloj', t: '?' };
+    } else if (c.tipo === 'trampa') {
+      p = { i: 'anzuelo', t: 'A / B' };
     }
     if (!p) return '';
     return '<span class="precio">' + Ico(p.i) + '<b>' + p.t + '</b></span>';
@@ -723,7 +763,7 @@ var UI = (function () {
   function ladoDeCasilla(k) {
     var t = Motor.tablero();
     if (!t) return 'abajo';
-    var anillo = medidasDelAnillo(t.dias + 1);
+    var anillo = medidasDelAnillo();
     return ladoDelAnillo(casillaDelAnillo(k, anillo.f, anillo.c), anillo.f, anillo.c);
   }
 
@@ -738,6 +778,10 @@ var UI = (function () {
     if (tipo === 'dificultad') return T('Imprevisto');
     if (tipo === 'comodin') return T('Comodín');
     if (tipo === 'viaje') return T('Viaje');
+    if (tipo === 'trampa') return T('Trampa');
+    if (tipo === 'reto') return T('Reto');
+    if (tipo === 'respiro') return T('Descanso libre');
+    if (tipo === 'atraso') return T('Se te fue el mes');
     if (tipo === 'fin') return T('Fin de mes');
     if (tipo === 'salida') return T('Salida');
     return '';
@@ -767,7 +811,7 @@ var UI = (function () {
      * primera tirada. Sin eso, el primer paseo del mes no tenía ficha de la que
      * salir y la primera tirada se veía como un salto. */
     if (!t || k < 0) return '';
-    var anillo = medidasDelAnillo(t.dias + 1);
+    var anillo = medidasDelAnillo();
     var sitio = casillaDelAnillo(k, anillo.f, anillo.c);
     return '<div class="ficha" id="ficha-tablero" style="grid-column:' + (sitio.col + 1) +
            ';grid-row:' + (sitio.fila + 1) + '">' +
@@ -788,9 +832,32 @@ var UI = (function () {
   function sinMovimiento() {
     if (typeof SIN_PASEO !== 'undefined' && SIN_PASEO) return true;
     try {
-      return !!(window.matchMedia &&
-                window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      return document.documentElement.classList.contains('menos-movimiento');
     } catch (err) { return false; }
+  }
+
+  /* Y quien escribe esa clase es esto, una sola vez al arrancar.
+   *
+   * El CSS y el JS tienen que decidir lo mismo: uno apaga la inclinación del
+   * tablero y el otro el paseo de la ficha y la cámara. Con el `@media` en el
+   * CSS y el `matchMedia` en el JS eran dos fuentes para la misma decisión, y
+   * dos fuentes acaban discrepando.
+   *
+   * `MOVIMIENTO` es el interruptor del banco de pruebas, igual que `SIN_PASEO`
+   * y `RUTA_ASSETS`: pruebas/vista.html lo pone para poder MIRAR las dos
+   * versiones, que es lo que no se podía hacer. Chrome sin ventana dice que sí
+   * a `prefers-reduced-motion`, así que todas las capturas del tablero salían
+   * en la versión plana sin que nadie se diera cuenta. */
+  function marcarMovimiento() {
+    var menos = false;
+    try {
+      if (typeof MOVIMIENTO !== 'undefined') menos = (MOVIMIENTO === 'reducido');
+      else menos = !!(window.matchMedia &&
+                      window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (err) { menos = false; }
+    try {
+      document.documentElement.classList.toggle('menos-movimiento', menos);
+    } catch (err) {}
   }
 
   /* La ficha camina, casilla por casilla.
@@ -808,7 +875,7 @@ var UI = (function () {
       return alLlegar();
     }
     var t = Motor.tablero();
-    var anillo = medidasDelAnillo(t.dias + 1);
+    var anillo = medidasDelAnillo();
     var k = desde;
 
     /* Un paso cada vez, con `setTimeout` y no con `setInterval`, porque el
@@ -947,7 +1014,7 @@ var UI = (function () {
     var m = plano || tomarMedidas();
     var t = Motor.tablero();
     if (!m || !t) return null;
-    var anillo = medidasDelAnillo(t.dias + 1);
+    var anillo = medidasDelAnillo();
     var destino = sitioGirado(casillaDelAnillo(k, anillo.f, anillo.c),
                               anillo.f, giroFinal - m.base);
     var q = m.sitios[destino.fila + ',' + destino.col];
@@ -1051,7 +1118,7 @@ var UI = (function () {
     var t = Motor.tablero();
     if (!t) return '';
     var fin = Motor.tableroTerminado();
-    var anillo = medidasDelAnillo(t.dias + 1);
+    var anillo = medidasDelAnillo();
     var donde = fichaEn === null ? t.pos : fichaEn;
     var barrio = Motor.nivelDeBarrio && Motor.nivelDeBarrio();
     /* El mes nuevo empieza con el tablero mirando al lado de la SALIDA, que es
@@ -1061,7 +1128,7 @@ var UI = (function () {
 
     var h = '<div class="tarjeta tablero-caja">';
     h += '<div class="titulo">' + Ico('calendario') + ' ' +
-         T('{0}: día {1} de {2}', nombreMes(e.mes), t.pos, t.dias) + '</div>';
+         T('{0}: día {1} de {2}', nombreMes(e.mes), Motor.diaActual(), t.dias) + '</div>';
 
     /* La lente va POR FUERA de la perspectiva, y no al reves.
      *
@@ -1087,11 +1154,17 @@ var UI = (function () {
      * válido —la cuenta de `repeat()` no acepta variables— y el navegador se lo
      * come sin decir nada: el tablero salía con las columnas por omisión y se
      * iba de la pantalla. */
+    /* Y las esquinas son MAS GRANDES que los días, como en el tablero de mesa:
+     * la primera y la última pista miden vez y media. Con todas iguales, las
+     * esquinas se veían como un día más y no como lo que son —un sitio—, y de
+     * paso los días quedaban cuadrados en vez de tarjetas. */
+    var pistas = '1.5fr repeat(' + (anillo.c - 2) + ',minmax(0,1fr)) 1.5fr';
     h += '<div class="tablero" style="--vuelta:' + vuelta + 'deg;' +
-         'grid-template-columns:repeat(' + anillo.c + ',minmax(0,1fr));' +
-         'grid-template-rows:repeat(' + anillo.f + ',minmax(0,1fr))">';
+         'grid-template-columns:' + pistas + ';grid-template-rows:' + pistas + '">';
 
     for (var k = 0; k < anillo.total; k++) {
+      var c = t.casillas[k];
+      if (!c) continue;
       var sitio = casillaDelAnillo(k, anillo.f, anillo.c);
       var lado = ' lado-' + ladoDelAnillo(sitio, anillo.f, anillo.c);
       var esquina = sitio.esquina ? ' esquina' : '';
@@ -1100,27 +1173,23 @@ var UI = (function () {
        * quedar una casilla despues de que el tablero gire, sin tener que
        * girarlo para medirlo. */
       var enSitio = ' data-f="' + sitio.fila + '" data-c="' + sitio.col + '"';
-
-      if (k === 0) {           // la salida
-        h += '<div class="casilla salida' + esquina + lado + '" style="' + estilo + '"' +
-             enSitio + '>' +
-             caraDelDia('salida', '', '') +
-             objetoDeCasilla('salida') + '</div>';
-        continue;
-      }
-      if (k > t.dias) {        // camino sin día: el mes ya se acabó antes
-        h += '<div class="casilla camino' + esquina + lado + '" style="' + estilo + '"' +
-             enSitio + '></div>';
-        continue;
-      }
-      var c = t.casillas[k - 1];
       var pasada = k < donde;
       var aqui = k === donde;
+      var estado = (pasada ? ' pasada' : '') + (aqui ? ' aqui' : '');
+
+      // El camino sin día: lo que sobra para cerrar el cuadrado
+      if (c.tipo === 'camino') {
+        h += '<div class="casilla camino' + esquina + lado + estado +
+             '" style="' + estilo + '" data-paso="' + k + '"' + enSitio + '></div>';
+        continue;
+      }
+
       h += '<div class="casilla ' + (CLASE_CASILLA[c.tipo] || '') + esquina + lado +
-           (pasada ? ' pasada' : '') + (aqui ? ' aqui' : '') +
-           '" style="' + estilo + '" data-paso="' + k + '"' + enSitio +
-           ' title="' + T('Día {0}', k) + '">' +
-           caraDelDia(c.tipo, k, precioDeCasilla(c)) +
+           (c.tipo === 'salida' ? ' salida' : '') +
+           estado + '" style="' + estilo + '" data-paso="' + k + '"' + enSitio +
+           (c.dia ? ' data-dia="' + c.dia + '"' : '') +
+           ' title="' + (c.dia ? T('Día {0}', c.dia) : esc(etiquetaDeCasilla(c.tipo))) + '">' +
+           caraDelDia(c.tipo, c.dia || '', c.dia ? precioDeCasilla(c) : '') +
            objetoDeCasilla(c.tipo) + '</div>';
     }
 
@@ -1131,11 +1200,7 @@ var UI = (function () {
      * ella el dado se iba con el giro: a media vuelta acababa tirado en la
      * acera del fondo, de espaldas al jugador. Las casas si giran —estan
      * plantadas en el suelo— pero el dado esta encima de la mesa. */
-    h += '<div class="barrio-frente">';
-    h += '<span class="barrio-rotulo">' + esc(K('barrio', barrio ? barrio.id : '',
-           barrio ? barrio.nombre : '')) + '</span>';
-    h += dadoCubo(ultimoDado);
-    h += '</div>';
+    h += '<div class="barrio-frente">' + dadosCubos(ultimoDado) + '</div>';
     h += '</div>';
 
     // Y la ficha, que es un elemento suelto: se mueve de casilla en casilla
@@ -1215,15 +1280,27 @@ var UI = (function () {
     return h + '</span>';
   }
 
-  function dadoCubo(n) {
+  function dadoCubo(n, cual) {
     var cara = n || 1;
-    var h = '<div class="dado3d" role="img" aria-label="' +
+    var h = '<div class="dado3d d' + (cual || 1) + '" role="img" aria-label="' +
             (n ? T('El dado cayó en {0}', n) : T('Tirar el dado')) + '">';
     h += '<div class="dado-inclina"><div class="dado-cubo' + (n ? ' rueda' : '') +
          '" style="--fin:' + CARA_FIN[cara] + '">';
     for (var c = 1; c <= 6; c++) h += caraDelDado(c);
     h += '</div></div></div>';
     return h;
+  }
+
+  /* DOS dados, como en el de mesa.
+   *
+   * Con uno solo el mes eran ocho o nueve tiradas iguales; con dos son cinco o
+   * seis y cada una pesa. Y el reparto deja de ser plano —el siete sale seis
+   * veces más que el dos—, así que el jugador empieza a tener una idea de
+   * cuánto va a avanzar sin saber que la tiene: eso es lo que hace que una
+   * tirada se sienta buena o mala. */
+  function dadosCubos(par) {
+    var a = par ? par[0] : null, b = par ? par[1] : null;
+    return '<div class="dados">' + dadoCubo(a, 1) + dadoCubo(b, 2) + '</div>';
   }
 
   /* LLEGASTE AL FINAL DEL MES.
@@ -1307,10 +1384,14 @@ var UI = (function () {
       return celebrarFinDeMes();
     }
 
-    if (c.tipo === 'libre') {
+    if (c.tipo === 'libre' || c.tipo === 'camino') {
       notaTablero = T('Día {0}: un día cualquiera.', res.pos);
       return alejar();
     }
+
+    /* LAS CUATRO ESQUINAS. No son días —caer en una no gasta calendario— y
+     * por eso ninguna pide una jornada del mes: son sitios, no trabajo. */
+    if (c.esquina !== undefined) return abrirEsquina(c, res);
 
     if (c.tipo === 'dificultad') {
       var d = c.sorteado || { texto: '', energia: 0 };
@@ -1344,17 +1425,25 @@ var UI = (function () {
         alejar);
     }
 
-    if (c.tipo === 'comodin') {
+    /* El comodín y la trampa se preguntan igual —dos puertas— y son lo
+     * contrario: en el comodín ninguna de las dos dice lo que va a pasar, en
+     * la trampa sí hay una respuesta buena. Misma ventana, otro nombre y otro
+     * color, porque lo que el jugador tiene que aprender es distinto. */
+    if (c.tipo === 'comodin' || c.tipo === 'trampa') {
+      var esTrampa = c.tipo === 'trampa';
+      var grupo = esTrampa ? 'tablero_trampa' : 'tablero_comodin';
       var k = c.sorteado;
       if (!k) { notaTablero = ''; return alejar(); }
-      var dm = modal(escritura('comodin', T('Te toca elegir'),
-          '<p>' + esc(K('tablero_comodin', k.id, k.pregunta)) + '</p>', '') +
+      var dm = modal(escritura(c.tipo,
+          esTrampa ? T('Te quieren ver la cara') : T('Te toca elegir'),
+          '<p>' + esc(K(grupo, k.id, k.pregunta)) + '</p>', '') +
         '<button class="btn-primario claro" data-lado="a">A · ' +
-          esc(K('tablero_comodin', k.id + ':a', k.a.texto)) + '</button>' +
+          esc(K(grupo, k.id + ':a', k.a.texto)) + '</button>' +
         '<button class="btn-primario claro" data-lado="b" style="margin-top:8px">B · ' +
-          esc(K('tablero_comodin', k.id + ':b', k.b.texto)) + '</button>' +
+          esc(K(grupo, k.id + ':b', k.b.texto)) + '</button>' +
         '<p class="sutil centrado" style="margin-top:10px">' +
-          T('Ninguna de las dos dice lo que va a pasar. Así es.') + '</p>',
+          (esTrampa ? T('Aquí sí hay una buena. Piénsalo.')
+                    : T('Ninguna de las dos dice lo que va a pasar. Así es.')) + '</p>',
         alejar);
       dm.querySelectorAll('[data-lado]').forEach(function (b) {
         b.addEventListener('click', function () {
@@ -1366,11 +1455,11 @@ var UI = (function () {
           var saldo = (ef.energia || 0) + (ef.experiencia || 0) + (ef.dinero || 0);
           Sonido.tono(saldo >= 0 ? 'alegre' : 'triste');
           dm.remove();
-          notaTablero = esc(K('tablero_comodin', k.id + ':' + b.getAttribute('data-lado') + ':r',
+          notaTablero = esc(K(grupo, k.id + ':' + b.getAttribute('data-lado') + ':r',
                               lado.resultado));
           render();
-          modal(escritura('comodin', T('Elegiste'),
-              '<p>' + esc(K('tablero_comodin', k.id + ':' + b.getAttribute('data-lado') + ':r',
+          modal(escritura(c.tipo, T('Elegiste'),
+              '<p>' + esc(K(grupo, k.id + ':' + b.getAttribute('data-lado') + ':r',
                             lado.resultado)) + '</p>',
               filasDeEfecto(hc) + avisoDeDeuda(hc)) +
             '<button class="btn-primario" data-cerrar>' + T('Listo') + '</button>',
@@ -1382,6 +1471,67 @@ var UI = (function () {
 
     // Las tres que se aceptan o se dejan: tarea, trabajo, extra y descanso
     return casillaConDecision(c, res);
+  }
+
+  /* Las cuatro esquinas del tablero.
+   *
+   * La salida no hace nada —es el sitio del que se sale—, el descanso libre es
+   * el único de todo el juego que no cuesta jornada, el reto es un trabajito
+   * con premio que tampoco gasta día, y el atraso te devuelve unos pasos.
+   *
+   * Ninguna avanza el calendario, y eso es lo que las hace esquinas: el mes
+   * sigue teniendo los días que tiene el mes. */
+  function datosDeEsquina(c) {
+    if (typeof TABLERO_ESQUINAS === 'undefined') return null;
+    for (var i = 0; i < TABLERO_ESQUINAS.length; i++) {
+      if (TABLERO_ESQUINAS[i].id === c.id) return TABLERO_ESQUINAS[i];
+    }
+    return null;
+  }
+
+  function abrirEsquina(c, res) {
+    var d = datosDeEsquina(c) || { tipo: c.tipo, texto: '' };
+    var texto = '<p>' + esc(K('tablero_esquina', c.id, d.texto || '')) + '</p>';
+    var titulo = etiquetaDeCasilla(c.tipo);
+
+    // La salida no hace nada: se pasa por encima y ya
+    if (c.tipo === 'salida') {
+      notaTablero = T('Pasaste por la salida.');
+      return alejar();
+    }
+
+    if (c.tipo === 'respiro') {
+      var gana = Math.round(Motor.energiaDeEspacio('descanso'));
+      var hl = Motor.aplicarEfecto({ energia: gana });
+      notaTablero = T('Descansaste sin gastar jornada.');
+      render();
+      return modal(escritura('respiro', titulo, texto, filasDeEfecto(hl)) +
+        '<button class="btn-primario" data-cerrar>' + T('Listo') + '</button>', alejar);
+    }
+
+    if (c.tipo === 'atraso') {
+      var r = Motor.retroceder(d.pasos || 4);
+      notaTablero = T('Se te fueron {0} días.', d.pasos || 4);
+      fichaEn = null;
+      render();
+      return modal(escritura('atraso', titulo, texto,
+          fila(T('Días'), '-' + (d.pasos || 4), 'neg')) +
+        '<button class="btn-primario" data-cerrar>' + T('Ni modo') + '</button>', alejar);
+    }
+
+    // El reto: un trabajito con premio, y no gasta jornada
+    var sueltos = listaDeExtras();
+    notaTablero = T('Te salió un reto.');
+    render();
+    return modal(escritura('reto', titulo, texto,
+        pastillas([pastilla('moneda', T('se paga aparte'), 'ok'),
+                   pastilla('reloj', T('no gasta jornada'), 'ok')])) +
+      (sueltos.length
+        ? '<button class="btn-primario" data-reto="1">' + T('Hacerlo') + '</button>' +
+          '<div class="btn-fila" style="margin-top:8px">' +
+          '<button class="btn-chico" data-cerrar>' + T('Dejarlo pasar') + '</button></div>'
+        : '<button class="btn-primario" data-cerrar>' + T('Listo') + '</button>'),
+      alejar);
   }
 
   function filasDeEfecto(ef) {
@@ -4611,7 +4761,7 @@ var UI = (function () {
         '[data-ver-perfil],[data-mejora],' +
         '[data-abrir-negocio],[data-subir-negocio],[data-contratar],[data-despedir],' +
         '[data-traspasar],' +
-        '#tirar-dado,#son-tablero,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
+        '[data-reto],#tirar-dado,#son-tablero,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
         '#pedir-tarjeta,#pedir-informal,#gastar-tarjeta,#pagar-tarjeta,#alternar-minimo,' +
         '#abrir-pension,#cambiar-pension,#retirar-pension,#migrar,#regresar,' +
         '#ver-glosario,#ver-reporte,#ver-reporte-final');
@@ -5062,6 +5212,15 @@ var UI = (function () {
        * Tirar es gratis y no se puede no tirar: el mes pasa igual. Lo que se
        * decide es lo que se hace con la casilla en la que caes, y de eso se
        * encarga `abrirCasilla`. */
+      if (el.dataset.reto) {
+        var velo = el.closest('.velo');
+        if (velo) velo.remove();
+        zoomEn = null;
+        var sueltos = listaDeExtras();
+        if (sueltos.length) return jugarMinijuego(sueltos[0]);
+        return render();
+      }
+
       if (el.id === 'son-tablero') {
         Sonido.alternar();
         return render();
@@ -5070,7 +5229,7 @@ var UI = (function () {
       if (el.id === 'tirar-dado') {
         var tirada = Motor.tirarDado();
         if (!tirada) return render();
-        ultimoDado = tirada.dado;
+        ultimoDado = tirada.dados;
         notaTablero = '';
         // Cuatro golpes secos: un cubo cayendo en la mesa, no una nota
         Sonido.tono('dado');
@@ -5624,6 +5783,7 @@ var UI = (function () {
   }
 
   function iniciar() {
+    marcarMovimiento();
     app = document.querySelector('#app');
     try { document.documentElement.lang = Idioma.actual(); } catch (e) {}
     /* El foco del tutorial va pegado a una posición de pantalla, así que al
@@ -5642,6 +5802,10 @@ var UI = (function () {
      * Existe para pruebas/vista.html, que sirve para mirar el diseño con los
      * ojos: una tarjeta que aparece con 10% de probabilidad al mes es
      * imposible de revisar de otra forma. */
-    verDecision: function (ref) { mostrarDecision({ clase: 'decision', ref: ref }, render); }
+    verDecision: function (ref) { mostrarDecision({ clase: 'decision', ref: ref }, render); },
+    /* Para pruebas/dom-real.js: comprobar que un día cualquiera no lleva nada
+     * encima es comprobar una REGLA, y una regla no se puede comprobar
+     * mirando un tablero donde ese día puede no haber salido. */
+    objetoDeCasilla: objetoDeCasilla
   };
 })();

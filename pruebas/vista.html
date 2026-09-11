@@ -33,6 +33,8 @@
     ?nueva=1&paso=1 el primer desbloqueo de la ruta, recién anunciado
     ?guia=5         el tutorial después de cinco toques guiados
     ?idioma=en      en inglés
+    ?movimiento=completo   fuerza las animaciones (Chrome sin ventana las apaga solo)
+    ?movimiento=reducido   fuerza la versión de quien pidió menos movimiento
 
   Ejemplo: pruebas/vista.html?p=banco
 -->
@@ -68,6 +70,11 @@
     'js/ui.js'
   ];
   var par = new URLSearchParams(location.search);
+  /* ?movimiento=completo|reducido fuerza la version con o sin animaciones.
+   * Hace falta para poder MIRARLAS: Chrome sin ventana dice que si a
+   * `prefers-reduced-motion`, asi que sin esto todas las capturas del tablero
+   * salen planas y nadie revisa lo que de verdad ve el jugador. */
+  if (par.get('movimiento')) window.MOVIMIENTO = par.get('movimiento');
   localStorage.setItem('miPrimerQuetzal.idioma', par.get('idioma') === 'en' ? 'en' : 'es');
 
   (function cargar(i) {
