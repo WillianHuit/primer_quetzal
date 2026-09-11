@@ -270,6 +270,40 @@ ok(sinBarrio.length === 0,
    `los ${sbEn.BARRIO_NIVELES.length} barrios del tablero están traducidos` +
    (sinBarrio.length ? ': ' + sinBarrio.join(', ') : ''));
 
+/* Y las condiciones del mes: el nombre va en la franja y en el pronostico, y
+ * ':t' es la frase que se lee al tocarla.
+ *
+ * Esta comprobacion no estaba y se notaba: `fresco` y `vacaciones` llevaban
+ * dos meses sin traducir —el jugador en ingles veia dos pastillas en
+ * espanol— y tres de las frases seguian contando lo que las condiciones
+ * hacian ANTES de quitarles los multiplicadores escondidos. Un diccionario sin
+ * prueba se queda atras en silencio. */
+const sinCond = sbEn.CONDICIONES_MES
+  .filter(c => !X.condicion || !X.condicion[c.id] || !X.condicion[c.id + ':t'])
+  .map(c => c.id);
+ok(sinCond.length === 0,
+   `las ${sbEn.CONDICIONES_MES.length} condiciones del mes están traducidas` +
+   (sinCond.length ? ': ' + sinCond.join(', ') : ''));
+
+const sinClase = ['clima', 'compromiso', 'oportunidad']
+  .filter(c => !X.condicion || !X.condicion['clase_' + c]);
+ok(sinClase.length === 0,
+   'y las tres etiquetas del pronóstico también' +
+   (sinClase.length ? ': ' + sinClase.join(', ') : ''));
+
+/* Las siete pestanas de la barra de abajo.
+ *
+ * Sus nombres viven en una tabla (`PESTANAS_DEF` en js/ui.js) y llegan al
+ * diccionario por `T(it.tx)`, con la variable adentro: el rastreador de
+ * cadenas de mas abajo busca `T('...')` literales y estos no los ve. 'Mes'
+ * llevaba sin traducir desde que la pestana se llama asi —era la primera
+ * palabra de la pantalla principal en ingles— y ninguna prueba se entero. */
+const ROTULOS_PESTANA = ['Mes', 'Trabajo', 'Imperio', 'Estudio', 'Banco', 'Extra', 'Noticias'];
+const sinPestana = ROTULOS_PESTANA.filter(t => !X.ui[t]);
+ok(sinPestana.length === 0,
+   'las siete pestañas de la barra están traducidas' +
+   (sinPestana.length ? ': ' + sinPestana.join(', ') : ''));
+
 // Una partida completa con la capa de idioma cargada
 const { Motor } = sbEn;
 Motor.iniciar('normal', 3, 'apoyo');

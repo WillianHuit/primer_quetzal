@@ -18,6 +18,9 @@
  *   icono     de js/iconos.js
  *   texto     una frase de lo que hace. Se lee al tocar la condición.
  *   peso      cuánto de probable es que salga este mes
+ *   clase     de qué habla la pista en el pronóstico: 'clima' (el tiempo),
+ *             'compromiso' (algo que hay que aguantar) u 'oportunidad' (algo
+ *             que se puede aprovechar). Es la etiqueta chiquita de la tarjeta.
  *   si        condición del jugador, igual que en datos/tablero.js
  *             ('estudia', 'trabaja' o 'dinero')
  *
@@ -54,6 +57,7 @@
 var CONDICIONES_MES = [
   {
     id: 'lluvia',
+    clase: 'clima',
     nombre: 'Lluvia',
     icono: 'nube',
     texto: 'Llueve casi todos los días. Moverse cuesta más y la calle se vacía.',
@@ -63,6 +67,7 @@ var CONDICIONES_MES = [
   },
   {
     id: 'calor',
+    clase: 'clima',
     nombre: 'Calor',
     icono: 'sol',
     texto: 'No corre aire. Se duerme mal y salen más trabajitos en la calle.',
@@ -72,6 +77,7 @@ var CONDICIONES_MES = [
   },
   {
     id: 'quincena',
+    clase: 'oportunidad',
     nombre: 'Quincena',
     icono: 'moneda',
     texto: 'Hay dinero en la calle: sale más trabajo y más trabajitos sueltos.',
@@ -83,6 +89,7 @@ var CONDICIONES_MES = [
   },
   {
     id: 'examen',
+    clase: 'compromiso',
     nombre: 'Exámenes',
     icono: 'libro',
     texto: 'Mes de exámenes. Cae mucha más tarea y casi ningún día libre.',
@@ -92,6 +99,7 @@ var CONDICIONES_MES = [
   },
   {
     id: 'feria',
+    clase: 'oportunidad',
     nombre: 'Feria',
     icono: 'confeti',
     texto: 'Es la feria. Hay trabajitos por todos lados y nadie duerme.',
@@ -101,6 +109,7 @@ var CONDICIONES_MES = [
   },
   {
     id: 'apagon',
+    clase: 'compromiso',
     nombre: 'Apagones',
     icono: 'foco',
     texto: 'Se va la luz a cada rato. Hay menos días de trabajo y más de espera.',
@@ -109,6 +118,7 @@ var CONDICIONES_MES = [
   },
   {
     id: 'gripe',
+    clase: 'compromiso',
     nombre: 'Gripe',
     icono: 'hospital',
     texto: 'Anda una gripe en el barrio. El cuerpo no da lo de siempre.',
@@ -126,6 +136,7 @@ var CONDICIONES_MES = [
    * tenía razón. Sumando los pesos, lo que quitan y lo que dan se compensa. */
   {
     id: 'fresco',
+    clase: 'clima',
     nombre: 'Fresco',
     icono: 'palmera',
     texto: 'Buen tiempo todo el mes. Se duerme bien y el cuerpo aguanta más.',
@@ -134,6 +145,7 @@ var CONDICIONES_MES = [
   },
   {
     id: 'vacaciones',
+    clase: 'oportunidad',
     nombre: 'Vacaciones',
     icono: 'confeti',
     texto: 'Vacaciones del colegio. Casi no cae tarea y se descansa de verdad.',
@@ -147,5 +159,25 @@ var CONDICIONES_MES = [
 /* Cuántas condiciones trae un mes. Tres es el techo y no es casualidad: con
  * cuatro la franja deja de leerse de un vistazo, que es lo único que tiene que
  * hacer. Y un mes sin ninguna también existe: los meses tranquilos son los que
- * hacen que los otros se noten. */
-var CONDICIONES_POR_MES = { minimo: 0, maximo: 3, probabilidadDeNinguna: 0.15 };
+ * hacen que los otros se noten.
+ *
+ * Y LA PISTA QUE PUEDE CAMBIAR, que es la última de las tres del pronóstico.
+ *
+ * Enseñar el mes entero de antemano lo vuelve un trámite; no enseñar nada lo
+ * vuelve una lotería. Así que dos pistas son firmes y una lleva un signo de
+ * interrogación: puede llegar a mitad de mes o quedarse en nada.
+ *
+ *   probabilidadDePista      con qué frecuencia el mes trae una pista incierta
+ *   probabilidadDeQueLlegue  y, si la trae, con qué frecuencia se cumple
+ *
+ * Casi la mitad y casi la mitad, a propósito: una pista que se cumple siempre
+ * no es una pista, es un anuncio, y una que no se cumple casi nunca es ruido.
+ * A la mitad el jugador tiene que decidir si le hace caso, que es lo único
+ * interesante que se puede hacer con un pronóstico.
+ *
+ * Nunca hay una cuarta condición: si el mes ya trae el tope, no se sortea
+ * pista. Ver `sortearPendiente` en js/motor.js. */
+var CONDICIONES_POR_MES = {
+  minimo: 0, maximo: 3, probabilidadDeNinguna: 0.15,
+  probabilidadDePista: 0.55, probabilidadDeQueLlegue: 0.5
+};

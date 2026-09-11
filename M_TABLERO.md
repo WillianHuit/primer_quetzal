@@ -152,6 +152,36 @@ segundos, sin abrir una explicación.
 
 ---
 
+> **IMPLEMENTADO (11 de septiembre de 2026).** Esta seccion esta hecha: ver
+> `sortearPendiente()`, `pronosticoDelMes()`, `resolverPendiente()` y
+> `repartirDesde()` en `js/motor.js`, `tarjetaPronostico()` en `js/ui.js`, el
+> bloque 6 de `pruebas/tablero.js` y el bloque del pronostico en
+> `pruebas/dom-real.js`. Para mirarlo con los ojos:
+> `pruebas/vista.html?nino=1&p=casa&pronostico=1`.
+>
+> Tres cosas se decidieron aqui y conviene que queden escritas:
+>
+> - **La pista incierta es una condicion de verdad que puede llegar, no un
+>   adorno.** Se sortea aparte, con su propia probabilidad de cumplirse (la
+>   mitad, en `datos/condiciones.js`), y hasta que se cumple NO HACE NADA. Si
+>   hiciera algo mientras lleva el signo de interrogacion seria un efecto que
+>   el jugador no puede ver, que es lo que este juego no hace.
+> - **Al cumplirse, los dias que FALTAN se vuelven a repartir.** Es lo que le
+>   da sentido al signo: el tablero estaba avisando desde el primer dia de que
+>   la segunda mitad del mes podia cambiar. Los dias que la ficha ya camino no
+>   se tocan —un mes que reescribe su pasado no es un mes, es un truco— y las
+>   casillas que cambian se voltean para que el cambio se vea.
+> - **La tarjeta no bloquea.** La seccion dice "antes de habilitar las
+>   casillas"; se cierra con `Planear` y tambien tirando el dado. Cobrarle un
+>   toque de mas a quien la leyo de un vistazo son seiscientos toques en una
+>   partida de cincuenta anos. Mientras esta abierta, la franja del mes no se
+>   dibuja: serian las mismas tres pastillas dos veces, y asi el movimiento de
+>   cierre cuenta de donde salieron los iconos que se quedan arriba.
+>
+> Y nunca hay una cuarta condicion: si el mes ya trae el tope no se sortea
+> pista. De eso depende que el limite de `efectoDelMes` siga alcanzando, que es
+> lo que evita el mes imposible.
+
 ## 3. Pronóstico antes de repartir
 
 ### Objetivo

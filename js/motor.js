@@ -1310,6 +1310,20 @@ var Motor = (function () {
     return { id: e.id, tipo: e.tipo };
   }
 
+  /* Un dia del mes, con la regla de NO TRES IGUALES SEGUIDOS.
+   *
+   * El sorteo por pesos es correcto y se ve mal: cinco comodines en fila
+   * parecen un error aunque no lo sean, y el jugador lee el tablero por
+   * rachas, no por probabilidades. Con dos intentos basta para que casi nunca
+   * se junten tres. */
+  function sortearDia(etapa, previo, anterior) {
+    var c = sortearTipoDeDia(etapa);
+    if (previo && anterior && previo.tipo === anterior.tipo) {
+      for (var r = 0; r < 2 && c.tipo === previo.tipo; r++) c = sortearTipoDeDia(etapa);
+    }
+    return c;
+  }
+
   /* EL ANILLO, CON SUS CUATRO ESQUINAS.
    *
    * El camino ya no son los dias y ya esta: es un cuadrado con una esquina en
@@ -1340,36 +1354,174 @@ var Motor = (function () {
    *
    * Ver datos/condiciones.js, que se edita sin tocar codigo.
    */
+  function reglasDelMes() {
+    return (typeof CONDICIONES_POR_MES !== 'undefined') ? CONDICIONES_POR_MES
+         : { minimo: 0, maximo: 3, probabilidadDeNinguna: 0.15 };
+  }
+
+  /* Saca una de la bolsa haciendo caso a los pesos. */
+  function sortearPesado(bolsa) {
+    var total = 0, i;
+    for (i = 0; i < bolsa.length; i++) total += bolsa[i].peso || 1;
+    var tiro = azar(0, total), suma = 0;
+    for (i = 0; i < bolsa.length; i++) {
+      suma += bolsa[i].peso || 1;
+      if (tiro <= suma) return bolsa[i];
+    }
+    return bolsa[bolsa.length - 1];
+  }
+
   function sortearCondiciones() {
     if (typeof CONDICIONES_MES === 'undefined') return [];
-    var reglas = (typeof CONDICIONES_POR_MES !== 'undefined') ? CONDICIONES_POR_MES
-               : { minimo: 0, maximo: 3, probabilidadDeNinguna: 0.15 };
+    var reglas = reglasDelMes();
     if (azar(0, 1) < (reglas.probabilidadDeNinguna || 0)) return [];
 
     var bolsa = CONDICIONES_MES.filter(function (c) { return cumpleCondicion(c.si); });
     var cuantas = azarEntero(Math.max(1, reglas.minimo || 1), reglas.maximo || 3);
     var salen = [];
     while (salen.length < cuantas && bolsa.length) {
-      var total = 0, i;
-      for (i = 0; i < bolsa.length; i++) total += bolsa[i].peso || 1;
-      var tiro = azar(0, total), suma = 0, elegida = bolsa[0];
-      for (i = 0; i < bolsa.length; i++) {
-        suma += bolsa[i].peso || 1;
-        if (tiro <= suma) { elegida = bolsa[i]; break; }
-      }
+      var elegida = sortearPesado(bolsa);
       salen.push(elegida.id);
       bolsa = bolsa.filter(function (c) { return c.id !== elegida.id; });
     }
     return salen;
   }
 
-  /* Las condiciones de este mes, ya resueltas a objeto. */
+  /* ---------------------------------------------------------------------
+   * LA PISTA QUE PUEDE CAMBIAR
+   * ---------------------------------------------------------------------
+   * El pronostico del mes ensena tres pistas y una lleva un signo de
+   * interrogacion. Esa es la pendiente: una condicion sorteada aparte que
+   * PUEDE llegar a mitad de mes, y que hasta entonces no hace nada.
+   *
+   * Ensenar el mes entero de antemano lo vuelve un tramite; no ensenar nada lo
+   * vuelve una loteria. El signo de interrogacion es el trato: si esa pista
+   * cae, los dias que faltan se vuelven a repartir con ella, y el jugador
+   * estaba avisado desde el primer dia.
+   *
+   * Nunca hay una cuarta condicion: si el mes ya trae el tope no se sortea
+   * pendiente, y asi lo que se acumula sigue cabiendo en el limite de
+   * `efectoDelMes`, que es lo que evita el mes imposible.
+   */
+  function sortearPendiente(activas) {
+    if (typeof CONDICIONES_MES === 'undefined') return null;
+    var reglas = reglasDelMes();
+    if (activas.length >= (reglas.maximo || 3)) return null;
+    if (azar(0, 1) > (reglas.probabilidadDePista || 0)) return null;
+    var bolsa = CONDICIONES_MES.filter(function (c) {
+      return cumpleCondicion(c.si) && activas.indexOf(c.id) < 0;
+    });
+    if (!bolsa.length) return null;
+    return {
+      id: sortearPesado(bolsa).id,
+      llega: azar(0, 1) < (reglas.probabilidadDeQueLlegue || 0),
+      revelada: false
+    };
+  }
+
+  /* Las condiciones que estan pesando AHORA, ya resueltas a objeto.
+   *
+   * La pendiente cuenta solo despues de revelarse y solo si llego. Mientras
+   * lleva el signo de interrogacion no hace absolutamente nada: si hiciera
+   * algo, seria un efecto que el jugador no puede ver, que es justo lo que
+   * este juego no hace. */
   function condicionesDelMes() {
     var t = estado && estado.tablero;
     if (!t || !t.condiciones || typeof CONDICIONES_MES === 'undefined') return [];
-    return t.condiciones.map(function (id) {
+    var ids = t.condiciones.slice();
+    var p = t.pendiente;
+    if (p && p.revelada && p.llega && ids.indexOf(p.id) < 0) ids.push(p.id);
+    return ids.map(function (id) {
       return buscarPorId(CONDICIONES_MES, id);
     }).filter(Boolean);
+  }
+
+  /* EL PRONOSTICO: lo que se sabe del mes antes de tirar el primer dado.
+   *
+   * Devuelve las pistas en orden, cada una con `incierta` puesto si es la que
+   * todavia puede cambiar. Dos firmes y una con interrogacion es el reparto
+   * normal; un mes tranquilo devuelve la lista vacia y entonces no hay tarjeta
+   * que ensenar, que tambien es informacion. */
+  function pronosticoDelMes() {
+    var t = estado && estado.tablero;
+    if (!t || typeof CONDICIONES_MES === 'undefined') return [];
+    function pista(id, incierta) {
+      var c = buscarPorId(CONDICIONES_MES, id);
+      if (!c) return null;
+      return { id: c.id, icono: c.icono, nombre: c.nombre,
+               clase: c.clase || 'clima', incierta: !!incierta };
+    }
+    var pistas = (t.condiciones || []).map(function (id) { return pista(id, false); });
+    var p = t.pendiente;
+    /* La que se revelo y no llego ya no es pista: se cayo del pronostico. */
+    if (p && !(p.revelada && !p.llega)) pistas.push(pista(p.id, !p.revelada));
+    return pistas.filter(Boolean);
+  }
+
+  /* Si el jugador ya vio el pronostico de este mes. Se marca al tocar Planear
+   * y tambien al tirar el primer dado: quien no quiera leerlo no tiene que
+   * despacharlo con un toque de mas. */
+  function planeado() {
+    var t = estado && estado.tablero;
+    if (!t) return true;
+    /* Un mes empezado ya no se pronostica: el pronostico es de ANTES de
+     * repartir. Sin esto, una partida guardada a mitad de mes —o una de antes
+     * de que esto existiera— abria con la tarjeta encima del tablero a medio
+     * andar. */
+    if (t.pos > 0) return true;
+    return !!t.planeado;
+  }
+
+  function planear() {
+    var t = estado && estado.tablero;
+    if (t && !t.planeado) { t.planeado = true; guardar(); }
+    return true;
+  }
+
+  /* A MITAD DE MES SE SABE.
+   *
+   * La pista incierta se resuelve cuando la ficha pasa la mitad del camino: o
+   * llega —y entra a la franja, y los dias que faltan se vuelven a repartir
+   * contandola— o se queda en nada y la pastilla se cae del pronostico.
+   *
+   * Se reparten SOLO los dias que la ficha todavia no ha pisado. Lo ya andado
+   * no se toca: un mes que reescribe su pasado no es un mes, es un truco.
+   *
+   * Devuelve null si no habia nada que resolver, para que la interfaz sepa
+   * cuando no tiene nada que contar.
+   */
+  function resolverPendiente() {
+    var t = estado && estado.tablero;
+    if (!t || !t.pendiente || t.pendiente.revelada) return null;
+    if (t.pos < Math.floor(t.pasos / 2)) return null;
+    t.pendiente.revelada = true;
+    var cambiadas = t.pendiente.llega ? repartirDesde(t.pos) : [];
+    guardar();
+    return {
+      condicion: buscarPorId(CONDICIONES_MES, t.pendiente.id),
+      llega: !!t.pendiente.llega,
+      cambiadas: cambiadas
+    };
+  }
+
+  /* Vuelve a repartir los dias posteriores a `pos`. Las esquinas, el camino
+   * sin dia y el final del mes no se tocan: son sitios, no dias. Devuelve los
+   * pasos que de verdad cambiaron, que son los que la interfaz voltea. */
+  function repartirDesde(pos) {
+    var t = estado && estado.tablero;
+    if (!t || !t.casillas) return [];
+    var etapa = etapaTablero(), cambiadas = [];
+    for (var k = pos + 1; k < t.casillas.length; k++) {
+      var c = t.casillas[k];
+      if (!c || c.esquina !== undefined) continue;
+      if (c.tipo === 'camino' || c.tipo === 'fin') continue;
+      var nuevo = sortearDia(etapa, t.casillas[k - 1], t.casillas[k - 2]);
+      if (nuevo.tipo === c.tipo) continue;
+      nuevo.dia = c.dia;
+      t.casillas[k] = nuevo;
+      cambiadas.push(k);
+    }
+    return cambiadas;
   }
 
   /* Lo que las condiciones le hacen a una palanca. `pesos` multiplica; las
@@ -1405,7 +1557,9 @@ var Motor = (function () {
     var dias = diasDelMes();
     var etapa = etapaTablero();
     var condiciones = sortearCondiciones();
-    estado.tablero = { dias: dias, pos: 0, condiciones: condiciones, casillas: [] };
+    var pendiente = sortearPendiente(condiciones);
+    estado.tablero = { dias: dias, pos: 0, condiciones: condiciones,
+                       pendiente: pendiente, planeado: false, casillas: [] };
     var lado = ladoDelMes(dias);
     var pasos = 4 * lado - 4;
     var esquinas = [0, lado - 1, 2 * lado - 2, 3 * lado - 3];
@@ -1425,23 +1579,14 @@ var Motor = (function () {
       if (dia > dias) { casillas.push({ id: 'camino', tipo: 'camino', dia: null }); continue; }
       // El ultimo dia es el final del mes y no trae nada: es la meta
       if (dia === dias) { casillas.push({ id: 'fin', tipo: 'fin', dia: dia }); continue; }
-      /* Y NO TRES IGUALES SEGUIDOS. El sorteo por pesos es correcto y se ve
-       * mal: cinco comodines en fila parecen un error aunque no lo sean, y el
-       * jugador lee el tablero por rachas, no por probabilidades. Con dos
-       * intentos basta para que casi nunca se junten tres. */
-      var c = sortearTipoDeDia(etapa);
-      var previo = casillas[casillas.length - 1], anterior = casillas[casillas.length - 2];
-      if (previo && anterior && previo.tipo === anterior.tipo) {
-        for (var reintento = 0; reintento < 2 && c.tipo === previo.tipo; reintento++) {
-          c = sortearTipoDeDia(etapa);
-        }
-      }
+      var c = sortearDia(etapa, casillas[casillas.length - 1], casillas[casillas.length - 2]);
       c.dia = dia;
       casillas.push(c);
     }
 
     estado.tablero = { dias: dias, pasos: pasos, lado: lado, pos: 0,
-                       condiciones: condiciones, casillas: casillas };
+                       condiciones: condiciones, pendiente: pendiente,
+                       planeado: false, casillas: casillas };
     return estado.tablero;
   }
 
@@ -3214,6 +3359,8 @@ var Motor = (function () {
     aceptarCasilla: aceptarCasilla, diasDelMes: diasDelMes,
     diaActual: diaActual, retroceder: retroceder,
     condicionesDelMes: condicionesDelMes, efectoDelMes: efectoDelMes,
+    pronosticoDelMes: pronosticoDelMes, planeado: planeado, planear: planear,
+    resolverPendiente: resolverPendiente,
     nivelDeBarrio: nivelDeBarrio, cumpleCondicion: cumpleCondicion,
     sortearViaje: sortearViaje,
     energiaDeEspacio: energiaDeEspacio, energiaProyectada: energiaProyectada,

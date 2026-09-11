@@ -1124,15 +1124,97 @@ var UI = (function () {
    * de un toque, que es donde va todo lo que se lee una vez. Ver
    * datos/condiciones.js. */
   function franjaDelMes() {
-    var cs = Motor.condicionesDelMes ? Motor.condicionesDelMes() : [];
-    if (!cs.length) return '';
+    var ps = Motor.pronosticoDelMes ? Motor.pronosticoDelMes() : [];
+    /* Mientras el pronóstico esté abierto la franja no se dibuja: serían las
+     * mismas tres pastillas dos veces. La tarjeta se comprime HACIA la franja
+     * y es entonces cuando la franja aparece, así que el movimiento cuenta de
+     * dónde salieron los iconos que se quedan arriba el resto del mes. */
+    if (Motor.planeado && !Motor.planeado()) return '';
+    if (!ps.length) return '';
     var h = '<div class="franja-mes">';
-    for (var i = 0; i < cs.length; i++) {
-      h += '<button class="cond" data-cond="' + cs[i].id + '" style="--i:' + i + '">' +
-           Ico(cs[i].icono) + '<span>' +
-           esc(K('condicion', cs[i].id, cs[i].nombre)) + '</span></button>';
+    for (var i = 0; i < ps.length; i++) {
+      h += '<button class="cond' + (ps[i].incierta ? ' incierta' : '') +
+           '" data-cond="' + ps[i].id + '" style="--i:' + i + '">' +
+           Ico(ps[i].icono) + '<span>' +
+           esc(K('condicion', ps[i].id, ps[i].nombre)) + '</span>' +
+           (ps[i].incierta ? '<b class="quiza">?</b>' : '') + '</button>';
     }
     return h + '</div>';
+  }
+
+  /* EL PRONÓSTICO, antes de tirar el primer dado.
+   *
+   * Tres pistas: dos firmes y una con un signo de interrogación. Enseñar el
+   * mes entero de antemano lo vuelve un trámite y no enseñar nada lo vuelve
+   * una lotería; lo que hace que valga la pena mirarlo es que una de las tres
+   * puede no cumplirse, así que hay que decidir si se le hace caso.
+   *
+   * La tarjeta no bloquea nada: se cierra con `Planear` y también tirando el
+   * dado, porque cobrarle un toque de más a quien ya la leyó de un vistazo es
+   * cobrarle seiscientos toques en una partida de cincuenta años.
+   */
+  var CLASE_PISTA = { clima: 'Clima', compromiso: 'Compromiso', oportunidad: 'Oportunidad' };
+
+  function tarjetaPronostico() {
+    var ps = Motor.pronosticoDelMes ? Motor.pronosticoDelMes() : [];
+    if (!ps.length) return '';
+    var hayDuda = false;
+    var h = '<div class="pronostico">';
+    h += '<div class="pron-titulo">' + Ico('calendario') + ' ' + T('Cómo viene el mes') + '</div>';
+    h += '<div class="pron-pistas">';
+    for (var i = 0; i < ps.length; i++) {
+      if (ps[i].incierta) hayDuda = true;
+      h += '<div class="pista' + (ps[i].incierta ? ' incierta' : '') + '" style="--i:' + i + '">' +
+           '<span class="pista-clase">' +
+           esc(K('condicion', 'clase_' + ps[i].clase, CLASE_PISTA[ps[i].clase] || 'Clima')) +
+           '</span>' + Ico(ps[i].icono) +
+           '<b>' + esc(K('condicion', ps[i].id, ps[i].nombre)) +
+           (ps[i].incierta ? ' <i class="quiza">?</i>' : '') + '</b></div>';
+    }
+    h += '</div>';
+    h += '<p class="pron-pie">' + (hayDuda
+         ? T('La del signo ? todavía puede cambiar.')
+         : T('Esto es todo lo que trae el mes.')) + '</p>';
+    h += '<button class="btn-primario chico" id="planear">' + T('Planear') + '</button>';
+    return h + '</div>';
+  }
+
+  /* SE RESOLVIÓ LA PISTA: llegó o se quedó en nada.
+   *
+   * Se cuenta encima del tablero y se va sola a los dos segundos. Va aquí y no
+   * en una ventana porque no hay nada que decidir: es una noticia, y una
+   * noticia que hay que despachar con un botón deja de ser una noticia.
+   */
+  function avisarDelMes(r) {
+    /* Va pegado a la pantalla y no dentro del tablero, y eso es a propósito:
+     * la casilla en la que se acaba de caer puede haber abierto una ventana
+     * encima, y la noticia de que el mes cambió no puede quedarse debajo. */
+    if (!r || !r.condicion || !document.body) return;
+    var caja = document.body;
+    var capa = document.createElement('div');
+    capa.className = 'mes-cambia' + (r.llega ? '' : ' no');
+    capa.innerHTML = Ico(r.llega ? r.condicion.icono : 'visto') +
+      '<b>' + esc(K('condicion', r.condicion.id, r.condicion.nombre)) + '</b>' +
+      '<span>' + (r.llega
+        ? T('Llegó lo que estaba en duda. Los días que faltan cambian.')
+        : T('Lo que estaba en duda no llegó. El mes sigue como estaba.')) + '</span>';
+    caja.appendChild(capa);
+    Sonido.tono(r.llega ? 'alerta' : 'toque');
+    setTimeout(function () {
+      capa.classList.add('yendose');
+      setTimeout(function () { if (capa.parentNode) capa.remove(); }, 400);
+    }, 2200);
+  }
+
+  /* Los días que cambiaron se voltean, uno detrás de otro. Sin esto el tablero
+   * se reescribiría a espaldas del jugador, que es exactamente de lo que el
+   * signo de interrogación venía avisando. */
+  function voltearCasillas(pasos) {
+    if (!pasos || !pasos.length || sinMovimiento()) return;
+    for (var i = 0; i < pasos.length; i++) {
+      var el = app.querySelector('.casilla[data-paso="' + pasos[i] + '"]');
+      if (el) { el.style.setProperty('--i', i % 8); el.classList.add('volteada'); }
+    }
   }
 
   function tarjetaTablero(e) {
@@ -1160,7 +1242,10 @@ var UI = (function () {
      * justo al acercarse del todo. Por fuera, la escena se dibuja primero y la
      * lente mueve y agranda el resultado, como una lupa encima de una foto:
      * ahi si, un punto que esta a `d` del centro acaba en `d*s + t`. */
-    h += '<div class="tablero-vista">';
+    /* El pronóstico se dibuja encima del tablero y con el tablero apagado
+     * detrás: es lo único que hay que mirar en ese momento. */
+    var pron = (Motor.planeado && Motor.planeado()) ? '' : tarjetaPronostico();
+    h += '<div class="tablero-vista' + (pron ? ' planeando' : '') + '">';
     h += '<div class="tablero-lente' + (zoomEn ? ' acercado' : '') + '"' +
          (zoomEn ? ' style="--zx:' + zoomEn.x + 'px;--zy:' + zoomEn.y +
                    'px;--zs:' + zoomEn.s + '"' : '') + '>';
@@ -1228,7 +1313,9 @@ var UI = (function () {
     // Y la ficha, que es un elemento suelto: se mueve de casilla en casilla
     h += fichaDelTablero(e, donde);
     h += '</div>';          // .tablero
-    h += '</div></div></div>';   // 3d, lente, vista
+    h += '</div></div>';         // 3d, lente
+    h += pron;
+    h += '</div>';               // vista
 
     /* La consola, debajo del tablero y de frente.
      *
@@ -4793,7 +4880,7 @@ var UI = (function () {
         '[data-ver-perfil],[data-mejora],' +
         '[data-abrir-negocio],[data-subir-negocio],[data-contratar],[data-despedir],' +
         '[data-traspasar],' +
-        '[data-cond],[data-reto],#tirar-dado,#son-tablero,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
+        '[data-cond],[data-reto],#planear,#tirar-dado,#son-tablero,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
         '#pedir-tarjeta,#pedir-informal,#gastar-tarjeta,#pagar-tarjeta,#alternar-minimo,' +
         '#abrir-pension,#cambiar-pension,#retirar-pension,#migrar,#regresar,' +
         '#ver-glosario,#ver-reporte,#ver-reporte-final');
@@ -5250,8 +5337,34 @@ var UI = (function () {
           if (lista[ic].id === el.dataset.cond) cnd = lista[ic];
         }
         if (!cnd) return null;
-        return aviso(K('condicion', cnd.id, cnd.nombre),
-                     esc(K('condicion', cnd.id + ':t', cnd.texto)));
+        /* Y si es la del signo de interrogación, lo primero que se dice es que
+         * todavía no es segura: leer lo que hace una condición que a lo mejor
+         * no llega y no saberlo sería peor que no leer nada. */
+        var pistas = Motor.pronosticoDelMes ? Motor.pronosticoDelMes() : [];
+        var dudosa = false;
+        for (var ip = 0; ip < pistas.length; ip++) {
+          if (pistas[ip].id === cnd.id && pistas[ip].incierta) dudosa = true;
+        }
+        var cuerpo = esc(K('condicion', cnd.id + ':t', cnd.texto));
+        if (dudosa) {
+          cuerpo = '<b>' + T('Todavía no es seguro.') + '</b> ' +
+                   T('Si llega, se sabrá a mitad de mes.') + '<br><br>' + cuerpo;
+        }
+        return aviso(K('condicion', cnd.id, cnd.nombre), cuerpo);
+      }
+
+      /* `Planear` no decide nada: solo dice "ya lo leí". La tarjeta se
+       * comprime hacia la franja del mes, donde los mismos iconos se quedan
+       * a la vista todo el mes. */
+      if (el.id === 'planear') {
+        if (Motor.planear) Motor.planear();
+        Sonido.tono('toque');
+        var tarj = el.closest('.pronostico');
+        if (tarj && !sinMovimiento()) {
+          tarj.classList.add('yendose');
+          return setTimeout(function () { render(); }, 300);
+        }
+        return render();
       }
 
       if (el.dataset.reto) {
@@ -5269,6 +5382,9 @@ var UI = (function () {
       }
 
       if (el.id === 'tirar-dado') {
+        /* Tirar también despacha el pronóstico: quien ya lo leyó de un vistazo
+         * no tiene que cerrarlo con un toque de más. */
+        if (Motor.planear) Motor.planear();
         var tirada = Motor.tirarDado();
         if (!tirada) return render();
         ultimoDado = tirada.dados;
@@ -5280,6 +5396,11 @@ var UI = (function () {
          * el jugador veía un número y una ficha teletransportada. */
         fichaEn = tirada.desde;
         zoomEn = null;
+        /* ¿Pasamos la mitad del mes? Entonces la pista del signo de
+         * interrogación se resuelve AQUÍ, con la cámara todavía abierta y el
+         * mes entero a la vista: si los días que faltan van a cambiar, el
+         * jugador tiene que estar mirándolos cuando cambien. */
+        var cambioDelMes = Motor.resolverPendiente ? Motor.resolverPendiente() : null;
         render();
 
         /* Sin animaciones —el banco de pruebas, o quien pidió menos
@@ -5291,7 +5412,11 @@ var UI = (function () {
           render();
           var an = tirada.fin ? null : ANIMO_CASILLA[tirada.casilla && tirada.casilla.tipo];
           if (an) Sonido.tono(an);
-          return abrirCasilla(tirada);
+          var resuelto = abrirCasilla(tirada);
+          /* Quien pidió menos movimiento no pidió menos información: el aviso
+           * de que el mes cambió sale igual, después de dibujar. */
+          if (cambioDelMes) avisarDelMes(cambioDelMes);
+          return resuelto;
         }
 
         /* Y con ellas, el turno tiene cuatro tiempos:
@@ -5310,6 +5435,8 @@ var UI = (function () {
          * sale de esta foto. */
         plano = null;
         tomarMedidas();
+
+        if (cambioDelMes) { avisarDelMes(cambioDelMes); voltearCasillas(cambioDelMes.cambiadas); }
 
         return setTimeout(function () {
           enfocarCasilla(tirada.desde, LENTE_PASEO);

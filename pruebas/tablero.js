@@ -254,4 +254,94 @@ q.tablero.condiciones = ['gripe', 'calor', 'lluvia'];
 ok(Motor.efectoDelMes('energiaExtra') >= -6,
    `tres meses malos a la vez no pasan de -6 de cuerpo (dan ${Motor.efectoDelMes('energiaExtra')})`);
 
+/* ---------- 6. el pronóstico: dos pistas firmes y una que puede cambiar ----------
+ *
+ * Enseñar el mes entero de antemano lo vuelve un trámite; no enseñar nada lo
+ * vuelve una lotería. La pista incierta es el punto medio, y lo que estas
+ * comprobaciones cuidan es que siga siendo honesta: que mientras lleve el
+ * signo de interrogación no haga NADA, que al cumplirse no reescriba los días
+ * que el jugador ya caminó, y que nunca meta una cuarta condición al mes.
+ */
+
+const CLASES = ['clima', 'compromiso', 'oportunidad'];
+const sinClase = CONDICIONES_MES.filter(c => CLASES.indexOf(c.clase) < 0).map(c => c.id);
+ok(sinClase.length === 0,
+   `las ${CONDICIONES_MES.length} condiciones dicen de qué hablan en el pronóstico` +
+   (sinClase.length ? ': ' + sinClase.join(', ') : ''));
+
+/* Que nunca haya una cuarta: si el mes ya trae el tope, no se sortea pista.
+ * De aquí depende que el límite de `efectoDelMes` siga alcanzando. */
+let cuartas = 0, conPista = 0;
+for (let m = 0; m < 300; m++) {
+  const t = Motor.generarTablero();
+  if (t.pendiente) {
+    conPista++;
+    if ((t.condiciones || []).length >= (CONDICIONES_POR_MES.maximo || 3)) cuartas++;
+    if ((t.condiciones || []).indexOf(t.pendiente.id) >= 0) cuartas++;
+  }
+}
+ok(cuartas === 0, 'la pista incierta nunca es una cuarta condición ni repite una que ya está');
+ok(conPista > 30 && conPista < 270,
+   `unos meses traen pista y otros no (${conPista} de 300): una que sale siempre no es una pista`);
+
+// Un mes con pista, para mirarlo de cerca
+let hallado = false;
+for (let i = 0; i < 400 && !hallado; i++) {
+  Motor.generarTablero();
+  hallado = !!q.tablero.pendiente;
+}
+ok(hallado, 'se encuentra un mes con pista incierta para revisarlo');
+
+const pistas = Motor.pronosticoDelMes();
+ok(pistas.length <= (CONDICIONES_POR_MES.maximo || 3) + 0 && pistas.length >= 1,
+   `el pronóstico enseña ${pistas.length} pistas y no más de tres`);
+ok(pistas.filter(x => x.incierta).length === 1,
+   'y exactamente una lleva el signo de interrogación');
+
+/* MIENTRAS LLEVE EL SIGNO NO HACE NADA. Si hiciera algo sería un efecto que el
+ * jugador no puede ver, que es justo lo que este juego no hace. */
+ok(Motor.condicionesDelMes().length === q.tablero.condiciones.length,
+   'la pista incierta no pesa hasta que se cumple');
+
+ok(Motor.resolverPendiente() === null,
+   'y no se resuelve antes de la mitad del mes');
+
+/* AL CUMPLIRSE, LOS DÍAS QUE FALTAN CAMBIAN Y LOS ANDADOS NO.
+ * Un mes que reescribe su pasado no es un mes, es un truco. */
+q.tablero.pendiente.llega = true;
+q.tablero.pos = Math.floor(q.tablero.pasos / 2);
+const antes = q.tablero.casillas.map(c => c.tipo);
+const r = Motor.resolverPendiente();
+ok(r && r.llega === true, 'pasada la mitad del mes, la pista se resuelve');
+const reescritos = (r.cambiadas || []).filter(k => k <= q.tablero.pos);
+ok(reescritos.length === 0,
+   'y no toca ni uno de los días que la ficha ya caminó' +
+   (reescritos.length ? ' (tocó ' + reescritos.join(', ') + ')' : ''));
+const pasadoIgual = antes.slice(0, q.tablero.pos + 1)
+  .every((t, k) => t === q.tablero.casillas[k].tipo);
+ok(pasadoIgual, 'el pasado del mes queda exactamente como estaba');
+
+ok(Motor.condicionesDelMes().length <= (CONDICIONES_POR_MES.maximo || 3),
+   'y con la pista dentro el mes sigue sin pasar de tres condiciones');
+ok(Motor.resolverPendiente() === null, 'una pista solo se resuelve una vez');
+
+/* Y la que se revela y NO llega se cae del pronóstico: deja de ser una pista
+ * porque ya no hay nada que esperar de ella. */
+Motor.generarTablero();
+/* Las condiciones se fijan a mano: si el mes sorteado ya trae gripe, la
+ * pastilla sigue ahi con todo derecho y la comprobacion senalaria el sitio
+ * equivocado. */
+q.tablero.condiciones = ['lluvia'];
+q.tablero.pendiente = { id: 'gripe', llega: false, revelada: true };
+ok(Motor.pronosticoDelMes().every(x => x.id !== 'gripe'),
+   'la pista que no llegó desaparece del pronóstico');
+ok(Motor.condicionesDelMes().every(c => c.id !== 'gripe'),
+   'y no pesa en el mes');
+
+/* Planear no decide nada: solo dice "ya lo leí". */
+Motor.generarTablero();
+ok(Motor.planeado() === false, 'el mes nuevo empieza sin leer el pronóstico');
+Motor.planear();
+ok(Motor.planeado() === true, 'y tocar Planear lo da por leído');
+
 M.imprimir('el tablero del mes');

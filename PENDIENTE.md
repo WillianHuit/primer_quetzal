@@ -12,16 +12,21 @@ El tablero del mes es lo que más va a crecer, y ya tiene su propia guía:
 rangos que no desbalancean y la regla de la condición `si`. Lo que falta,
 por orden de lo que más se nota jugando:
 
-- **Más comodines.** Son los que el jugador recuerda y solo hay ocho. Deberían
-  ser treinta.
+- **Los comodines y las trampas no están traducidos al inglés.** Es lo más
+  gordo que queda y lo que más se ve: los 30 comodines y las 7 trampas salen
+  en español en la partida en inglés. No existe el grupo `X.tablero_comodin`
+  ni `X.tablero_trampa` en `datos/textos.en.v2.js`; las dificultades, los
+  viajes, las esquinas y las condiciones del mes sí están. Son unas 150
+  cadenas: pregunta, los dos lados y los dos resultados de cada uno.
 - **Más dificultades de adulto.** Las 21 de ahora son de estudiante y de casa;
   falta lo que le pasa a alguien de 30 con un negocio y dos hijos.
-- **Los comodines no están traducidos al inglés** (40 cadenas: pregunta, los
-  dos lados y los dos resultados de cada uno). Las dificultades y los viajes
-  en el tiempo sí lo están, en `datos/textos.en.v2.js`.
-- **Condiciones nuevas.** `si` acepta tres palabras (`estudia`, `trabaja`,
+- **Condiciones `si` nuevas.** Acepta tres palabras (`estudia`, `trabaja`,
   `dinero`). Faltan la edad y el número de negocios abiertos, y agregar una es
   tocar `cumpleCondicion()` en `js/motor.js`: cuatro líneas.
+- **Más condiciones del mes.** Hay nueve en `datos/condiciones.js` y el
+  pronóstico las reparte en tres clases (clima, compromiso, oportunidad): tres
+  de cada una. Agregar una es una línea, y el formato está en la guía. Regla
+  que la prueba vigila: si agregas una mala, mira si hace falta una buena.
 
 ---
 

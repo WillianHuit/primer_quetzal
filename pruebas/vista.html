@@ -24,6 +24,9 @@
     ?nino=1         el juego tal como lo ve un chico de 13 recién empezado
     ?nino=1&origen=sosten  el mismo chico, pero empezando en el asentamiento
     ?p=casa&mj=1    además abre un minijuego
+    ?pronostico=1   el pronóstico del mes con sus tres pistas, una incierta
+    ?pronostico=fin la misma pista, ya resuelta a mitad de mes
+    ?pronostico=llega&tirada=1  la ficha a mitad de mes: la pista se cumple al tirar
     ?tirada=1       tira el dado una vez y deja abierta la tarjeta del día
     ?tirada=zoom    igual, pero sin la ventana: la cámara acercada a la casilla
     ?tirada=zoom&desde=8   tira desde la esquina, para mirar el giro del tablero
@@ -146,6 +149,7 @@
       // Un mes cerrado: es lo que abre las Mejoras y los trabajos extra
       Motor.cerrarTurno();
       for (var q2 = 0; q2 < 8; q2++) Motor.asignarEspacio(q2, q2 % 2 ? 'trabajo' : 'estudio');
+      if (par.get('pronostico')) forzarPronostico();
       Motor.guardar();
       UI.iniciar();
       var bn2 = document.querySelector('[data-seguir="1"]');
@@ -216,6 +220,7 @@
     }
     // Sin tarjetas educativas ni cinta del tutorial encima del diseño
     Motor.get().vistos.guiaSaltada = true;
+    if (par.get('pronostico')) forzarPronostico();
     Motor.guardar();
 
     UI.iniciar();
@@ -257,6 +262,24 @@
       var cierre = document.querySelector('#cerrar-turno');
       if (cierre) cierre.click();
     }
+  }
+
+  /* El pronostico con sus tres pistas, una incierta.
+   *
+   * Se fuerza porque el sorteo no siempre trae pista —poco mas de la mitad de
+   * los meses— y porque se cumple a medias: mirar con los ojos una cosa que
+   * sale cuando quiere es imposible. Con ?pronostico=fin la pista ya se
+   * resolvio, que es el otro estado que hay que poder revisar. */
+  function forzarPronostico() {
+    var t = Motor.tablero();
+    if (!t) return;
+    t.condiciones = ['lluvia', 'quincena'];
+    t.pendiente = { id: 'gripe', llega: true, revelada: par.get('pronostico') === 'fin' };
+    t.planeado = false;
+    /* Con 'llega' la ficha arranca en la mitad del camino, asi que la tirada
+     * siguiente resuelve la pista: es la unica forma de mirar con los ojos el
+     * aviso de que el mes cambio y los dias que se voltean. */
+    if (par.get('pronostico') === 'llega') t.pos = Math.floor(t.pasos / 2);
   }
 
   /* Tira el dado unas cuantas veces y contesta lo que salga.

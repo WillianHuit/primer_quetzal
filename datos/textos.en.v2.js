@@ -93,18 +93,50 @@
     lluvia: 'Rain',
     'lluvia:t': 'It rains almost every day. Getting around costs more and the street empties out.',
     calor: 'Heat',
-    'calor:t': 'Not a breath of air. You sleep badly, but people buy more on the street.',
+    'calor:t': 'Not a breath of air. You sleep badly and more odd jobs turn up on the street.',
     quincena: 'Payday',
-    'quincena:t': 'There is money on the street: you sell more and more work comes up.',
+    'quincena:t': 'There is money on the street: more work and more odd jobs come up.',
     examen: 'Exams',
-    'examen:t': 'Exam month. More homework comes up and what you study pays off more.',
+    'examen:t': 'Exam month. Far more homework comes up and hardly a free day.',
     feria: 'Fair',
     'feria:t': 'The town fair is on. Side jobs everywhere and nobody sleeps.',
     apagon: 'Blackouts',
-    'apagon:t': 'The power keeps going out. Anything that needs electricity produces less.',
+    'apagon:t': 'The power keeps going out. Fewer workdays and more days spent waiting.',
     gripe: 'Flu',
-    'gripe:t': 'There is a flu going around. Your body is not giving what it usually does.'
+    'gripe:t': 'There is a flu going around. Your body is not giving what it usually does.',
+    fresco: 'Cool spell',
+    'fresco:t': 'Good weather all month. You sleep well and your body holds up better.',
+    vacaciones: 'School break',
+    'vacaciones:t': 'School holidays. Hardly any homework and real rest.',
+
+    /* Las etiquetas del pronostico: de que habla cada pista. */
+    clase_clima: 'Weather',
+    clase_compromiso: 'Obligation',
+    clase_oportunidad: 'Opportunity'
   };
+
+  /* ---------- el pronostico del mes ----------
+   * Dos pistas firmes y una con signo de interrogacion, antes del primer dado.
+   * Ver datos/condiciones.js y `pronosticoDelMes` en js/motor.js. */
+  /* La pestana del mes. Los nombres de las pestanas salen de una tabla y
+   * llegan al diccionario por T(it.tx), con la variable adentro, asi que el
+   * rastreador de cadenas de pruebas/interfaz-bilingue.js no los ve: 'Mes'
+   * llevaba sin traducir desde que la pestana se llama asi, y era la primera
+   * palabra de la pantalla principal. */
+  ui['Mes'] = 'Month';
+  ui['Imperio'] = 'Empire';
+  ui['Banco'] = 'Bank';
+
+  ui['Cómo viene el mes'] = 'How the month looks';
+  ui['Planear'] = 'Plan';
+  ui['La del signo ? todavía puede cambiar.'] = 'The one with the ? can still change.';
+  ui['Esto es todo lo que trae el mes.'] = 'That is everything the month brings.';
+  ui['Todavía no es seguro.'] = 'Not certain yet.';
+  ui['Si llega, se sabrá a mitad de mes.'] = 'If it lands, you will know halfway through.';
+  ui['Llegó lo que estaba en duda. Los días que faltan cambian.'] =
+    'What was in doubt landed. The days ahead change with it.';
+  ui['Lo que estaba en duda no llegó. El mes sigue como estaba.'] =
+    'What was in doubt never came. The month carries on as it was.';
 
   /* ---------- el barrio del centro del tablero ----------
    * El nombre de cada barrio y lo que se ve en el. La clave ':d' es la

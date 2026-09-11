@@ -571,6 +571,61 @@ ok(!puerta.experienciaRequerida,
   ok(tipos.size >= 3,
      `y se ven ${tipos.size} clases de día distintas antes de caer en ninguna`);
 
+  /* ---------- el pronóstico, antes de tirar el primer dado ----------
+   *
+   * Dos pistas firmes y una con signo de interrogación. Se fuerzan las tres
+   * porque el sorteo no siempre trae pista incierta, y lo que hay que probar
+   * es la regla, no la suerte de esta corrida.
+   *
+   * Lo que se cuida aquí es que la tarjeta no sea una pared: se cierra con
+   * `Planear`, se cierra tirando el dado, y deja sus iconos arriba en la
+   * franja. Una tarjeta que hay que despachar cada mes son seiscientos toques
+   * en una partida de cincuenta años. */
+  M3.tablero().condiciones = ['lluvia', 'quincena'];
+  M3.tablero().pendiente = { id: 'gripe', llega: true, revelada: false };
+  M3.tablero().planeado = false;
+  M3.tablero().pos = 0;
+  clic(w3, w3.document.querySelector('[data-pestana="casa"]'));
+
+  const pron = w3.document.querySelector('.pronostico');
+  ok(!!pron, 'el mes abre con el pronóstico de cómo viene');
+  ok(pron && pron.querySelectorAll('.pista').length === 3,
+     'con sus tres pistas: clima, compromiso y oportunidad');
+  ok(pron && pron.querySelectorAll('.pista.incierta').length === 1,
+     'y exactamente una con el signo de interrogación');
+  ok(!w3.document.querySelector('.franja-mes'),
+     'mientras está abierto no hay franja: serían las mismas pastillas dos veces');
+  clic(w3, w3.document.querySelector('#planear'));
+  ok(!w3.document.querySelector('.pronostico'), 'tocar Planear lo cierra');
+  const franja3 = w3.document.querySelector('.franja-mes');
+  ok(!!franja3 && franja3.querySelectorAll('.cond').length === 3,
+     'y deja los mismos tres iconos arriba, en la franja del mes');
+  ok(!!franja3 && franja3.querySelectorAll('.cond.incierta').length === 1,
+     'con el signo de interrogación puesto: todavía no se ha cumplido');
+
+  /* Y mientras lleve el signo no pesa. Si pesara sería un efecto que el
+   * jugador no puede ver, que es justo lo que este juego no hace. */
+  ok(M3.condicionesDelMes().every(c => c.id !== 'gripe'),
+     'la pista incierta no pesa en el mes hasta que se cumple');
+
+  /* ---------- y a mitad de mes se sabe ----------
+   * La ficha pasa la mitad y la pista se resuelve. Si llega, los días que
+   * FALTAN se vuelven a repartir; los andados no se tocan. */
+  M3.tablero().pos = Math.floor(M3.tablero().pasos / 2);
+  const antesDelCambio = M3.tablero().casillas.map(c => c.tipo);
+  const cambio = M3.resolverPendiente();
+  ok(!!cambio && cambio.llega, 'pasada la mitad del mes, la pista se resuelve');
+  ok((cambio.cambiadas || []).every(k => k > M3.tablero().pos),
+     'y solo cambian días que la ficha todavía no ha pisado');
+  ok(antesDelCambio.slice(0, M3.tablero().pos + 1)
+       .every((t, k) => t === M3.tablero().casillas[k].tipo),
+     'lo ya andado queda exactamente igual: un mes no reescribe su pasado');
+  clic(w3, w3.document.querySelector('[data-pestana="casa"]'));
+  const franja4 = w3.document.querySelector('.franja-mes');
+  ok(!!franja4 && franja4.querySelectorAll('.cond.incierta').length === 0,
+     'y la pastilla pierde el signo de interrogación: ya es una condición más');
+  M3.tablero().pos = 0;
+
   /* Una tirada mueve la ficha y la casilla pregunta lo suyo. Y SUENA: se
    * apunta lo que se toca para comprobar que el tablero avisa de lo que pasa.
    * jsdom no tiene AudioContext, asi que el sonido no llega a sonar; lo que
@@ -941,6 +996,15 @@ ok(w.document.querySelector('main').textContent.indexOf('Mercado laboral') < 0,
  * es exactamente de lo que se venía. */
 w.Motor.get().efectivo += 40000;
 w.Motor.abrirNegocio('refrescos');
+/* Con el cuerpo entero y sin condiciones encima.
+ *
+ * Lo que se prueba aquí es el ATAJO de la calle, no el presupuesto de cuerpo:
+ * un mes que caiga con gripe, calor y lluvia a la vez deja al personaje sin
+ * energía para una jornada y el atajo se niega CON RAZÓN. Pasó una vez de
+ * cada tantas y se veía como un fallo del local, que es lo peor que puede
+ * hacer una prueba: señalar el sitio equivocado. */
+w.Motor.get().energia = w.CONFIG.energia.maxima;
+if (w.Motor.tablero()) w.Motor.tablero().condiciones = [];
 w.Motor.guardar();
 clic(w, w.document.querySelector('[data-pestana="casa"]'));
 

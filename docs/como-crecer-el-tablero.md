@@ -238,20 +238,78 @@ problema es el minijuego.
 
 ---
 
+## Agregar una CONDICIÓN DEL MES
+
+Las condiciones son *cómo viene el mes*: llueve, hay feria, se fue la luz, hay
+exámenes. Viven en `datos/condiciones.js`, salen hasta tres por mes en la
+franja de encima del tablero y en el pronóstico de antes de tirar el primer
+dado.
+
+```js
+{
+  id: 'huelga',
+  nombre: 'Paro',            // DOS PALABRAS como mucho: va en una pastilla
+  icono: 'bus',              // de js/iconos.js
+  clase: 'compromiso',       // 'clima' | 'compromiso' | 'oportunidad'
+  texto: 'Hay paro de buses. Llegar a cualquier lado cuesta el doble.',
+  peso: 12,
+  si: 'trabaja',             // opcional, igual que en el resto del tablero
+  energiaExtra: -2,
+  pesos: { trabajo: 0.7, libre: 1.4 }
+}
+```
+
+**Y solo hay DOS palancas, no inventes una tercera:**
+
+| Palanca | Qué hace |
+|---|---|
+| `pesos` | multiplica la probabilidad de un tipo de día. `1.8` en `tarea` es "este mes salen casi el doble de tareas" |
+| `energiaExtra` | se suma a lo que cuesta **cada** jornada del mes. Negativo cansa más |
+
+Hubo dos palancas más —multiplicar lo que producen los negocios y lo que se
+aprende— y se quitaron. El banco de pruebas las cazó (el modo difícil dejaba
+siete de cada veintiuna vidas en negativo a los 65), pero el motivo de fondo
+manda: **eran un multiplicador en secreto**. El jugador veía el mismo trabajo
+rendir distinto sin poder saber por qué. Lo que cambia se tiene que ver, y lo
+que se ve son los días que salen y lo que cuesta el cuerpo. Así que la quincena
+no multiplica tus ventas: hace que salgan más días de trabajo.
+
+**Rangos:** los `pesos` entre `0.6` y `1.8`, y `energiaExtra` entre `-5` y
+`+3`. Lo que se acumule se limita en `efectoDelMes()` (`js/motor.js`) a
+`[-6, +4]`: tres condiciones razonables juntas dejan de serlo, y con gripe,
+calor y lluvia a la vez cada jornada costaba diez de cuerpo más.
+
+**Y si agregas una mala, mira si hace falta una buena.** `pruebas/tablero.js`
+comprueba que, sumando los pesos, lo que las condiciones quitan y lo que dan
+se compense. Con puras condiciones malas dejan de ser "cómo viene el mes" y
+pasan a ser un impuesto; por eso existen `fresco` y `vacaciones`.
+
+**La pista incierta sale sola.** No hay que escribir nada: el motor sortea una
+condición aparte (`sortearPendiente()`), la enseña en el pronóstico con un
+signo de interrogación y a mitad de mes la cumple o no. Cualquier condición
+puede tocarle, la tuya también.
+
+---
+
 ## Antes de dar por buena tu línea
 
 1. **Tradúcela.** El juego es bilingüe y la clave es el id:
    ```js
    X.tablero_dificultad = { dif_taxi: 'You were running late and had to pay for a taxi.' };
    X.tablero_viaje = { via_espejo: '…' };
+   X.condicion = { huelga: 'Bus strike', 'huelga:t': 'Buses are on strike. …' };
    ```
-   en `datos/textos.en.v2.js`. Ver ahí los grupos que ya existen.
+   en `datos/textos.en.v2.js`. Ver ahí los grupos que ya existen. Las
+   condiciones llevan **dos** claves: el nombre y `':t'`, la frase que se lee
+   al tocar la pastilla. `pruebas/interfaz-bilingue.js` te avisa si falta una.
 2. **Corre las pruebas**: `npm test`. La que te va a atrapar es
    `pruebas/tablero.js`, que comprueba que las condiciones estén bien puestas,
    que ninguna dificultad regale nada y que nada cobre lo que el jugador no
    tiene.
 3. **Míralo con los ojos**: `pruebas/vista.html?nino=1&p=casa&tirada=carta`
-   tira el dado hasta caer en un día que pregunte algo.
+   tira el dado hasta caer en un día que pregunte algo, y
+   `…?nino=1&p=casa&pronostico=1` abre el pronóstico del mes con sus tres
+   pistas (`pronostico=llega&tirada=1` enseña la pista cumpliéndose).
 
 ---
 
