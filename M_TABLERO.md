@@ -88,6 +88,25 @@ capa de casillas.
 
 ---
 
+> **IMPLEMENTADO (11 de septiembre de 2026).** Esta seccion esta hecha: ver
+> `datos/condiciones.js`, `sortearCondiciones()` y `efectoDelMes()` en
+> `js/motor.js`, `franjaDelMes()` en `js/ui.js` y el bloque 5 de
+> `pruebas/tablero.js`.
+>
+> Dos cosas salieron distintas de lo escrito aqui, y las dos por el banco de
+> pruebas:
+>
+> - **Las condiciones NO multiplican dinero ni experiencia.** Estaba puesto
+>   —quincena vendia mas, apagon producia menos— y con eso el modo dificil
+>   dejaba siete de cada veintiuna vidas en negativo a los 65. Ademas era un
+>   multiplicador en secreto: el jugador veia el mismo trabajo rendir distinto
+>   sin poder saber por que. Ahora una condicion cambia **que dias salen** y
+>   **cuanto cuesta el cuerpo**, que son las dos cosas que se ven.
+> - **Hay meses buenos.** Con solo lluvia, calor, gripe y apagones, las
+>   condiciones dejaban de ser "como viene el mes" y pasaban a ser un impuesto.
+>   Se agregaron `fresco` y `vacaciones`, y lo que quitan y lo que dan se
+>   compensa sumando los pesos (lo comprueba `pruebas/tablero.js`).
+
 ## 2. Estado vivo del mes
 
 ### Objetivo

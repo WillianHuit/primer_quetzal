@@ -772,6 +772,35 @@ p  { margin: 0 0 10px; }
 .menos-movimiento .fin-sello,
 .menos-movimiento .papelito { animation: none; }
 
+/* ---------- como viene el mes ----------
+   Hasta tres pastillas encima del tablero: llueve, hay feria, se fue la luz.
+   Entran una detras de otra, cada una con su retraso, y se quedan quietas: el
+   movimiento confirma que el mes cambio, no decora la pantalla. Dos palabras
+   por pastilla; la frase de lo que hace esta detras de un toque. */
+.franja-mes {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 8px 0 0;
+}
+.cond {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px;
+  border: 1.5px solid var(--borde); border-radius: 99px;
+  background: var(--tarjeta); color: var(--gris);
+  font-size: 11.5px; font-weight: 700; font-family: inherit;
+  cursor: pointer;
+  animation: cond-entra .3s ease-out both;
+  animation-delay: calc(var(--i, 0) * .09s);
+}
+.cond svg { width: 14px; height: 14px; }
+@keyframes cond-entra {
+  0%   { opacity: 0; transform: translateY(-12px) scale(.85); }
+  70%  { opacity: 1; transform: translateY(0) scale(1.05); }
+  100% { opacity: 1; transform: none; }
+}
+/* Quien pidio menos movimiento las ve aparecer, no bajar. */
+.menos-movimiento .cond { animation: cond-fundido .13s ease-out both; }
+@keyframes cond-fundido { from { opacity: 0; } to { opacity: 1; } }
+
 /* ---------- llegaste al final del mes ----------
    Treinta dias recorridos de uno en uno merecen algo mas que una linea gris.
    El sello cae encima del tablero, el confeti baja y a los dos segundos se va

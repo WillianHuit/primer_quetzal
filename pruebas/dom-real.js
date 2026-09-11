@@ -267,7 +267,9 @@ ok(w.document.querySelector('nav.pestanas'), 'aparecen las pestañas del juego')
        * apagada, sin cinta y sin nada que tocar. */
       if (!w.document.querySelector('#tirar-dado') &&
           !w.document.querySelector('#cerrar-turno')) durante.sinPista++;
-      if (w.document.querySelector('main').textContent.indexOf('Q') >= 0) durante.dinero++;
+      /* Una CANTIDAD, no la letra: "Quincena" es una palabra y no un quetzal.
+       * Lo que no puede aparecer en esos meses es una cifra de dinero. */
+      if (/Q\s?[0-9]/.test(w.document.querySelector('main').textContent)) durante.dinero++;
       clic(w, cerrar);
       cerrarModales(w);
       esperas++;

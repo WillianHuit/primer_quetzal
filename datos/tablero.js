@@ -110,7 +110,7 @@ var TABLERO_CASILLAS = [
     tipo: 'descanso',
     nombre: 'Un día para ti',
     icono: 'luna',
-    peso: { colegio: 8, trabajo: 8 }
+    peso: { colegio: 10, trabajo: 9 }
   },
   {
     id: 'dia_trabajo',
@@ -140,14 +140,14 @@ var TABLERO_CASILLAS = [
     tipo: 'trampa',
     nombre: 'Te quieren ver la cara',
     icono: 'anzuelo',
-    peso: { colegio: 8, trabajo: 9 }
+    peso: { colegio: 9, trabajo: 9 }
   },
   {
     id: 'dia_comodin',
     tipo: 'comodin',
     nombre: 'Te toca elegir',
     icono: 'mundo',
-    peso: { colegio: 26, trabajo: 20 }
+    peso: { colegio: 20, trabajo: 16 }
   },
   {
     id: 'dia_viaje',

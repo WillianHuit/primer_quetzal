@@ -86,6 +86,26 @@
                 'and you cannot say how.'
   };
 
+  /* ---------- como viene el mes ----------
+   * El nombre va en la franja (dos palabras como mucho) y ':t' es la frase que
+   * se lee al tocarla. Ver datos/condiciones.js. */
+  X.condicion = {
+    lluvia: 'Rain',
+    'lluvia:t': 'It rains almost every day. Getting around costs more and the street empties out.',
+    calor: 'Heat',
+    'calor:t': 'Not a breath of air. You sleep badly, but people buy more on the street.',
+    quincena: 'Payday',
+    'quincena:t': 'There is money on the street: you sell more and more work comes up.',
+    examen: 'Exams',
+    'examen:t': 'Exam month. More homework comes up and what you study pays off more.',
+    feria: 'Fair',
+    'feria:t': 'The town fair is on. Side jobs everywhere and nobody sleeps.',
+    apagon: 'Blackouts',
+    'apagon:t': 'The power keeps going out. Anything that needs electricity produces less.',
+    gripe: 'Flu',
+    'gripe:t': 'There is a flu going around. Your body is not giving what it usually does.'
+  };
+
   /* ---------- el barrio del centro del tablero ----------
    * El nombre de cada barrio y lo que se ve en el. La clave ':d' es la
    * descripcion, la que va en el title. Ver datos/barrio.js. */

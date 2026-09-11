@@ -69,7 +69,8 @@ for (const m of leer('js/ui.js').matchAll(/tarjetaEducativa\('[a-z]+',\s*'([a-z-
 const datos = []
   .concat(sb.TRABAJOS, sb.CARRERAS, sb.CASAS, sb.ORIGENES, sb.EVENTOS,
           sb.PROMOCIONES, sb.CREDITOS, sb.MIGRACION.empleos,
-          sb.Minijuegos.todos(), sb.TABLERO_CASILLAS, [sb.PENSION])
+          sb.Minijuegos.todos(), sb.TABLERO_CASILLAS, sb.TABLERO_ESQUINAS,
+          sb.CONDICIONES_MES, [sb.PENSION])
   .filter(Boolean);
 datos.forEach(o => { if (o.icono) pedir(o.icono, 'datos (' + o.id + ')'); });
 // Las categorías del minijuego de presupuesto viven dentro de su propio archivo

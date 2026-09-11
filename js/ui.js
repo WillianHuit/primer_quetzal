@@ -1114,6 +1114,27 @@ var UI = (function () {
    *   30 dias -> anillo 9x9 = 32: salida + 30 + 1
    *   31 dias -> anillo 9x9 = 32: salida + 31, justo
    */
+  /* CÓMO VIENE EL MES, en una franja de tres pastillas.
+   *
+   * Llueve, hay feria, se fue la luz, hay exámenes. Cambia qué días salen,
+   * cuánto cansa cada jornada y cuánto rinde lo que hace, y se ve ANTES de
+   * tirar: si no, sería un castigo sorpresa en vez de algo con lo que contar.
+   *
+   * Dos palabras por pastilla y nada más. La frase de lo que hace está detrás
+   * de un toque, que es donde va todo lo que se lee una vez. Ver
+   * datos/condiciones.js. */
+  function franjaDelMes() {
+    var cs = Motor.condicionesDelMes ? Motor.condicionesDelMes() : [];
+    if (!cs.length) return '';
+    var h = '<div class="franja-mes">';
+    for (var i = 0; i < cs.length; i++) {
+      h += '<button class="cond" data-cond="' + cs[i].id + '" style="--i:' + i + '">' +
+           Ico(cs[i].icono) + '<span>' +
+           esc(K('condicion', cs[i].id, cs[i].nombre)) + '</span></button>';
+    }
+    return h + '</div>';
+  }
+
   function tarjetaTablero(e) {
     var t = Motor.tablero();
     if (!t) return '';
@@ -1129,6 +1150,7 @@ var UI = (function () {
     var h = '<div class="tarjeta tablero-caja">';
     h += '<div class="titulo">' + Ico('calendario') + ' ' +
          T('{0}: día {1} de {2}', nombreMes(e.mes), Motor.diaActual(), t.dias) + '</div>';
+    h += franjaDelMes();
 
     /* La lente va POR FUERA de la perspectiva, y no al reves.
      *
@@ -1778,9 +1800,19 @@ var UI = (function () {
      * donde se juega, es donde se comprueba en qué se fue el mes. */
     h += '<h2>' + T('Tu {0}', turnoNombre()) + '</h2>';
 
-    h += '<div class="tarjeta escenario mando">';
-    h += calle(true);
-    h += '</div>';
+    /* ...PERO SOLO CUANDO HAY CALLE QUE ENSEÑAR.
+     *
+     * Al principio de la partida ahí no hay nada: el personaje parado en una
+     * acera vacía y un lote con un más. Ocupaba el tercio de arriba de la
+     * pantalla para no decir nada y dejaba el tablero —que es donde se
+     * juega— por debajo del doblez. En cuanto abre su primer negocio vuelve
+     * sola, y con ella el atajo de meter una jornada tocando el local. */
+    var hayCalle = Motor.negociosAbiertos().length > 0 || Motor.estaFuera();
+    if (hayCalle) {
+      h += '<div class="tarjeta escenario mando">';
+      h += calle(true);
+      h += '</div>';
+    }
 
     // Y justo debajo, si el jugador tocó un negocio o el lote
     h += hojaDeNegocio();
@@ -4761,7 +4793,7 @@ var UI = (function () {
         '[data-ver-perfil],[data-mejora],' +
         '[data-abrir-negocio],[data-subir-negocio],[data-contratar],[data-despedir],' +
         '[data-traspasar],' +
-        '[data-reto],#tirar-dado,#son-tablero,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
+        '[data-cond],[data-reto],#tirar-dado,#son-tablero,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
         '#pedir-tarjeta,#pedir-informal,#gastar-tarjeta,#pagar-tarjeta,#alternar-minimo,' +
         '#abrir-pension,#cambiar-pension,#retirar-pension,#migrar,#regresar,' +
         '#ver-glosario,#ver-reporte,#ver-reporte-final');
@@ -5212,6 +5244,16 @@ var UI = (function () {
        * Tirar es gratis y no se puede no tirar: el mes pasa igual. Lo que se
        * decide es lo que se hace con la casilla en la que caes, y de eso se
        * encarga `abrirCasilla`. */
+      if (el.dataset.cond) {
+        var cnd = null, lista = (typeof CONDICIONES_MES !== 'undefined') ? CONDICIONES_MES : [];
+        for (var ic = 0; ic < lista.length; ic++) {
+          if (lista[ic].id === el.dataset.cond) cnd = lista[ic];
+        }
+        if (!cnd) return null;
+        return aviso(K('condicion', cnd.id, cnd.nombre),
+                     esc(K('condicion', cnd.id + ':t', cnd.texto)));
+      }
+
       if (el.dataset.reto) {
         var velo = el.closest('.velo');
         if (velo) velo.remove();

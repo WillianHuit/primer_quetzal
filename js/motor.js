@@ -980,12 +980,16 @@ var Motor = (function () {
     var base = CONFIG.energia.porEspacio[tipo];
     if (base === undefined) return 0;
     var mej = efectosDeMejoras();
-    if (tipo === 'descanso') return base + mej.energiaExtra;
+    /* Y COMO VIENE EL MES. Con calor se duerme mal y con gripe no da el
+     * cuerpo: la condicion se suma a lo que cuesta cada jornada, y al descanso
+     * tambien le quita, que es lo que pasa cuando duermes con calor. */
+    var mes = efectoDelMes('energiaExtra');
+    if (tipo === 'descanso') return base + mej.energiaExtra + mes;
     if (tipo === 'tarea' || tipo === 'tarea-usada') {
       // El metodo de estudio la abarata; gratis no se pone nunca
-      return Math.min(-6, base + (mej.ahorroEnergiaTarea || 0));
+      return Math.min(-6, base + (mej.ahorroEnergiaTarea || 0) + mes);
     }
-    return base;
+    return base + mes;
   }
 
   /* Con cuanta energia te va a dejar el reparto que tienes puesto.
@@ -1296,7 +1300,9 @@ var Motor = (function () {
       var c = TABLERO_CASILLAS[i];
       if (c.requiere && !desbloqueado(c.requiere)) continue;
       if (c.si && !cumpleCondicion(c.si)) continue;
-      var peso = (c.peso && c.peso[etapa]) || 0;
+      /* Y el mes manda sobre el sorteo: en mes de examenes salen casi el doble
+       * de tareas, y con gripe, casi el doble de descansos. */
+      var peso = Math.round(((c.peso && c.peso[etapa]) || 0) * efectoDelMes('pesos', c.tipo));
       for (var k = 0; k < peso; k++) bolsa.push(c);
     }
     if (!bolsa.length) return { id: 'dia_libre', tipo: 'libre' };
@@ -1321,10 +1327,85 @@ var Motor = (function () {
    */
   function ladoDelMes(dias) { return Math.ceil((dias + 8) / 4); }
 
+  /* ---------------------------------------------------------------------
+   * COMO VIENE EL MES
+   * ---------------------------------------------------------------------
+   * Hasta tres condiciones —llueve, hay feria, se fue la luz, hay examen— que
+   * se sortean al empezar el mes y cambian tres cosas a la vez: que dias
+   * salen, cuanto cansa cada jornada y cuanto rinde lo que hace.
+   *
+   * El tablero ya sorteaba dias distintos, pero el MES entero era siempre el
+   * mismo: mismas probabilidades, mismos rendimientos, misma energia. El
+   * jugador aprendia el ritmo y de ahi en adelante solo tiraba el dado.
+   *
+   * Ver datos/condiciones.js, que se edita sin tocar codigo.
+   */
+  function sortearCondiciones() {
+    if (typeof CONDICIONES_MES === 'undefined') return [];
+    var reglas = (typeof CONDICIONES_POR_MES !== 'undefined') ? CONDICIONES_POR_MES
+               : { minimo: 0, maximo: 3, probabilidadDeNinguna: 0.15 };
+    if (azar(0, 1) < (reglas.probabilidadDeNinguna || 0)) return [];
+
+    var bolsa = CONDICIONES_MES.filter(function (c) { return cumpleCondicion(c.si); });
+    var cuantas = azarEntero(Math.max(1, reglas.minimo || 1), reglas.maximo || 3);
+    var salen = [];
+    while (salen.length < cuantas && bolsa.length) {
+      var total = 0, i;
+      for (i = 0; i < bolsa.length; i++) total += bolsa[i].peso || 1;
+      var tiro = azar(0, total), suma = 0, elegida = bolsa[0];
+      for (i = 0; i < bolsa.length; i++) {
+        suma += bolsa[i].peso || 1;
+        if (tiro <= suma) { elegida = bolsa[i]; break; }
+      }
+      salen.push(elegida.id);
+      bolsa = bolsa.filter(function (c) { return c.id !== elegida.id; });
+    }
+    return salen;
+  }
+
+  /* Las condiciones de este mes, ya resueltas a objeto. */
+  function condicionesDelMes() {
+    var t = estado && estado.tablero;
+    if (!t || !t.condiciones || typeof CONDICIONES_MES === 'undefined') return [];
+    return t.condiciones.map(function (id) {
+      return buscarPorId(CONDICIONES_MES, id);
+    }).filter(Boolean);
+  }
+
+  /* Lo que las condiciones le hacen a una palanca. `pesos` multiplica; las
+   * demas se suman o se multiplican segun toque. */
+  function efectoDelMes(cual, tipo) {
+    var cs = condicionesDelMes();
+    var v = (cual === 'energiaExtra') ? 0 : 1;
+    for (var i = 0; i < cs.length; i++) {
+      var c = cs[i];
+      if (cual === 'pesos') {
+        if (c.pesos && c.pesos[tipo]) v *= c.pesos[tipo];
+      } else if (cual === 'energiaExtra') {
+        v += c.energiaExtra || 0;
+      } else if (c[cual]) {
+        v *= c[cual];
+      }
+    }
+    /* Y SE LIMITA LO QUE SE ACUMULA, que es la parte que casi rompe el juego.
+     *
+     * Un mes puede traer tres condiciones y cada una es razonable por separado;
+     * las tres juntas no. Con gripe, calor y lluvia a la vez cada jornada
+     * costaba diez de cuerpo mas de lo normal —el trabajo pasaba de seis a
+     * dieciseis— y el modo dificil dejaba siete de cada veintiuna vidas en
+     * negativo a los 65: el banco de pruebas lo canto como trampa sin salida.
+     *
+     * Un mes malo tiene que doler y poder jugarse. Un mes no es un muro. */
+    if (cual === 'energiaExtra') return limitar(v, -6, 4);
+    return v;
+  }
+
   function generarTablero() {
     if (!estado || !hayTablero()) return null;
     var dias = diasDelMes();
     var etapa = etapaTablero();
+    var condiciones = sortearCondiciones();
+    estado.tablero = { dias: dias, pos: 0, condiciones: condiciones, casillas: [] };
     var lado = ladoDelMes(dias);
     var pasos = 4 * lado - 4;
     var esquinas = [0, lado - 1, 2 * lado - 2, 3 * lado - 3];
@@ -1344,12 +1425,23 @@ var Motor = (function () {
       if (dia > dias) { casillas.push({ id: 'camino', tipo: 'camino', dia: null }); continue; }
       // El ultimo dia es el final del mes y no trae nada: es la meta
       if (dia === dias) { casillas.push({ id: 'fin', tipo: 'fin', dia: dia }); continue; }
+      /* Y NO TRES IGUALES SEGUIDOS. El sorteo por pesos es correcto y se ve
+       * mal: cinco comodines en fila parecen un error aunque no lo sean, y el
+       * jugador lee el tablero por rachas, no por probabilidades. Con dos
+       * intentos basta para que casi nunca se junten tres. */
       var c = sortearTipoDeDia(etapa);
+      var previo = casillas[casillas.length - 1], anterior = casillas[casillas.length - 2];
+      if (previo && anterior && previo.tipo === anterior.tipo) {
+        for (var reintento = 0; reintento < 2 && c.tipo === previo.tipo; reintento++) {
+          c = sortearTipoDeDia(etapa);
+        }
+      }
       c.dia = dia;
       casillas.push(c);
     }
 
-    estado.tablero = { dias: dias, pasos: pasos, lado: lado, pos: 0, casillas: casillas };
+    estado.tablero = { dias: dias, pasos: pasos, lado: lado, pos: 0,
+                       condiciones: condiciones, casillas: casillas };
     return estado.tablero;
   }
 
@@ -3121,6 +3213,7 @@ var Motor = (function () {
     etapaTablero: etapaTablero, aplicarEfecto: aplicarEfecto,
     aceptarCasilla: aceptarCasilla, diasDelMes: diasDelMes,
     diaActual: diaActual, retroceder: retroceder,
+    condicionesDelMes: condicionesDelMes, efectoDelMes: efectoDelMes,
     nivelDeBarrio: nivelDeBarrio, cumpleCondicion: cumpleCondicion,
     sortearViaje: sortearViaje,
     energiaDeEspacio: energiaDeEspacio, energiaProyectada: energiaProyectada,

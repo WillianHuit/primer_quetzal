@@ -199,4 +199,59 @@ ok(dioXp === 60, 'estudiando, siempre trae algo aprendido');
 ok(Math.min(...energias) >= 0 && Math.max(...energias) <= 100,
    `y el cuerpo que devuelve va de 0 a 100 (salió entre ${Math.min(...energias)} y ${Math.max(...energias)})`);
 
+// ---------- 5. como viene el mes ----------
+
+/* Hasta tres condiciones por mes —llueve, hay feria, se fue la luz— que
+ * cambian que dias salen y cuanto cansa cada jornada. Es lo que hace que
+ * marzo no se sienta igual que febrero. */
+const { CONDICIONES_MES, CONDICIONES_POR_MES } = sb;
+
+ok(CONDICIONES_MES.length >= 6,
+   `hay ${CONDICIONES_MES.length} condiciones distintas que le pueden tocar a un mes`);
+ok(CONDICIONES_MES.every(c => c.nombre.split(' ').length <= 2),
+   'y todas se llaman con dos palabras o menos: van en una franja de pocos píxeles');
+
+/* Lo que quitan y lo que dan tiene que compensarse. Con solo meses malos, las
+ * condiciones dejan de ser "cómo viene el mes" y pasan a ser un impuesto: en
+ * una vida de cincuenta años eso decide la partida, y el modo difícil dejaba
+ * cuatro de veintiuna vidas en negativo. */
+const balance = CONDICIONES_MES.reduce((n, c) => n + (c.peso || 1) * (c.energiaExtra || 0), 0);
+const pesoTotal = CONDICIONES_MES.reduce((n, c) => n + (c.peso || 1), 0);
+ok(Math.abs(balance / pesoTotal) < 0.35,
+   `lo que quitan y lo que dan de cuerpo se compensa (${(balance / pesoTotal).toFixed(2)} por condición)`);
+
+Motor.iniciar('normal', 3, 'apoyo');
+const q = Motor.get();
+q.vistos.guiaSaltada = true;
+Motor.inscribirse('basicos', false);
+
+let cuantas = [], repetidas = 0;
+for (let m = 0; m < 40; m++) {
+  const t = Motor.generarTablero();
+  const ids = t.condiciones || [];
+  cuantas.push(ids.length);
+  if (new Set(ids).size !== ids.length) repetidas++;
+}
+ok(Math.max(...cuantas) <= (CONDICIONES_POR_MES.maximo || 3),
+   `un mes trae ${Math.max(...cuantas)} condiciones como mucho: más no se leen de un vistazo`);
+ok(Math.min(...cuantas) === 0, 'y algunos meses no traen ninguna: los tranquilos hacen que se noten los otros');
+ok(repetidas === 0, 'y nunca se repite una en el mismo mes');
+
+/* Y el mes MANDA sobre el sorteo de los días: en mes de exámenes salen casi el
+ * doble de tareas. Esto es lo que hace que la condición se note jugando y no
+ * solo en la franja. */
+q.tablero.condiciones = ['examen'];
+ok(Motor.efectoDelMes('pesos', 'tarea') > 1.5,
+   'en mes de exámenes, las tareas salen casi el doble');
+q.tablero.condiciones = ['gripe'];
+ok(Motor.energiaDeEspacio('trabajo') < CONFIG.energia.porEspacio.trabajo,
+   'y con gripe, cada jornada cuesta más cuerpo del normal');
+
+/* Lo que se acumula se limita: tres condiciones razonables juntas dejan de
+ * serlo. Con gripe, calor y lluvia a la vez cada jornada costaba diez de
+ * cuerpo más, y el modo difícil se volvía una trampa sin salida. */
+q.tablero.condiciones = ['gripe', 'calor', 'lluvia'];
+ok(Motor.efectoDelMes('energiaExtra') >= -6,
+   `tres meses malos a la vez no pasan de -6 de cuerpo (dan ${Motor.efectoDelMes('energiaExtra')})`);
+
 M.imprimir('el tablero del mes');
