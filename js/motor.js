@@ -1600,16 +1600,56 @@ var Motor = (function () {
     return estado.tablero;
   }
 
+  /* ---------------------------------------------------------------------
+   * `pos` ES LA CASILLA EN LA QUE ESTA LA FICHA, y no los pasos que lleva
+   * ---------------------------------------------------------------------
+   * Parece una obviedad y fue un error de verdad: el motor contaba `pos` como
+   * "pasos andados" y resolvia `casillas[pos - 1]`, mientras el tablero
+   * plantaba la ficha en `casillas[pos]`. Los dos sistemas eran coherentes por
+   * dentro y se llevaban uno de diferencia, asi que el juego entero iba
+   * corrido una casilla:
+   *
+   *   - la ficha se paraba en TRAMPA y se abria la ventana del DESCANSO
+   *     siguiente;
+   *   - el titulo decia "dia 19" estando en el 20;
+   *   - las esquinas se disparaban desde la casilla de antes: caias en RETO y
+   *     te salia la dificultad anterior, y el reto salia estando en otro lado;
+   *   - y al terminar el mes `pos` valia `pasos`, que no es ninguna casilla,
+   *     asi que la ficha desaparecia del tablero.
+   *
+   * Ninguna prueba lo cazo porque todas preguntaban por `casillaActual()`, que
+   * estaba corrida igual. Lo que lo canto fue una captura de pantalla.
+   *
+   * Ahora `pos` es un indice del anillo, de 0 a `pasos - 1`. La salida es la
+   * casilla 0 y ahi empieza el mes, que es lo que ya dibujaba el tablero.
+   */
+  /* El mes se acabo cuando la ficha llego al ULTIMO DIA.
+   *
+   * No al ultimo paso: el anillo tiene que cerrar en un cuadrado y por eso a
+   * los meses cortos les sobran una o dos casillas de camino DESPUES del dia
+   * 31. Terminar en el camino dejaba al jugador tirando el dado un turno de
+   * mas para llegar a una casilla que no es ningun dia. */
+  function indiceFinal(t) {
+    if (!t || !t.casillas) return 0;
+    for (var k = 0; k < t.casillas.length; k++) {
+      if (t.casillas[k] && t.casillas[k].tipo === 'fin') return k;
+    }
+    return t.pasos - 1;
+  }
+
+  function enElFinal(t) {
+    return !t || t.pos >= indiceFinal(t);
+  }
+
   function tableroTerminado() {
-    var t = tablero();
-    return !t || t.pos >= t.pasos;
+    return enElFinal(tablero());
   }
 
   /* Que dia del mes es hoy: las esquinas no cuentan, asi que no es `pos`. */
   function diaActual() {
     var t = tablero();
     if (!t || t.pos <= 0) return 0;
-    for (var k = t.pos - 1; k >= 0; k--) {
+    for (var k = t.pos; k >= 0; k--) {
       if (t.casillas[k] && t.casillas[k].dia) return t.casillas[k].dia;
     }
     return 0;
@@ -1725,14 +1765,14 @@ var Motor = (function () {
    */
   function tirarDado() {
     var t = tablero();
-    if (!t || t.pos >= t.pasos) return null;
+    if (!t || enElFinal(t)) return null;
     var a = azarEntero(1, 6), b = azarEntero(1, 6);
     var desde = t.pos;
-    t.pos = Math.min(t.pasos, t.pos + a + b);
-    var casilla = sortearContenido(t.casillas[t.pos - 1]);
+    t.pos = Math.min(indiceFinal(t), t.pos + a + b);
+    var casilla = sortearContenido(t.casillas[t.pos]);
     guardar();
     return { dados: [a, b], dado: a + b, desde: desde, pos: t.pos,
-             casilla: casilla, fin: t.pos >= t.pasos };
+             dia: diaActual(), casilla: casilla, fin: enElFinal(t) };
   }
 
   /* Y hay una casilla que te devuelve pasos. Nunca antes de la salida, y
@@ -1742,16 +1782,17 @@ var Motor = (function () {
     if (!t) return null;
     var desde = t.pos;
     t.pos = Math.max(1, t.pos - Math.max(1, pasos || 1));
-    while (t.pos > 1 && t.casillas[t.pos - 1] &&
-           t.casillas[t.pos - 1].esquina !== undefined) t.pos--;
+    while (t.pos > 1 && t.casillas[t.pos] &&
+           t.casillas[t.pos].esquina !== undefined) t.pos--;
     guardar();
-    return { desde: desde, pos: t.pos, casilla: sortearContenido(t.casillas[t.pos - 1]) };
+    return { desde: desde, pos: t.pos, dia: diaActual(),
+             casilla: sortearContenido(t.casillas[t.pos]) };
   }
 
   function casillaActual() {
     var t = tablero();
-    if (!t || t.pos <= 0) return null;
-    return t.casillas[t.pos - 1];
+    if (!t) return null;
+    return t.casillas[t.pos] || null;
   }
 
   /* Aplicar un efecto de casilla: cuerpo, dinero y lo que se aprendio.

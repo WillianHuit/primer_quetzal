@@ -660,6 +660,29 @@ ok(!puerta.experienciaRequerida,
   ok(!!w3.document.getElementById('ficha-tablero'),
      'y la ficha es un elemento suelto, que es lo que le deja caminar');
 
+  /* ---------- LA FICHA Y LA VENTANA HABLAN DE LA MISMA CASILLA ----------
+   *
+   * Esto estuvo roto y nadie lo vio. El motor contaba `pos` como pasos
+   * andados y resolvía `casillas[pos - 1]`; el tablero plantaba la ficha en
+   * `casillas[pos]`. Cada uno era coherente consigo mismo y se llevaban uno
+   * de diferencia, así que el juego entero iba corrido una casilla: la ficha
+   * en TRAMPA y la ventana del DESCANSO de al lado, el título diciendo "día
+   * 19" estando en el 20, las esquinas disparándose desde la casilla de
+   * antes, y la ficha desapareciendo del tablero al terminar el mes.
+   *
+   * Ninguna prueba lo cazó porque todas preguntaban por `casillaActual()`,
+   * que estaba corrida igual. Lo cantó una captura de pantalla. Esta
+   * comprobación pregunta las dos cosas a la vez, que es la única forma. */
+  const marcada = w3.document.querySelector('.tablero .casilla.aqui');
+  ok(marcada && Number(marcada.dataset.paso) === M3.tablero().pos,
+     `la ficha se dibuja en la casilla ${M3.tablero().pos}, la misma que dice el motor`);
+  const suTipo = [...marcada.classList].find(x => x.indexOf('c-') === 0) || '';
+  ok(!suTipo || suTipo === 'c-' + tipoCaido || tipoCaido === 'libre' || tipoCaido === 'camino',
+     `y es del tipo que resolvió el motor (${tipoCaido})`);
+  const diaMarcado = marcada.dataset.dia ? Number(marcada.dataset.dia) : null;
+  ok(diaMarcado === null || diaMarcado === M3.diaActual(),
+     `y el día que dice el título (${M3.diaActual()}) es el de esa casilla (${diaMarcado})`);
+
   /* La casilla en la que cayó: si pedía algo, hay una ventana con las dos
    * salidas. Aceptar mete la jornada en la contabilidad del mes; dejarla pasar
    * no mete nada. Las dos son decisiones y las dos se pueden tomar. */
@@ -673,6 +696,48 @@ ok(!puerta.experienciaRequerida,
        'y dejarla pasar no gasta ninguna jornada del mes');
   }
 
+  /* ---------- el RETO de la esquina hace algo al tocarlo ----------
+   *
+   * "Hacerlo" no hacía nada, y el motivo es una trampa que puede volver a
+   * morder: el botón se fiaba de la delegación de clics de `conectar()`, que
+   * escucha en `#app`. Las ventanas cuelgan de `document.body`, o sea FUERA
+   * de `#app`, así que el clic no le llegaba nunca. Se pintaba, se podía
+   * tocar y no pasaba nada.
+   *
+   * Regla, y por eso esta prueba: un botón dentro de una ventana se conecta a
+   * mano con addEventListener, nunca por la lista de `conectar()`.
+   *
+   * Se cae en la esquina a propósito: con los dos dados en uno la ficha
+   * avanza dos casillas exactas. */
+  cerrarModales(w3);
+  const e3 = M3.get();
+  const sueltos3 = w3.Minijuegos.disponibles(e3.educacion, e3.carrerasTerminadas,
+      e3.estudio ? e3.estudio.carreraId : null, M3.experiencia())
+    .filter(j => j.tipo !== 'clase');
+  const iReto = M3.tablero().casillas.findIndex(c => c.tipo === 'reto');
+  if (iReto >= 2 && sueltos3.length) {
+    M3.tablero().pos = iReto - 2;
+    clic(w3, w3.document.querySelector('[data-pestana="casa"]'));
+    const azarReal = w3.Math.random;
+    w3.Math.random = () => 0;
+    clic(w3, w3.document.querySelector('#tirar-dado'));
+    w3.Math.random = azarReal;
+    ok(M3.tablero().pos === iReto,
+       'la ficha cae justo en la esquina del reto');
+    ok((M3.casillaActual() || {}).tipo === 'reto',
+       'y el motor resuelve el reto, no la casilla de al lado');
+    const vr = [...w3.document.querySelectorAll('.velo')].pop();
+    const hacerlo = vr && vr.querySelector('[data-reto]');
+    ok(!!hacerlo, 'la esquina ofrece hacerlo');
+    if (hacerlo) {
+      clic(w3, hacerlo);
+      ok(!!w3.document.querySelector('.velo.mj-lleno .mj'),
+         'y tocar Hacerlo abre el trabajito de verdad');
+    }
+    w3.document.querySelectorAll('.velo').forEach(v => v.remove());
+    clic(w3, w3.document.querySelector('[data-pestana="casa"]'));
+  }
+
   // Se recorre el resto del mes y ahí sí aparece el botón de cerrarlo
   const tiradas = recorrerMes(w3, true);
   ok(M3.tableroTerminado(), `el mes se recorrió en ${tiradas + 1} tiradas`);
@@ -680,6 +745,16 @@ ok(!puerta.experienciaRequerida,
      'que son las que caben en un mes con dos dados de seis caras');
   ok(!!w3.document.querySelector('#cerrar-turno'),
      'y al llegar al final aparece el botón de terminar el mes');
+
+  /* Y al terminar, la ficha sigue EN el tablero.
+   *
+   * Con la cuenta vieja `pos` llegaba a valer `pasos`, que no es ninguna
+   * casilla, y la ficha se esfumaba justo en el único momento del mes en que
+   * el jugador terminó algo. */
+  ok(w3.document.querySelectorAll('.tablero .casilla.aqui').length === 1,
+     'y al llegar al final la ficha sigue parada en una casilla, no desaparece');
+  ok(M3.diaActual() === M3.tablero().dias,
+     `y el mes se acaba en el día ${M3.tablero().dias}, no en una casilla de relleno`);
 
   const mesesAntes = M3.get().mesesJugados;
   clic(w3, w3.document.querySelector('#cerrar-turno'));

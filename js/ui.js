@@ -1494,7 +1494,7 @@ var UI = (function () {
     }
 
     if (c.tipo === 'libre' || c.tipo === 'camino') {
-      notaTablero = T('Día {0}: un día cualquiera.', res.pos);
+      notaTablero = T('Día {0}: un día cualquiera.', c.dia || Motor.diaActual());
       return alejar();
     }
 
@@ -1632,7 +1632,7 @@ var UI = (function () {
     var sueltos = listaDeExtras();
     notaTablero = T('Te salió un reto.');
     render();
-    return modal(escritura('reto', titulo, texto,
+    var dr = modal(escritura('reto', titulo, texto,
         pastillas([pastilla('moneda', T('se paga aparte'), 'ok'),
                    pastilla('reloj', T('no gasta jornada'), 'ok')])) +
       (sueltos.length
@@ -1641,6 +1641,30 @@ var UI = (function () {
           '<button class="btn-chico" data-cerrar>' + T('Dejarlo pasar') + '</button></div>'
         : '<button class="btn-primario" data-cerrar>' + T('Listo') + '</button>'),
       alejar);
+
+    /* Y el botón se conecta AQUÍ, a mano.
+     *
+     * Se fiaba de la delegación de `conectar()`, que escucha en `#app`; las
+     * ventanas cuelgan de `document.body`, o sea FUERA de `#app`. El clic no
+     * le llegaba nunca: el botón se pintaba, se podía tocar y no pasaba nada.
+     * Todos los demás botones de ventana ya se conectaban a mano; este era el
+     * único que no, y por eso era el único roto.
+     *
+     * Si algún día se agrega otro botón dentro de una ventana: se conecta
+     * aquí, no en la lista de `conectar()`. */
+    var hacerlo = dr.querySelector('[data-reto]');
+    if (hacerlo) {
+      hacerlo.addEventListener('click', function () {
+        dr.remove();
+        zoomEn = null;
+        var ahora = listaDeExtras();
+        if (!ahora.length) { Sonido.tono('error'); return render(); }
+        /* Y no siempre el mismo: `sueltos[0]` hacía que el reto fuera
+         * literalmente el mismo trabajito todas las veces. */
+        jugarMinijuego(ahora[azar(0, ahora.length - 1)]);
+      });
+    }
+    return dr;
   }
 
   function filasDeEfecto(ef) {
@@ -1713,7 +1737,7 @@ var UI = (function () {
     var dm = modal(h, alejar);
     dm.querySelector('[data-dejo]').addEventListener('click', function () {
       dm.remove();
-      notaTablero = T('Día {0}: lo dejaste pasar.', res.pos);
+      notaTablero = T('Día {0}: lo dejaste pasar.', c.dia || Motor.diaActual());
       alejar();
     });
     dm.querySelector('[data-acepto]').addEventListener('click', function () {
@@ -1732,7 +1756,7 @@ var UI = (function () {
       }
       dm.remove();
       Sonido.tono('toque');
-      notaTablero = T('Día {0}: {1}', res.pos, titulo);
+      notaTablero = T('Día {0}: {1}', c.dia || Motor.diaActual(), titulo);
       zoomEn = null;
       /* Y si lo que se acepta se JUEGA —una tarea, un extra— se abre ahí
        * mismo. Aceptar y tener que ir a buscarla a otra pestaña sería partir
@@ -4880,7 +4904,7 @@ var UI = (function () {
         '[data-ver-perfil],[data-mejora],' +
         '[data-abrir-negocio],[data-subir-negocio],[data-contratar],[data-despedir],' +
         '[data-traspasar],' +
-        '[data-cond],[data-reto],#planear,#tirar-dado,#son-tablero,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
+        '[data-cond],#planear,#tirar-dado,#son-tablero,#cerrar-turno,#renunciar,#pedir-planilla,#abandonar,#abrir-plazo,#romper-plazo,#pedir-prestamo,' +
         '#pedir-tarjeta,#pedir-informal,#gastar-tarjeta,#pagar-tarjeta,#alternar-minimo,' +
         '#abrir-pension,#cambiar-pension,#retirar-pension,#migrar,#regresar,' +
         '#ver-glosario,#ver-reporte,#ver-reporte-final');
@@ -5364,15 +5388,6 @@ var UI = (function () {
           tarj.classList.add('yendose');
           return setTimeout(function () { render(); }, 300);
         }
-        return render();
-      }
-
-      if (el.dataset.reto) {
-        var velo = el.closest('.velo');
-        if (velo) velo.remove();
-        zoomEn = null;
-        var sueltos = listaDeExtras();
-        if (sueltos.length) return jugarMinijuego(sueltos[0]);
         return render();
       }
 
