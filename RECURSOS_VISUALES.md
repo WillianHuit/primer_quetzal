@@ -223,8 +223,8 @@ y una base visual alineada cerca del borde inferior. Mantienen la progresión
 `n1` inicio mínimo → `n2` equipado → `n3` puesto consolidado → `n4` sucursal,
 sin palabras, cifras, marcas ni logotipos. La entrega completa pesa 35.73 MB.
 
-Quedan sin producir las prioridades 2 a 5 de `RECURSOS_TYCOON.md`: calle por
-tramos, gente contratada, edades del protagonista y efectos ambientales. Los
+Quedan sin producir las prioridades 3 a 5 de `RECURSOS_TYCOON.md`: gente
+contratada, edades del protagonista y efectos ambientales. Los
 iconos de interfaz continúan fuera del alcance y deben seguir siendo SVG.
 
 ### 6.1 Lo que hubo que resolver para conectarlos
@@ -260,7 +260,31 @@ Cuatro cosas, y ninguna se veía abriendo los PNG en un visor.
    viene más ancho que alto, y el techo de verdad queda más abajo que el borde
    de la caja.
 
-## 7. Lo que sigue pendiente
+## 7. Entrega Tycoon: calle modular
+
+El 10 de septiembre de 2026 se completó la **prioridad 2** de
+`RECURSOS_TYCOON.md`. Son ocho PNG maestros y todavía **no están conectados** al
+juego; otra IA debe declararlos en `js/arte.js`, adaptar `suelo()` en
+`js/escena.js` y preparar las copias WebP.
+
+| Recurso | Tamaño | Uso |
+|---|---:|---|
+| `assets/visuales/escena/calle-centro.png` | 512 × 256 | tramo horizontal repetible |
+| `assets/visuales/escena/calle-izq.png` | 256 × 256 | remate izquierdo |
+| `assets/visuales/escena/calle-der.png` | 256 × 256 | remate derecho |
+| `assets/visuales/escena/fondo.png` | 2048 × 512 | ciudad guatemalteca y volcanes al fondo |
+| `assets/visuales/escena/urbano/farol.png` | 768 × 768 | poste de luz aislado |
+| `assets/visuales/escena/urbano/arbol.png` | 768 × 768 | árbol de banqueta aislado |
+| `assets/visuales/escena/urbano/basura.png` | 768 × 768 | bote de basura aislado |
+| `assets/visuales/escena/urbano/parada.png` | 768 × 768 | parada de bus aislada |
+
+El centro coincide píxel por píxel consigo mismo en los bordes izquierdo y
+derecho. Los bordes interiores de ambos remates también coinciden con el centro.
+El fondo es opaco; los otros siete archivos conservan transparencia real y no
+tienen cuadriculado horneado. Las cuatro piezas urbanas están apoyadas cerca del
+borde inferior y no incluyen suelo ni sombra de contacto.
+
+## 8. Lo que sigue pendiente
 
 - **Los iconos de interfaz no se convirtieron a PNG, y no deben convertirse.**
   Son 78 controles que se muestran desde unos 16 px y cambian de color con
